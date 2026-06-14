@@ -110,6 +110,95 @@ function textFromContent(content: ChatCompletionResponse["choices"]): string {
   return "";
 }
 
+function arrayLiteralFromKey(raw: string, key: string): string | undefined {
+  const keyPattern = new RegExp(`["']?${key}["']?\\s*:`, "i");
+  const match = keyPattern.exec(raw);
+  if (!match) {
+    return undefined;
+  }
+
+  const start = raw.indexOf("[", match.index + match[0].length);
+  if (start < 0) {
+    return undefined;
+  }
+
+  let quote: string | undefined;
+  let escaped = false;
+  let depth = 0;
+
+  for (let index = start; index < raw.length; index += 1) {
+    const char = raw[index];
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (char === "[") {
+      depth += 1;
+    } else if (char === "]") {
+      depth -= 1;
+      if (depth === 0) {
+        return raw.slice(start, index + 1);
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function parseQuotedStringArray(raw: string): string[] {
+  const items: string[] = [];
+  let quote: string | undefined;
+  let escaped = false;
+  let current = "";
+
+  for (let index = 0; index < raw.length; index += 1) {
+    const char = raw[index];
+
+    if (!quote) {
+      if (char === '"' || char === "'") {
+        quote = char;
+        current = "";
+      }
+      continue;
+    }
+
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (char === quote) {
+      items.push(current.trim());
+      quote = undefined;
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  return items.filter(Boolean);
+}
+
 function parseModelText(raw: string): string[] {
   const trimmed = raw.trim();
   const jsonCandidate =
@@ -137,6 +226,14 @@ function parseModelText(raw: string): string[] {
     }
   } catch {
     // Fall back to line parsing below.
+  }
+
+  const commentsArray = arrayLiteralFromKey(jsonCandidate, "comments");
+  if (commentsArray) {
+    const comments = parseQuotedStringArray(commentsArray);
+    if (comments.length > 0) {
+      return comments;
+    }
   }
 
   return trimmed
