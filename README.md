@@ -5,6 +5,8 @@ comments from a vision-capable, OpenAI-compatible model provider.
 
 ![Danmaku Companion settings](docs/assets/settings.png)
 
+![Danmaku Companion overlay](docs/assets/live-overlay.png)
+
 ## What It Does
 
 - Renders a transparent, click-through danmaku overlay on macOS and Windows.
