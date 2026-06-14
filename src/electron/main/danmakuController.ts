@@ -462,7 +462,7 @@ export class DanmakuController {
       return;
     }
 
-    if (!result.assistantText.trim()) {
+    if (result.items.length === 0 || !result.assistantText.trim()) {
       return;
     }
 
