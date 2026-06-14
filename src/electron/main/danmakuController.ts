@@ -320,6 +320,7 @@ export class DanmakuController {
         cachedInputTokens: result.cachedInputTokens,
         screen: screenLogInfo(config.model.visionEnabled, snapshot, captureError),
         comments: result.items.map((item) => item.text),
+        rawOutput: result.assistantText,
       };
       this.status = {
         state: this.running ? "running" : reason === "timer" ? "paused" : "idle",

@@ -526,6 +526,40 @@ textarea:focus {
   font-size: 13px;
 }
 
+.raw-output-panel {
+  margin-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+
+.raw-output-panel summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 0;
+  padding: 0;
+  color: #475569;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  list-style: revert;
+}
+
+.raw-output-panel pre {
+  max-height: 280px;
+  overflow: auto;
+  margin: 9px 0 0;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .muted-text {
   color: #64748b;
 }

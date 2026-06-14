@@ -184,6 +184,7 @@ export interface GenerationLogEntry {
   cachedInputTokens?: number;
   screen: GenerationLogScreenInfo;
   comments: string[];
+  rawOutput?: string;
   error?: string;
 }
 

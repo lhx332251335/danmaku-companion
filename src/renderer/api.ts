@@ -100,6 +100,7 @@ export function api(): DanmakuBridge {
             capturedAt: new Date().toISOString(),
           },
           comments: ["预览弹幕已经就位"],
+          rawOutput: JSON.stringify({ comments: ["预览弹幕已经就位"] }, null, 2),
         },
         ...generationLogs,
       ].slice(0, config.runtime.generationLogLimit);

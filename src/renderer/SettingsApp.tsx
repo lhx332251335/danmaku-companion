@@ -1063,6 +1063,12 @@ export function SettingsApp() {
                         ))
                       )}
                     </div>
+                    {log.rawOutput?.trim() ? (
+                      <details className="raw-output-panel">
+                        <summary>原始输出</summary>
+                        <pre>{log.rawOutput}</pre>
+                      </details>
+                    ) : null}
                   </div>
                 </details>
               ))}
