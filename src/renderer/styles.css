@@ -303,6 +303,10 @@ label {
   opacity: 0.55;
 }
 
+.model-select {
+  margin-top: 2px;
+}
+
 .field-note {
   min-height: 16px;
   color: #64748b;

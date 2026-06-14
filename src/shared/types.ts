@@ -210,5 +210,6 @@ export interface DanmakuBridge {
   setOverlayVisible(visible: boolean): Promise<void>;
   onDanmakuItems(callback: (items: DanmakuItem[]) => void): () => void;
   onRuntimeStatus(callback: (status: RuntimeStatus) => void): () => void;
+  onConfigUpdated(callback: (config: AppConfig) => void): () => void;
   onOverlayClear(callback: () => void): () => void;
 }

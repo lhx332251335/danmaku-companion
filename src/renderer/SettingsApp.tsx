@@ -226,7 +226,23 @@ export function SettingsApp() {
   }
 
   const paletteText = draft.danmaku.palette.join(", ");
-  const selectedModel = modelList?.models.find((model) => model.id === draft.model.model);
+  const modelOptions = modelList?.models ?? [];
+  const selectedModel = modelOptions.find((model) => model.id === draft.model.model);
+  const selectedModelValue = selectedModel ? selectedModel.id : "";
+  const selectedModelStatus = selectedModel
+    ? [selectedModel.state, selectedModel.vision ? "vision" : undefined]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+  const modelListNote =
+    modelList?.ok === false
+      ? modelList.message
+      : modelList
+        ? [
+            `${modelList.models.length} models`,
+            selectedModelStatus || undefined,
+          ].filter(Boolean).join(" · ")
+        : "-";
 
   return (
     <main className="app-shell">
@@ -326,32 +342,41 @@ export function SettingsApp() {
                   )}
                 </button>
               </div>
-              <input
-                list="model-options"
-                value={draft.model.model}
-                onChange={(event) =>
-                  setDraft({ ...draft, model: { ...draft.model, model: event.target.value } })
-                }
-              />
-              <datalist id="model-options">
-                {modelList?.models.map((model) => (
-                  <option
-                    key={model.id}
-                    value={model.id}
-                    label={[
-                      model.name,
-                      model.state,
-                      model.vision ? "vision" : undefined,
-                    ].filter(Boolean).join(" · ")}
-                  />
-                ))}
-              </datalist>
+              {modelOptions.length > 0 ? (
+                <select
+                  className="model-select"
+                  value={selectedModelValue}
+                  onChange={(event) => {
+                    if (event.target.value) {
+                      setDraft({
+                        ...draft,
+                        model: { ...draft.model, model: event.target.value },
+                      });
+                    }
+                  }}
+                >
+                  <option value="">Select from {modelOptions.length} models...</option>
+                  {modelOptions.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {[
+                        model.id,
+                        model.name && model.name !== model.id ? model.name : undefined,
+                        model.state,
+                        model.vision ? "vision" : undefined,
+                      ].filter(Boolean).join(" · ")}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={draft.model.model}
+                  onChange={(event) =>
+                    setDraft({ ...draft, model: { ...draft.model, model: event.target.value } })
+                  }
+                />
+              )}
               <div className={modelList?.ok === false ? "field-note error-note" : "field-note"}>
-                {selectedModel
-                  ? [selectedModel.state, selectedModel.vision ? "vision" : undefined]
-                      .filter(Boolean)
-                      .join(" · ")
-                  : modelList?.message ?? "-"}
+                {modelListNote}
               </div>
             </div>
           </div>

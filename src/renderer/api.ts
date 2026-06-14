@@ -11,6 +11,7 @@ export function api(): DanmakuBridge {
   let generationLogs: Awaited<ReturnType<DanmakuBridge["getGenerationLogs"]>> = [];
   const statusListeners = new Set<Parameters<DanmakuBridge["onRuntimeStatus"]>[0]>();
   const itemListeners = new Set<Parameters<DanmakuBridge["onDanmakuItems"]>[0]>();
+  const configListeners = new Set<Parameters<DanmakuBridge["onConfigUpdated"]>[0]>();
   const clearListeners = new Set<Parameters<DanmakuBridge["onOverlayClear"]>[0]>();
 
   const bridge: DanmakuBridge = {
@@ -35,6 +36,7 @@ export function api(): DanmakuBridge {
             patch.runtime?.privacyBlacklist ?? config.runtime.privacyBlacklist,
         },
       };
+      configListeners.forEach((listener) => listener(config));
       return config;
     },
     testModelConnection: async () => ({
@@ -122,6 +124,10 @@ export function api(): DanmakuBridge {
     onRuntimeStatus: (callback) => {
       statusListeners.add(callback);
       return () => statusListeners.delete(callback);
+    },
+    onConfigUpdated: (callback) => {
+      configListeners.add(callback);
+      return () => configListeners.delete(callback);
     },
     onOverlayClear: (callback) => {
       clearListeners.add(callback);

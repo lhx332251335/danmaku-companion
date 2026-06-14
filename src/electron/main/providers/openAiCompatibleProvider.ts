@@ -293,6 +293,39 @@ function uniqueModels(models: ModelOption[]): ModelOption[] {
   });
 }
 
+function mergeModelOptions(groups: ModelOption[][]): ModelOption[] {
+  const merged = new Map<string, ModelOption>();
+
+  groups.flat().forEach((model) => {
+    if (!model.id) {
+      return;
+    }
+
+    const current = merged.get(model.id);
+    if (!current) {
+      merged.set(model.id, model);
+      return;
+    }
+
+    const nextState =
+      current.state === "loaded" || !model.state
+        ? current.state
+        : model.state === "loaded" || !current.state
+          ? model.state
+          : current.state;
+
+    merged.set(model.id, {
+      id: model.id,
+      name: current.name ?? model.name,
+      state: nextState,
+      type: current.type ?? model.type,
+      vision: Boolean(current.vision || model.vision),
+    });
+  });
+
+  return [...merged.values()];
+}
+
 function nativeModelOptions(data: { models?: LmStudioNativeModel[] }): ModelOption[] {
   return uniqueModels(
     (data.models ?? [])
@@ -448,26 +481,34 @@ export async function listOpenAICompatibleModels(config: AppConfig): Promise<Mod
     },
   ];
   const errors: string[] = [];
+  const successfulEndpoints: string[] = [];
+  const modelGroups: ModelOption[][] = [];
 
   for (const candidate of candidates) {
     try {
       const data = await fetchJson<unknown>(candidate.endpoint, config);
       const models = candidate.parse(data as never);
       if (models.length > 0) {
-        return {
-          ok: true,
-          endpoint: candidate.endpoint,
-          message: `${models.length} model(s) found.`,
-          models,
-        };
+        successfulEndpoints.push(candidate.endpoint);
+        modelGroups.push(models);
+      } else {
+        errors.push(`${candidate.endpoint}: empty`);
       }
-
-      errors.push(`${candidate.endpoint}: empty`);
     } catch (error) {
       errors.push(
         `${candidate.endpoint}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  const models = mergeModelOptions(modelGroups);
+  if (models.length > 0) {
+    return {
+      ok: true,
+      endpoint: successfulEndpoints.join(", "),
+      message: `${models.length} model(s) found from ${successfulEndpoints.length} endpoint(s).`,
+      models,
+    };
   }
 
   return {

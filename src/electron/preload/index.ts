@@ -46,6 +46,12 @@ const bridge: DanmakuBridge = {
     ipcRenderer.on("runtime:status", listener);
     return () => ipcRenderer.off("runtime:status", listener);
   },
+  onConfigUpdated: (callback: (config: AppConfig) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, config: AppConfig) =>
+      callback(config);
+    ipcRenderer.on("config:updated", listener);
+    return () => ipcRenderer.off("config:updated", listener);
+  },
   onOverlayClear: (callback: () => void) => {
     const listener = () => callback();
     ipcRenderer.on("overlay:clear", listener);

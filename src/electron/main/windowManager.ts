@@ -8,7 +8,7 @@ import {
   screen,
 } from "electron";
 import path from "node:path";
-import type { RuntimeStatus } from "../../shared/types";
+import type { AppConfig, RuntimeStatus } from "../../shared/types";
 import type { DanmakuController } from "./danmakuController";
 
 const trayIconSvg = Buffer.from(`
@@ -61,6 +61,11 @@ export class WindowManager {
     this.latestStatus = status;
     this.settingsWindow?.webContents.send("runtime:status", status);
     this.updateTrayMenu();
+  }
+
+  broadcastConfig(config: AppConfig): void {
+    this.settingsWindow?.webContents.send("config:updated", config);
+    this.overlayWindow?.webContents.send("config:updated", config);
   }
 
   setOverlayVisible(visible: boolean): void {

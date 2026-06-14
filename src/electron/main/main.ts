@@ -48,6 +48,7 @@ function registerIpc(): void {
   ipcMain.handle("config:update", async (_event, patch: DeepPartial<AppConfig>) => {
     const config = await configStore.update(patch);
     await controller.refreshSchedule();
+    windowManager.broadcastConfig(config);
     return config;
   });
 

@@ -60,10 +60,12 @@ export function OverlayApp() {
       });
     });
     const removeClear = api().onOverlayClear(() => setItems([]));
+    const removeConfigUpdated = api().onConfigUpdated(setConfig);
 
     return () => {
       removeItems();
       removeClear();
+      removeConfigUpdated();
     };
   }, [config?.danmaku.zone]);
 
@@ -98,6 +100,7 @@ export function OverlayApp() {
           style={{
             top: `${item.top}%`,
             color: item.color,
+            opacity: config?.danmaku.opacity ?? 0.92,
             animationDuration: `${item.speedSeconds ?? config?.danmaku.speedSeconds ?? 10}s`,
             animationDelay: `${item.delayMs}ms`,
           }}
