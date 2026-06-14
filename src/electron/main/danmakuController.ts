@@ -174,6 +174,7 @@ export class DanmakuController {
   private timer: NodeJS.Timeout | undefined;
   private readonly releaseTimers = new Set<NodeJS.Timeout>();
   private readonly history: DanmakuHistoryRound[] = [];
+  private historyWindowRounds = 0;
   private activeGenerationAbort: AbortController | undefined;
   private busy = false;
   private running = false;
@@ -393,7 +394,7 @@ export class DanmakuController {
   }
 
   clearHistory(): void {
-    this.history.splice(0);
+    this.resetHistoryWindow();
     this.status = { ...this.status, cachedInputTokens: undefined };
     this.broadcastStatus(this.status);
   }
@@ -450,19 +451,28 @@ export class DanmakuController {
     requestHistoryLength: number,
   ): void {
     if (runtime.historyRounds <= 0) {
-      this.history.splice(0);
+      this.resetHistoryWindow();
       return;
     }
 
+    const countedHistoryRounds = Math.max(this.historyWindowRounds, requestHistoryLength);
     if (
       runtime.historyMode === "reset-on-limit" &&
-      requestHistoryLength >= runtime.historyRounds
+      countedHistoryRounds >= runtime.historyRounds
     ) {
-      this.history.splice(0);
+      this.resetHistoryWindow();
       return;
     }
 
+    this.historyWindowRounds = countedHistoryRounds + 1;
+
     if (result.items.length === 0 || !result.assistantText.trim()) {
+      if (
+        runtime.historyMode === "reset-on-limit" &&
+        this.historyWindowRounds >= runtime.historyRounds
+      ) {
+        this.resetHistoryWindow();
+      }
       return;
     }
 
@@ -474,7 +484,13 @@ export class DanmakuController {
 
     if (runtime.historyMode === "sliding" && this.history.length > runtime.historyRounds) {
       this.history.splice(0, this.history.length - runtime.historyRounds);
+      this.historyWindowRounds = this.history.length;
     }
+  }
+
+  private resetHistoryWindow(): void {
+    this.history.splice(0);
+    this.historyWindowRounds = 0;
   }
 
   private historyForRequest(historyRounds: number): DanmakuHistoryRound[] {
