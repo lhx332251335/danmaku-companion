@@ -1,0 +1,104 @@
+{
+  "name": "danmaku-companion",
+  "productName": "Danmaku Companion",
+  "version": "0.1.17",
+  "description": "A local-first desktop danmaku companion with OpenAI-compatible model providers.",
+  "author": "Danmaku Companion",
+  "main": "dist-electron/electron/main/main.js",
+  "private": true,
+  "scripts": {
+    "start:desktop": "electron dist-electron/electron/main/main.js",
+    "dev": "npm-run-all build:electron --parallel dev:renderer dev:electron",
+    "dev:renderer": "vite --host 127.0.0.1",
+    "dev:electron": "wait-on tcp:5173 dist-electron/electron/main/main.js dist-electron/electron/preload/index.js && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron dist-electron/electron/main/main.js",
+    "build": "npm-run-all typecheck build:electron build:renderer",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build:renderer": "vite build",
+    "package:mac": "npm run build && electron-builder --mac --arm64",
+    "package:win": "npm run build && electron-builder --win --x64",
+    "package:all": "npm run build && electron-builder --mac --arm64 && electron-builder --win --x64",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "lint": "tsc --noEmit",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "build": {
+    "appId": "local.danmaku.companion",
+    "productName": "Danmaku Companion",
+    "afterPack": "scripts/afterPack.cjs",
+    "directories": {
+      "output": "release"
+    },
+    "icon": "build/icon.png",
+    "files": [
+      "dist/renderer/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.icns",
+      "extendInfo": {
+        "NSScreenCaptureUsageDescription": "Danmaku Companion can capture the screen when Vision payload is enabled to generate screen-aware danmaku."
+      },
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-win-${arch}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    }
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^42.3.3",
+    "electron-builder": "^26.15.2",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "wait-on": "^8.0.1"
+  }
+}
