@@ -1,7 +1,7 @@
 {
   "name": "danmaku-companion",
   "productName": "Danmaku Companion",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "description": "A local-first desktop danmaku companion with OpenAI-compatible model providers.",
   "author": "Danmaku Companion",
   "main": "dist-electron/electron/main/main.js",
@@ -38,6 +38,10 @@
       {
         "from": "build/icon.png",
         "to": "icon.png"
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
       }
     ],
     "mac": {

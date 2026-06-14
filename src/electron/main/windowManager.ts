@@ -7,6 +7,7 @@ import {
   nativeImage,
   screen,
 } from "electron";
+import fs from "node:fs";
 import path from "node:path";
 import type { AppConfig, RuntimeStatus } from "../../shared/types";
 import type { DanmakuController } from "./danmakuController";
@@ -15,6 +16,38 @@ const trayIconSvg = Buffer.from(`
 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
   <path fill="#000" d="M3 5.25h12v2H3zM1.75 10.75h8.25v2H1.75zM12 10.75h4.25v2H12z"/>
 </svg>`);
+
+function appResourcePath(fileName: string): string {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, fileName)
+    : path.join(process.cwd(), "build", fileName);
+}
+
+function createTrayIcon(): Electron.NativeImage {
+  if (process.platform === "darwin") {
+    const image = nativeImage.createFromDataURL(
+      `data:image/svg+xml;base64,${trayIconSvg.toString("base64")}`,
+    );
+    image.setTemplateImage(true);
+    return image;
+  }
+
+  const candidates = [appResourcePath("icon.ico"), appResourcePath("icon.png")];
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) {
+      continue;
+    }
+
+    const image = nativeImage.createFromPath(candidate);
+    if (!image.isEmpty()) {
+      return candidate.endsWith(".png") ? image.resize({ width: 16, height: 16 }) : image;
+    }
+  }
+
+  return nativeImage.createFromDataURL(
+    `data:image/svg+xml;base64,${trayIconSvg.toString("base64")}`,
+  );
+}
 
 export class WindowManager {
   private settingsWindow: BrowserWindow | undefined;
@@ -36,11 +69,7 @@ export class WindowManager {
   }
 
   createTray(): void {
-    const image = nativeImage.createFromDataURL(
-      `data:image/svg+xml;base64,${trayIconSvg.toString("base64")}`,
-    );
-    image.setTemplateImage(true);
-    this.tray = new Tray(image);
+    this.tray = new Tray(createTrayIcon());
     if (process.platform === "darwin") {
       this.tray.setTitle("弹幕");
       app.dock?.show();
