@@ -1,5 +1,9 @@
 import { defaultAppConfig } from "../shared/defaultConfig";
-import type { DanmakuBridge } from "../shared/types";
+import type { AppConfig, DanmakuBridge } from "../shared/types";
+
+function cloneConfig(config: AppConfig): AppConfig {
+  return JSON.parse(JSON.stringify(config)) as AppConfig;
+}
 
 export function api(): DanmakuBridge {
   if (window.danmaku) {
@@ -7,12 +11,34 @@ export function api(): DanmakuBridge {
   }
 
   let config = defaultAppConfig;
+  let activeProfileId = "preview-profile";
+  let profileConfigs: Record<string, AppConfig> = {
+    [activeProfileId]: config,
+  };
+  let configProfiles = [
+    {
+      id: activeProfileId,
+      name: "默认配置",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
   let running = false;
   let generationLogs: Awaited<ReturnType<DanmakuBridge["getGenerationLogs"]>> = [];
   const statusListeners = new Set<Parameters<DanmakuBridge["onRuntimeStatus"]>[0]>();
   const itemListeners = new Set<Parameters<DanmakuBridge["onDanmakuItems"]>[0]>();
   const configListeners = new Set<Parameters<DanmakuBridge["onConfigUpdated"]>[0]>();
   const clearListeners = new Set<Parameters<DanmakuBridge["onOverlayClear"]>[0]>();
+
+  function profileSnapshot() {
+    return {
+      activeProfileId,
+      profiles: configProfiles.map((profile) => ({
+        ...profile,
+        active: profile.id === activeProfileId,
+      })),
+    };
+  }
 
   const bridge: DanmakuBridge = {
     getConfig: async () => config,
@@ -36,8 +62,61 @@ export function api(): DanmakuBridge {
             patch.runtime?.privacyBlacklist ?? config.runtime.privacyBlacklist,
         },
       };
+      profileConfigs[activeProfileId] = config;
+      configProfiles = configProfiles.map((profile) =>
+        profile.id === activeProfileId
+          ? { ...profile, updatedAt: new Date().toISOString() }
+          : profile,
+      );
       configListeners.forEach((listener) => listener(config));
       return config;
+    },
+    getConfigProfiles: async () => profileSnapshot(),
+    createConfigProfile: async (name) => {
+      const now = new Date().toISOString();
+      const id = `${Date.now()}-profile`;
+      activeProfileId = id;
+      config = cloneConfig(config);
+      profileConfigs[id] = config;
+      configProfiles = [
+        ...configProfiles,
+        {
+          id,
+          name: name.trim() || "默认配置 副本",
+          createdAt: now,
+          updatedAt: now,
+        },
+      ];
+      configListeners.forEach((listener) => listener(config));
+      return { config, profiles: profileSnapshot() };
+    },
+    renameConfigProfile: async (id, name) => {
+      configProfiles = configProfiles.map((profile) =>
+        profile.id === id
+          ? { ...profile, name: name.trim() || profile.name, updatedAt: new Date().toISOString() }
+          : profile,
+      );
+      return profileSnapshot();
+    },
+    switchConfigProfile: async (id) => {
+      if (profileConfigs[id]) {
+        activeProfileId = id;
+        config = profileConfigs[id];
+        configListeners.forEach((listener) => listener(config));
+      }
+      return { config, profiles: profileSnapshot() };
+    },
+    deleteConfigProfile: async (id) => {
+      if (configProfiles.length > 1) {
+        configProfiles = configProfiles.filter((profile) => profile.id !== id);
+        delete profileConfigs[id];
+        if (activeProfileId === id) {
+          activeProfileId = configProfiles[0].id;
+          config = profileConfigs[activeProfileId];
+        }
+        configListeners.forEach((listener) => listener(config));
+      }
+      return { config, profiles: profileSnapshot() };
     },
     testModelConnection: async () => ({
       ok: true,

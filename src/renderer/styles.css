@@ -227,6 +227,53 @@ h2 {
   margin: 0 auto;
 }
 
+.profile-panel {
+  max-width: 1280px;
+  margin: 0 auto 16px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 16px 18px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.profile-heading {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.profile-heading span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(160px, 1fr)
+    minmax(160px, 1fr)
+    max-content
+    minmax(160px, 1fr)
+    max-content
+    max-content;
+  align-items: end;
+  gap: 10px;
+}
+
+.compact-field {
+  margin-bottom: 0;
+}
+
+.danger-button {
+  color: #be123c;
+}
+
+.danger-button:hover {
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+
 .panel {
   min-width: 0;
   border: 1px solid #dbe3ee;
@@ -617,6 +664,7 @@ textarea:focus {
   }
 
   .workspace-grid,
+  .profile-grid,
   .two-column,
   .three-column,
   .log-meta-grid {

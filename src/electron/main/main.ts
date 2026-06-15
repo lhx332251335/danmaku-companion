@@ -1,7 +1,7 @@
 import { app, ipcMain, shell } from "electron";
 import fs from "node:fs";
 import path from "node:path";
-import type { DeepPartial, AppConfig } from "../../shared/types";
+import type { AppConfig, ConfigProfileResult, DeepPartial } from "../../shared/types";
 import { ConfigStore } from "./configStore";
 import { DanmakuController } from "./danmakuController";
 import { GenerationLogStore } from "./generationLogStore";
@@ -43,6 +43,15 @@ function configureDockIcon(): void {
 }
 
 function registerIpc(): void {
+  async function applyProfileResult(
+    result: ConfigProfileResult,
+  ): Promise<ConfigProfileResult> {
+    controller.clearHistory();
+    await controller.refreshSchedule();
+    windowManager.broadcastConfig(result.config);
+    return result;
+  }
+
   ipcMain.handle("config:get", () => configStore.get());
 
   ipcMain.handle("config:update", async (_event, patch: DeepPartial<AppConfig>) => {
@@ -51,6 +60,24 @@ function registerIpc(): void {
     windowManager.broadcastConfig(config);
     return config;
   });
+
+  ipcMain.handle("config:profiles", () => configStore.getProfiles());
+
+  ipcMain.handle("config:profile:create", async (_event, name: string) =>
+    applyProfileResult(await configStore.createProfile(name)),
+  );
+
+  ipcMain.handle("config:profile:rename", (_event, id: string, name: string) =>
+    configStore.renameProfile(id, name),
+  );
+
+  ipcMain.handle("config:profile:switch", async (_event, id: string) =>
+    applyProfileResult(await configStore.switchProfile(id)),
+  );
+
+  ipcMain.handle("config:profile:delete", async (_event, id: string) =>
+    applyProfileResult(await configStore.deleteProfile(id)),
+  );
 
   ipcMain.handle("model:testConnection", async () => {
     const config = await configStore.get();

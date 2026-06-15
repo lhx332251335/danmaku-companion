@@ -77,6 +77,24 @@ export interface AppConfig {
   runtime: RuntimeSettings;
 }
 
+export interface ConfigProfileSummary {
+  id: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConfigProfilesSnapshot {
+  activeProfileId: string;
+  profiles: ConfigProfileSummary[];
+}
+
+export interface ConfigProfileResult {
+  config: AppConfig;
+  profiles: ConfigProfilesSnapshot;
+}
+
 export interface RuntimeStatus {
   state: RuntimeState;
   cycles: number;
@@ -197,6 +215,11 @@ export type DeepPartial<T> = T extends readonly unknown[]
 export interface DanmakuBridge {
   getConfig(): Promise<AppConfig>;
   updateConfig(config: DeepPartial<AppConfig>): Promise<AppConfig>;
+  getConfigProfiles(): Promise<ConfigProfilesSnapshot>;
+  createConfigProfile(name: string): Promise<ConfigProfileResult>;
+  renameConfigProfile(id: string, name: string): Promise<ConfigProfilesSnapshot>;
+  switchConfigProfile(id: string): Promise<ConfigProfileResult>;
+  deleteConfigProfile(id: string): Promise<ConfigProfileResult>;
   testModelConnection(): Promise<ConnectionTestResult>;
   listModels(): Promise<ModelListResult>;
   getGenerationLogs(): Promise<GenerationLogEntry[]>;

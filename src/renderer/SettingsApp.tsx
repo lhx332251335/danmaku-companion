@@ -1,13 +1,16 @@
 import {
   Activity,
   Cable,
+  CopyPlus,
   Cpu,
   Eye,
   EyeOff,
   History as HistoryIcon,
+  Layers,
   LoaderCircle,
   MessageSquareText,
   Pause,
+  Pencil,
   Play,
   RefreshCw,
   Save,
@@ -19,6 +22,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import type {
   AppConfig,
+  ConfigProfileResult,
+  ConfigProfilesSnapshot,
   ConnectionTestResult,
   GenerationLogEntry,
   ModelListResult,
@@ -89,13 +94,23 @@ function screenLabel(log: GenerationLogEntry): string {
   return `${log.screen.width ?? "-"}x${log.screen.height ?? "-"}`;
 }
 
+function activeProfileName(profiles: ConfigProfilesSnapshot | null): string {
+  return profiles?.profiles.find((profile) => profile.active)?.name ?? "";
+}
+
 export function SettingsApp() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [draft, setDraft] = useState<AppConfig | null>(null);
+  const [profiles, setProfiles] = useState<ConfigProfilesSnapshot | null>(null);
+  const [profileName, setProfileName] = useState("");
+  const [newProfileName, setNewProfileName] = useState("");
   const [status, setStatus] = useState<RuntimeStatus>({ state: "idle", cycles: 0 });
   const [saving, setSaving] = useState(false);
   const [workingAction, setWorkingAction] = useState<
     "generate" | "start" | "test" | null
+  >(null);
+  const [profileWorking, setProfileWorking] = useState<
+    "create" | "rename" | "switch" | "delete" | null
   >(null);
   const [connection, setConnection] = useState<ConnectionTestResult | null>(null);
   const [modelList, setModelList] = useState<ModelListResult | null>(null);
@@ -105,10 +120,16 @@ export function SettingsApp() {
   const [overlayVisible, setOverlayVisible] = useState(true);
 
   useEffect(() => {
-    void Promise.all([api().getConfig(), api().getRuntimeStatus()]).then(
-      ([loadedConfig, loadedStatus]) => {
+    void Promise.all([
+      api().getConfig(),
+      api().getRuntimeStatus(),
+      api().getConfigProfiles(),
+    ]).then(
+      ([loadedConfig, loadedStatus, loadedProfiles]) => {
         setConfig(loadedConfig);
         setDraft(loadedConfig);
+        setProfiles(loadedProfiles);
+        setProfileName(activeProfileName(loadedProfiles));
         setStatus(loadedStatus);
         void loadModelList(false);
         void loadGenerationLogs(false);
@@ -135,11 +156,79 @@ export function SettingsApp() {
     setSaving(true);
     try {
       const updated = await api().updateConfig(nextDraft);
+      const nextProfiles = await api().getConfigProfiles();
       setConfig(updated);
       setDraft(updated);
+      setProfiles(nextProfiles);
+      setProfileName(activeProfileName(nextProfiles));
       return updated;
     } finally {
       setSaving(false);
+    }
+  }
+
+  function applyProfileResult(result: ConfigProfileResult) {
+    setConfig(result.config);
+    setDraft(result.config);
+    setProfiles(result.profiles);
+    setProfileName(activeProfileName(result.profiles));
+    setConnection(null);
+    setModelList(null);
+    void loadModelList(false);
+    void loadGenerationLogs(false);
+  }
+
+  async function createProfile() {
+    setProfileWorking("create");
+    try {
+      await saveDraft();
+      const result = await api().createConfigProfile(newProfileName);
+      applyProfileResult(result);
+      setNewProfileName("");
+    } finally {
+      setProfileWorking(null);
+    }
+  }
+
+  async function renameProfile() {
+    const activeProfile = profiles?.profiles.find((profile) => profile.active);
+    if (!activeProfile || !profileName.trim()) return;
+
+    setProfileWorking("rename");
+    try {
+      const nextProfiles = await api().renameConfigProfile(
+        activeProfile.id,
+        profileName,
+      );
+      setProfiles(nextProfiles);
+      setProfileName(activeProfileName(nextProfiles));
+    } finally {
+      setProfileWorking(null);
+    }
+  }
+
+  async function switchProfile(id: string) {
+    if (!profiles || id === profiles.activeProfileId) return;
+
+    setProfileWorking("switch");
+    try {
+      await saveDraft();
+      applyProfileResult(await api().switchConfigProfile(id));
+    } finally {
+      setProfileWorking(null);
+    }
+  }
+
+  async function deleteProfile() {
+    const activeProfile = profiles?.profiles.find((profile) => profile.active);
+    if (!activeProfile || (profiles?.profiles.length ?? 0) <= 1) return;
+    if (!window.confirm(`删除配置“${activeProfile.name}”？`)) return;
+
+    setProfileWorking("delete");
+    try {
+      applyProfileResult(await api().deleteConfigProfile(activeProfile.id));
+    } finally {
+      setProfileWorking(null);
     }
   }
 
@@ -243,6 +332,8 @@ export function SettingsApp() {
             selectedModelStatus || undefined,
           ].filter(Boolean).join(" · ")
         : "-";
+  const activeProfile = profiles?.profiles.find((profile) => profile.active);
+  const profileBusy = saving || profileWorking !== null;
 
   return (
     <main className="app-shell">
@@ -299,6 +390,79 @@ export function SettingsApp() {
           {connection.message} Endpoint: {connection.endpoint}
         </div>
       ) : null}
+
+      <section className="profile-panel">
+        <div className="panel-heading profile-heading">
+          <div className="heading-title">
+            <Layers size={18} />
+            <h2>配置</h2>
+          </div>
+          <span>{profiles?.profiles.length ?? 0} 套</span>
+        </div>
+        <div className="profile-grid">
+          <label className="compact-field">
+            当前配置
+            <select
+              value={profiles?.activeProfileId ?? ""}
+              disabled={!profiles || profileBusy}
+              onChange={(event) => void switchProfile(event.target.value)}
+            >
+              {(profiles?.profiles ?? []).map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="compact-field">
+            配置名称
+            <input
+              value={profileName}
+              disabled={!activeProfile || profileBusy}
+              onChange={(event) => setProfileName(event.target.value)}
+            />
+          </label>
+          <button
+            className="secondary-button"
+            disabled={
+              !activeProfile ||
+              profileBusy ||
+              !profileName.trim() ||
+              profileName.trim() === activeProfile.name
+            }
+            onClick={() => void renameProfile()}
+          >
+            <Pencil size={17} />
+            重命名
+          </button>
+          <label className="compact-field">
+            新配置
+            <input
+              value={newProfileName}
+              disabled={profileBusy}
+              placeholder="基于当前配置"
+              onChange={(event) => setNewProfileName(event.target.value)}
+            />
+          </label>
+          <button
+            className="secondary-button"
+            disabled={profileBusy}
+            onClick={() => void createProfile()}
+          >
+            <CopyPlus size={17} />
+            复制新建
+          </button>
+          <button
+            className="secondary-button danger-button"
+            disabled={profileBusy || (profiles?.profiles.length ?? 0) <= 1}
+            onClick={() => void deleteProfile()}
+          >
+            <Trash2 size={17} />
+            删除
+          </button>
+        </div>
+      </section>
+
       <section className="workspace-grid">
         <form className="panel" onSubmit={(event) => event.preventDefault()}>
           <div className="panel-heading">

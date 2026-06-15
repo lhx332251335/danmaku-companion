@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   AppConfig,
+  ConfigProfileResult,
+  ConfigProfilesSnapshot,
   DanmakuBridge,
   GenerationLogEntry,
   DanmakuItem,
@@ -14,6 +16,16 @@ const bridge: DanmakuBridge = {
   getConfig: () => ipcRenderer.invoke("config:get") as Promise<AppConfig>,
   updateConfig: (config: DeepPartial<AppConfig>) =>
     ipcRenderer.invoke("config:update", config) as Promise<AppConfig>,
+  getConfigProfiles: () =>
+    ipcRenderer.invoke("config:profiles") as Promise<ConfigProfilesSnapshot>,
+  createConfigProfile: (name: string) =>
+    ipcRenderer.invoke("config:profile:create", name) as Promise<ConfigProfileResult>,
+  renameConfigProfile: (id: string, name: string) =>
+    ipcRenderer.invoke("config:profile:rename", id, name) as Promise<ConfigProfilesSnapshot>,
+  switchConfigProfile: (id: string) =>
+    ipcRenderer.invoke("config:profile:switch", id) as Promise<ConfigProfileResult>,
+  deleteConfigProfile: (id: string) =>
+    ipcRenderer.invoke("config:profile:delete", id) as Promise<ConfigProfileResult>,
   testModelConnection: () =>
     ipcRenderer.invoke("model:testConnection") as Promise<
       import("../../shared/types").ConnectionTestResult
