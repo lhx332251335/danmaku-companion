@@ -82,6 +82,18 @@ function formatDuration(ms: number): string {
   return `${ms}ms`;
 }
 
+function formatBytes(bytes: number | undefined): string {
+  if (!bytes || bytes <= 0) {
+    return "-";
+  }
+
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  return `${Math.round(bytes / 1024)} KB`;
+}
+
 function screenLabel(log: GenerationLogEntry): string {
   if (!log.screen.enabled) {
     return "无截图";
@@ -996,6 +1008,43 @@ export function SettingsApp() {
               />
             </label>
             <label>
+              Screenshot format
+              <select
+                value={draft.runtime.captureImageFormat}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    runtime: {
+                      ...draft.runtime,
+                      captureImageFormat: event.target.value as AppConfig["runtime"]["captureImageFormat"],
+                    },
+                  })
+                }
+              >
+                <option value="jpeg">JPEG</option>
+                <option value="png">PNG</option>
+              </select>
+            </label>
+            <label>
+              JPEG quality
+              <input
+                type="number"
+                min="0.5"
+                max="0.95"
+                step="0.01"
+                value={draft.runtime.captureJpegQuality}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    runtime: {
+                      ...draft.runtime,
+                      captureJpegQuality: Number(event.target.value),
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
               History rounds
               <input
                 type="number"
@@ -1208,6 +1257,25 @@ export function SettingsApp() {
                       <div>
                         <b>截图来源</b>
                         <span>{log.screen.sourceName ?? "-"}</span>
+                      </div>
+                      <div>
+                        <b>截图格式</b>
+                        <span>
+                          {[
+                            log.screen.format?.toUpperCase(),
+                            log.screen.jpegQuality !== undefined
+                              ? `q${Math.round(log.screen.jpegQuality * 100)}`
+                              : undefined,
+                          ].filter(Boolean).join(" · ") || "-"}
+                        </span>
+                      </div>
+                      <div>
+                        <b>图片大小</b>
+                        <span>{formatBytes(log.screen.imageBytes)}</span>
+                      </div>
+                      <div>
+                        <b>传输大小</b>
+                        <span>{formatBytes(log.screen.dataUrlBytes)}</span>
                       </div>
                       <div>
                         <b>开始时间</b>

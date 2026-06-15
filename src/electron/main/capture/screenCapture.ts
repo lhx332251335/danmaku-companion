@@ -6,11 +6,19 @@ import path from "node:path";
 import { promisify } from "node:util";
 import type {
   ScreenCaptureProbeResult,
+  ScreenImageFormat,
   ScreenSnapshot,
 } from "../../../shared/types";
 
 const DEFAULT_CAPTURE_MAX_EDGE_PIXELS = 960;
+const DEFAULT_CAPTURE_IMAGE_FORMAT: ScreenImageFormat = "jpeg";
+const DEFAULT_CAPTURE_JPEG_QUALITY = 0.82;
 const execFileAsync = promisify(execFile);
+
+interface CaptureEncodingOptions {
+  format?: ScreenImageFormat;
+  jpegQuality?: number;
+}
 
 function getThumbnailSize(
   displaySize: Electron.Size,
@@ -43,8 +51,43 @@ function messageFromError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function normalizeJpegQuality(value: number | undefined): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_CAPTURE_JPEG_QUALITY;
+  }
+
+  return Math.min(0.95, Math.max(0.5, value ?? DEFAULT_CAPTURE_JPEG_QUALITY));
+}
+
+function encodeImage(
+  image: Electron.NativeImage,
+  options: CaptureEncodingOptions,
+): Pick<
+  ScreenSnapshot,
+  "dataUrl" | "format" | "mediaType" | "imageBytes" | "dataUrlBytes" | "jpegQuality"
+> {
+  const format = options.format ?? DEFAULT_CAPTURE_IMAGE_FORMAT;
+  const jpegQuality = normalizeJpegQuality(options.jpegQuality);
+  const mediaType = format === "png" ? "image/png" : "image/jpeg";
+  const buffer =
+    format === "png"
+      ? image.toPNG()
+      : image.toJPEG(Math.round(jpegQuality * 100));
+  const dataUrl = `data:${mediaType};base64,${buffer.toString("base64")}`;
+
+  return {
+    dataUrl,
+    format,
+    mediaType,
+    imageBytes: buffer.byteLength,
+    dataUrlBytes: Buffer.byteLength(dataUrl, "utf8"),
+    jpegQuality: format === "jpeg" ? jpegQuality : undefined,
+  };
+}
+
 async function captureWithMacScreencapture(
   maxEdgePixels: number,
+  options: CaptureEncodingOptions,
 ): Promise<ScreenSnapshot> {
   const filePath = path.join(
     os.tmpdir(),
@@ -71,7 +114,7 @@ async function captureWithMacScreencapture(
         : image.resize(thumbnailSize);
 
     return {
-      dataUrl: thumbnail.toDataURL(),
+      ...encodeImage(thumbnail, options),
       width: thumbnailSize.width,
       height: thumbnailSize.height,
       capturedAt: new Date().toISOString(),
@@ -88,6 +131,7 @@ async function captureWithMacScreencapture(
 
 async function captureWithDesktopCapturer(
   maxEdgePixels: number,
+  options: CaptureEncodingOptions,
 ): Promise<ScreenSnapshot> {
   const primary = screen.getPrimaryDisplay();
   const { width, height } = getThumbnailSize(primary.size, maxEdgePixels);
@@ -104,7 +148,7 @@ async function captureWithDesktopCapturer(
   }
 
   return {
-    dataUrl: source.thumbnail.toDataURL(),
+    ...encodeImage(source.thumbnail, options),
     width,
     height,
     capturedAt: new Date().toISOString(),
@@ -134,11 +178,12 @@ export async function probeScreenCapturePermission(): Promise<ScreenCaptureProbe
 
 export async function capturePrimaryScreen(
   maxEdgePixels = DEFAULT_CAPTURE_MAX_EDGE_PIXELS,
+  options: CaptureEncodingOptions = {},
 ): Promise<ScreenSnapshot> {
   let macScreencaptureError: unknown;
   if (process.platform === "darwin") {
     try {
-      return await captureWithMacScreencapture(maxEdgePixels);
+      return await captureWithMacScreencapture(maxEdgePixels, options);
     } catch (error) {
       macScreencaptureError = error;
       console.warn("macOS screencapture failed; trying desktopCapturer.", error);
@@ -146,7 +191,7 @@ export async function capturePrimaryScreen(
   }
 
   try {
-    return await captureWithDesktopCapturer(maxEdgePixels);
+    return await captureWithDesktopCapturer(maxEdgePixels, options);
   } catch (error) {
     if (macScreencaptureError) {
       throw new Error(

@@ -175,6 +175,13 @@ export function api(): DanmakuBridge {
             captured: config.model.visionEnabled,
             width: 960,
             height: 540,
+            format: config.runtime.captureImageFormat,
+            imageBytes: 86000,
+            dataUrlBytes: 115000,
+            jpegQuality:
+              config.runtime.captureImageFormat === "jpeg"
+                ? config.runtime.captureJpegQuality
+                : undefined,
             sourceName: "Preview",
             capturedAt: new Date().toISOString(),
           },

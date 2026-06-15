@@ -7,6 +7,7 @@ import type {
   HistoryMode,
   DanmakuItem,
   RuntimeStatus,
+  ScreenImageFormat,
   ScreenSnapshot,
 } from "../../shared/types";
 import { capturePrimaryScreen } from "./capture/screenCapture";
@@ -28,6 +29,8 @@ const RELEASE_WINDOW_MIN_SECONDS = 0;
 const RELEASE_WINDOW_MAX_SECONDS = 60;
 const CAPTURE_MAX_EDGE_MIN_PIXELS = 480;
 const CAPTURE_MAX_EDGE_MAX_PIXELS = 2160;
+const CAPTURE_JPEG_QUALITY_MIN = 0.5;
+const CAPTURE_JPEG_QUALITY_MAX = 0.95;
 const HISTORY_ROUNDS_MIN = 0;
 const HISTORY_ROUNDS_MAX = 50;
 const GENERATION_LOG_LIMIT_MIN = 10;
@@ -40,6 +43,8 @@ interface NormalizedRuntimeSettings {
   releaseWindowMinSeconds: number;
   releaseWindowMaxSeconds: number;
   captureMaxEdgePixels: number;
+  captureImageFormat: ScreenImageFormat;
+  captureJpegQuality: number;
   historyRounds: number;
   historyMode: HistoryMode;
   historyIncludeImages: boolean;
@@ -106,6 +111,13 @@ function normalizeRuntimeSettings(config: AppConfig): NormalizedRuntimeSettings 
         CAPTURE_MAX_EDGE_MAX_PIXELS,
       ),
     ),
+    captureImageFormat:
+      runtime.captureImageFormat === "png" ? "png" : "jpeg",
+    captureJpegQuality: clamp(
+      runtime.captureJpegQuality,
+      CAPTURE_JPEG_QUALITY_MIN,
+      CAPTURE_JPEG_QUALITY_MAX,
+    ),
     historyRounds: Math.round(
       clamp(runtime.historyRounds, HISTORY_ROUNDS_MIN, HISTORY_ROUNDS_MAX),
     ),
@@ -164,6 +176,10 @@ function screenLogInfo(
     captured: Boolean(snapshot),
     width: snapshot?.width,
     height: snapshot?.height,
+    format: snapshot?.format,
+    imageBytes: snapshot?.imageBytes,
+    dataUrlBytes: snapshot?.dataUrlBytes,
+    jpegQuality: snapshot?.jpegQuality,
     sourceName: snapshot?.sourceName,
     capturedAt: snapshot?.capturedAt,
     error: captureError,
@@ -271,7 +287,10 @@ export class DanmakuController {
       requestHistoryLength = requestHistory.length;
       if (config.model.visionEnabled) {
         try {
-          snapshot = await capturePrimaryScreen(runtime.captureMaxEdgePixels);
+          snapshot = await capturePrimaryScreen(runtime.captureMaxEdgePixels, {
+            format: runtime.captureImageFormat,
+            jpegQuality: runtime.captureJpegQuality,
+          });
         } catch (error) {
           captureError = errorMessage(error);
           console.warn(

@@ -155,7 +155,7 @@ function arrayLiteralFromKey(raw: string, key: string): string | undefined {
     }
   }
 
-  return undefined;
+  return raw.slice(start);
 }
 
 function parseQuotedStringArray(raw: string): string[] {

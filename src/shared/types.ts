@@ -6,6 +6,8 @@ export type DanmakuZone = "full" | "top" | "middle" | "bottom";
 
 export type HistoryMode = "reset-on-limit" | "sliding";
 
+export type ScreenImageFormat = "jpeg" | "png";
+
 export interface OpenAICompatibleSettings {
   provider: ProviderKind;
   baseUrl: string;
@@ -59,6 +61,8 @@ export interface RuntimeSettings {
   releaseWindowMaxSeconds: number;
   releaseWindowSeconds: number;
   captureMaxEdgePixels: number;
+  captureImageFormat: ScreenImageFormat;
+  captureJpegQuality: number;
   historyRounds: number;
   historyMode: HistoryMode;
   historyIncludeImages: boolean;
@@ -136,6 +140,11 @@ export interface ScreenSnapshot {
   dataUrl: string;
   width: number;
   height: number;
+  format: ScreenImageFormat;
+  mediaType: string;
+  imageBytes: number;
+  dataUrlBytes: number;
+  jpegQuality?: number;
   capturedAt: string;
   sourceName: string;
 }
@@ -179,6 +188,10 @@ export interface GenerationLogScreenInfo {
   captured: boolean;
   width?: number;
   height?: number;
+  format?: ScreenImageFormat;
+  imageBytes?: number;
+  dataUrlBytes?: number;
+  jpegQuality?: number;
   sourceName?: string;
   capturedAt?: string;
   error?: string;

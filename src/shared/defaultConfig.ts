@@ -61,6 +61,8 @@ export const defaultAppConfig: AppConfig = {
     releaseWindowMaxSeconds: 10,
     releaseWindowSeconds: 8,
     captureMaxEdgePixels: 960,
+    captureImageFormat: "jpeg",
+    captureJpegQuality: 0.82,
     historyRounds: 4,
     historyMode: "reset-on-limit",
     historyIncludeImages: false,
