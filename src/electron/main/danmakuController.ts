@@ -257,6 +257,7 @@ export class DanmakuController {
         cachedInputTokens: result.cachedInputTokens,
         promptTokens: result.promptTokens,
         requestBytes: result.requestBytes,
+        requestLimitBytes: trace.bodyLimitBytes,
         historyImages: trace.historyImagesSent,
       };
     } catch (error) {

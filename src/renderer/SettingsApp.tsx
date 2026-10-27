@@ -420,6 +420,7 @@ export function SettingsApp() {
         <div>Cached: {formatCacheUsage(status.cachedInputTokens, status.promptTokens)}</div>
         <div>
           Request: {formatBytes(status.requestBytes)}
+          {status.requestLimitBytes ? ` / ${formatBytes(status.requestLimitBytes)}` : ""}
           {status.historyImages ? ` · ${status.historyImages} 张历史截图` : ""}
         </div>
         <div>Last: {status.lastGeneratedAt ? new Date(status.lastGeneratedAt).toLocaleTimeString() : "-"}</div>

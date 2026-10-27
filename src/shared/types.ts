@@ -112,6 +112,8 @@ export interface RuntimeStatus {
   cachedInputTokens?: number;
   promptTokens?: number;
   requestBytes?: number;
+  /** Effective body limit: the configured one, or lower when learned from a 413. */
+  requestLimitBytes?: number;
   historyImages?: number;
 }
 
