@@ -62,6 +62,7 @@ describe("parseModelText", () => {
     ["numbers that are comments", "1. 2024年真好\n2. 3D效果\n- -5度", ["2024年真好", "3D效果", "-5度"]],
     ["a preamble line", "好的，我来生成弹幕：\n1. 这画面绝了\n2. 666", ["这画面绝了", "666"]],
     ["bare numbers", "666", ["666"]],
+    ["a long digit run", "6666666666666666666666", ["6666666666666666666666"]],
     ["decimals and parenthesized markers", "1.5倍速看完了\n(2) 好\n[3] 妙", ["1.5倍速看完了", "好", "妙"]],
     ["bracketed emoticons", "[狗头]这也行\n第[3]关好难", ["[狗头]这也行", "第[3]关好难"]],
     ["quoted lines", '"甲",\n「乙」\n“好”和“坏”', ["甲", "乙", "“好”和“坏”"]],
@@ -188,6 +189,7 @@ describe("readCompletion", () => {
     ["empty content", completion(null), /空内容（finish_reason=stop）/],
     ["reasoning only", completion("<think>a</think>", "stop"), /只输出了思考过程/],
     ["no choices", {}, /没有 choices/],
+    ["a null body", null, /没有 choices/],
     ["an error object in a 200 body", { error: { message: "model not loaded", type: "server_error" } }, /模型服务返回了错误：model not loaded/],
     ["a string error", { error: "overloaded", choices: [] }, /overloaded/],
   ])("throws for %s", (_name, response, message) => {

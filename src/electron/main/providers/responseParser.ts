@@ -292,6 +292,11 @@ function commentsFromLines(text: string): string[] {
 
 function commentsFromText(body: string): string[] {
   const parsed = parseJson(body);
+  if (typeof parsed === "number") {
+    // A bare "666…" is a comment; JSON.parse would round a long digit run to "6.6e+21".
+    return commentsFromLines(body);
+  }
+
   const json = parsed !== undefined ? parsed : embeddedJson(body);
   if (json !== undefined) {
     return commentsFromJson(json);
@@ -347,17 +352,19 @@ function emptyCompletionProblem(
 
 /** Reads the answer of a completion, throwing on error bodies and empty or reasoning-only output. */
 export function readCompletion(response: ChatCompletionResponse, maxTokens: number): CompletionOutput {
-  const apiError = errorText(response.error);
+  // The body is whatever JSON the server sent, e.g. `null`.
+  const body: ChatCompletionResponse = isRecord(response) ? response : {};
+  const apiError = errorText(body.error);
   if (apiError) {
     throw new Error(`模型服务返回了错误：${apiError}`);
   }
 
-  const choice = response.choices?.[0];
+  const choice = body.choices?.[0];
   if (!choice) {
     throw new Error("模型响应里没有 choices，无法读取输出。请确认 Base URL 指向 OpenAI 兼容接口。");
   }
 
-  const rawText = textFromContent(response.choices);
+  const rawText = textFromContent(body.choices);
   const text = stripReasoning(rawText);
   const comments = parseModelText(text);
   const finishReason = choice.finish_reason ?? undefined;
