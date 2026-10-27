@@ -14,9 +14,8 @@ import type { ModelProvider } from "./modelProvider";
 import {
   extractUsage,
   historyComments,
-  parseModelText,
+  readCompletion,
   sanitize,
-  textFromContent,
   type ChatCompletionResponse,
 } from "./responseParser";
 
@@ -85,12 +84,14 @@ export class OpenAICompatibleProvider implements ModelProvider {
       }
 
       const data = (await response.json()) as ChatCompletionResponse;
-      const text = textFromContent(data.choices);
+      const completion = readCompletion(data, config.model.maxTokens);
       const usage = extractUsage(data);
       return {
-        items: sanitize(parseModelText(text), config, input.maxItems, historyComments(input.history)),
+        items: sanitize(completion.comments, config, input.maxItems, historyComments(input.history)),
         userText,
-        assistantText: text,
+        assistantText: completion.text,
+        rawOutput: completion.rawText,
+        finishReason: completion.finishReason,
         cachedInputTokens: usage.cachedTokens,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,

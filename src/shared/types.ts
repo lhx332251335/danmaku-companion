@@ -180,7 +180,11 @@ export interface DanmakuInput {
 export interface DanmakuGenerationResult {
   items: DanmakuItem[];
   userText: string;
+  /** The answer without inline reasoning; this is what history keeps. */
   assistantText: string;
+  /** The content exactly as the server returned it (may include inline reasoning). */
+  rawOutput?: string;
+  finishReason?: string;
   cachedInputTokens?: number;
   promptTokens?: number;
   completionTokens?: number;

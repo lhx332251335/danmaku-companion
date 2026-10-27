@@ -52,4 +52,31 @@ describe("OpenAICompatibleProvider", () => {
     expect(result).toMatchObject({ promptTokens: 10, cachedInputTokens: 6, completionTokens: 4, promptMs: 12 });
     expect(result.requestBytes).toBe(Buffer.byteLength(String(fetchMock.mock.calls[0][1].body)));
   });
+
+  it("keeps inline reasoning out of the history text but returns it as raw output", async () => {
+    const content = '<think>look at the screen</think>\n{"comments":["甲","乙"]}';
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ choices: [{ finish_reason: "stop", message: { content } }] })),
+    );
+    const result = await new OpenAICompatibleProvider().generateDanmaku(input, config);
+    expect(result.items.map((item) => item.text)).toEqual(["甲", "乙"]);
+    expect(result.assistantText).toBe('{"comments":["甲","乙"]}');
+    expect(result.rawOutput).toBe(content);
+    expect(result.finishReason).toBe("stop");
+  });
+
+  it("fails with an actionable message when reasoning used up max_tokens", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          choices: [{ finish_reason: "length", message: { content: "", reasoning_content: "We need" } }],
+        }),
+      ),
+    );
+    await expect(new OpenAICompatibleProvider().generateDanmaku(input, config)).rejects.toThrow(
+      /max_tokens（260）/,
+    );
+  });
 });

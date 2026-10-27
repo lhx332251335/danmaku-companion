@@ -24,3 +24,23 @@ export class RequestTooLargeError extends Error {
 export function formatMiB(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
 }
+
+/** The message of an API error value: a string, `{ message }` or `{ error: { message } }`. */
+export function errorText(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    return value.trim() || undefined;
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const nested = errorText(record.message) ?? errorText(record.error) ?? errorText(record.detail);
+  if (nested) {
+    return nested;
+  }
+
+  const code = record.code ?? record.type;
+  return typeof code === "string" && code ? code : undefined;
+}
