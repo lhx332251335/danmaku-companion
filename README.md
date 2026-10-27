@@ -45,7 +45,8 @@ request, so the app keeps history append-only for as long as it can:
   still rejects the size (for example llm_api's `exceeds max_body of
   67108864`), the app learns the limit it reports (or halves the rejected size
   when it does not say), compacts history and retries once. A connection reset
-  while uploading 8 MiB or more is treated the same way. Failures that would
+  while uploading 8 MiB or more is retried once with half the body; that limit
+  is not kept, but the compaction is, so later requests start smaller. Failures that would
   repeat (HTTP 400/413/422, such as a context overflow) shrink history before
   the next cycle; timeouts, 429 and 5xx keep it.
 - **Choosing a format.** PNG screenshots are often 10x the bytes of JPEG for

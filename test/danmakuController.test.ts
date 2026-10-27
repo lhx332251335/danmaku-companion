@@ -2,6 +2,7 @@ import type { BrowserWindow } from "electron";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConfigStore } from "../src/electron/main/configStore";
 import { DanmakuController } from "../src/electron/main/danmakuController";
+import { RequestTooLargeError } from "../src/electron/main/providers/errors";
 import type { GenerationLogStore } from "../src/electron/main/generationLogStore";
 import type {
   AppConfig,
@@ -171,6 +172,8 @@ describe("DanmakuController", () => {
 
   it("clearOverlay() drops pending comments, in-flight comments and history", async () => {
     vi.useFakeTimers();
+    // vi.waitFor advances fake timers while polling; keep release delays well clear of that.
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
     const h = setup({ releaseWindowMinSeconds: 30, releaseWindowMaxSeconds: 30 });
     mocks.generate.mockImplementation(async () => reply("waiting"));
     await h.controller.generateOnce("manual");
@@ -284,6 +287,22 @@ describe("DanmakuController", () => {
     mocks.generate.mockResolvedValueOnce({ ...reply("hi"), rawOutput: '<think>plan</think>{"comments":["hi"]}' });
     await h.controller.generateOnce("manual");
     expect(h.logs[0].rawOutput).toBe('<think>plan</think>{"comments":["hi"]}');
+  });
+
+  it("shows the learned limit and no stale request size after a request rejected for size", async () => {
+    const h = setup();
+    mocks.capture.mockResolvedValue(makeSnapshot(1000));
+    mocks.generate.mockResolvedValueOnce({ ...reply("first"), requestBytes: 5000 });
+    await h.controller.generateOnce("manual");
+    expect(h.controller.getStatus().requestBytes).toBe(5000);
+
+    const tooLarge = () =>
+      new RequestTooLargeError({ message: "413", requestBytes: 3_000_000, serverBody: "exceeds max_body of 2000000", fromServer: true });
+    mocks.generate.mockRejectedValueOnce(tooLarge()).mockRejectedValueOnce(tooLarge());
+    await h.controller.generateOnce("manual");
+
+    expect(h.controller.getStatus()).toMatchObject({ requestBytes: undefined, requestLimitBytes: 1_900_000 });
+    expect(h.logs.at(-1)).toMatchObject({ status: "error", requestBytes: 3_000_000 });
   });
 
   it("switches state even when saving the running flag fails", async () => {

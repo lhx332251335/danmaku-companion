@@ -94,7 +94,7 @@ describe("runBudgetedRequest", () => {
     expect(generate).toHaveBeenCalledTimes(2);
   });
 
-  it("treats a connection reset during a large upload as a size rejection", async () => {
+  it("retries once with half the body after a connection reset on a large upload, without keeping a limit", async () => {
     const history = filledHistory(4, 3 * MIB);
     const reset = Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } });
     const generate = vi
@@ -106,8 +106,57 @@ describe("runBudgetedRequest", () => {
       { generate },
     );
     expect(generate).toHaveBeenCalledTimes(2);
-    expect(trace.learnedLimitBytes).toBeLessThan(8 * MIB);
-    expect(trace.compaction[0]).toMatchObject({ trigger: "413", reason: "bytes" });
+    expect(generate.mock.calls[1][0].maxBodyBytes).toBeLessThan(8 * MIB);
+    // A reset may be a network blip, so no limit is kept for later requests...
+    expect(trace.learnedLimitBytes).toBeUndefined();
+    // ...but the compaction stays in history, so the next request starts smaller anyway.
+    expect(trace.compaction[0]).toMatchObject({ trigger: "reset", reason: "bytes" });
+    expect(history.imageCount).toBeLessThan(4);
+  });
+
+  it("recognizes ECONNABORTED, which Windows reports when the server aborts an upload", async () => {
+    const aborted = Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNABORTED" } });
+    const generate = vi
+      .fn(async (_input: DanmakuInput) => okResult())
+      .mockRejectedValueOnce(aborted);
+    await runBudgetedRequest(
+      { config, history: filledHistory(4, 3 * MIB), input, snapshot: makeSnapshot(3 * MIB), trace: createBudgetTrace(), settings: { historyRounds: 50, historyMaxImages: 50, requestBodyLimitBytes: 48 * MIB } },
+      { generate },
+    );
+    expect(generate).toHaveBeenCalledTimes(2);
+  });
+
+  it("learns a 413 on the retry too, but still retries only once", async () => {
+    const rejected = (requestBytes: number) =>
+      new RequestTooLargeError({ message: "413", requestBytes, serverBody: "<html>413</html>", fromServer: true });
+    const generate = vi
+      .fn(async (_input: DanmakuInput) => okResult())
+      .mockRejectedValueOnce(rejected(60 * MIB))
+      .mockRejectedValueOnce(rejected(20 * MIB));
+    const trace = createBudgetTrace();
+    await expect(
+      runBudgetedRequest(
+        { config, history: filledHistory(6, 5 * MIB), input, snapshot: makeSnapshot(5 * MIB), trace, settings: { historyRounds: 50, historyMaxImages: 50, requestBodyLimitBytes: 48 * MIB } },
+        { generate },
+      ),
+    ).rejects.toBeInstanceOf(RequestTooLargeError);
+    expect(generate).toHaveBeenCalledTimes(2);
+    // The second 413 lowered the learned limit below what the retry was allowed to send.
+    expect(trace.learnedLimitBytes).toBeLessThan(generate.mock.calls[1][0].maxBodyBytes ?? 0);
+  });
+
+  it("judges a reset by the size actually sent after shrinking the screenshot", async () => {
+    const reset = Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } });
+    const generate = vi.fn(async (_input: DanmakuInput): Promise<DanmakuGenerationResult> => {
+      throw reset;
+    });
+    await expect(
+      runBudgetedRequest(
+        { config, history: new HistoryWindow(), input, snapshot: makeSnapshot(12 * MIB), trace: createBudgetTrace(), settings: { historyRounds: 4, historyMaxImages: 12, requestBodyLimitBytes: 10 * MIB } },
+        { generate, shrinkSnapshot: () => makeSnapshot(MIB) },
+      ),
+    ).rejects.toBe(reset);
+    expect(generate).toHaveBeenCalledTimes(1);
   });
 
   it("does not treat a reset on a small request as a size problem", async () => {

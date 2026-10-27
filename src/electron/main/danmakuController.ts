@@ -12,6 +12,7 @@ import { capturePrimaryScreen, shrinkSnapshotToFit } from "./capture/screenCaptu
 import { ConfigStore } from "./configStore";
 import { GenerationLogStore } from "./generationLogStore";
 import { endpoint } from "./providers/endpoints";
+import { RequestTooLargeError } from "./providers/errors";
 import { OpenAICompatibleProvider } from "./providers/openAiCompatibleProvider";
 import { createBudgetTrace, runBudgetedRequest, type BudgetTrace } from "./runtime/budgetedRequest";
 import { isRepeatingRequestError } from "./runtime/failurePolicy";
@@ -281,6 +282,7 @@ export class DanmakuController {
         ),
         comments: result.items.map((item) => item.text),
         rawOutput: result.rawOutput ?? result.assistantText,
+        finishReason: result.finishReason,
       };
       this.status = {
         state: this.restingState(),
@@ -324,6 +326,7 @@ export class DanmakuController {
           budgetTrace?.resizedToFit,
         ),
         comments: [],
+        requestBytes: error instanceof RequestTooLargeError ? error.requestBytes : undefined,
         error: aborted ? undefined : errorMessage(error),
       };
       if (aborted) {
@@ -331,16 +334,14 @@ export class DanmakuController {
           ...this.status,
           state: this.restingState(),
           lastError: undefined,
-          cachedInputTokens: undefined,
-          promptTokens: undefined,
+          ...this.clearedRequestStats(budgetTrace),
         };
       } else {
         this.status = {
           ...this.status,
           state: this.running ? "running" : "error",
           lastError: errorMessage(error),
-          cachedInputTokens: undefined,
-          promptTokens: undefined,
+          ...this.clearedRequestStats(budgetTrace),
         };
       }
     } finally {
@@ -373,7 +374,12 @@ export class DanmakuController {
   clearHistory(): void {
     this.historyEpoch += 1;
     this.history.reset();
-    this.status = { ...this.status, cachedInputTokens: undefined, promptTokens: undefined };
+    this.status = {
+      ...this.status,
+      cachedInputTokens: undefined,
+      promptTokens: undefined,
+      historyImages: undefined,
+    };
     this.broadcastStatus(this.status);
   }
 
@@ -394,6 +400,20 @@ export class DanmakuController {
         source: "system",
       },
     ]);
+  }
+
+  /** Status fields of a request that did not complete: no usage, and the limit now in effect. */
+  private clearedRequestStats(trace: BudgetTrace | undefined): Partial<RuntimeStatus> {
+    return {
+      cachedInputTokens: undefined,
+      promptTokens: undefined,
+      requestBytes: undefined,
+      historyImages: undefined,
+      requestLimitBytes:
+        trace?.bodyLimitBytes !== undefined
+          ? Math.min(trace.bodyLimitBytes, trace.learnedLimitBytes ?? Infinity)
+          : this.status.requestLimitBytes,
+    };
   }
 
   private restingState(): RuntimeState {

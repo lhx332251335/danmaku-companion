@@ -221,7 +221,7 @@ export function learnedBodyLimit(rejectedBytes: number, serverBody: string): num
   return Math.floor(rejectedBytes * LOW_WATER_RATIO);
 }
 
-const UPLOAD_RESET_CODES = new Set(["ECONNRESET", "EPIPE", "UND_ERR_SOCKET"]);
+const UPLOAD_RESET_CODES = new Set(["ECONNRESET", "ECONNABORTED", "EPIPE", "UND_ERR_SOCKET"]);
 
 /** Bodies at least this large are assumed rejected for size when the upload is cut off. */
 export const UPLOAD_RESET_MIN_BYTES = 8 * 1024 * 1024;

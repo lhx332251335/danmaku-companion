@@ -28,7 +28,9 @@ import type {
   ConfigProfilesSnapshot,
   ConnectionTestResult,
   DanmakuBridge,
+  GenerationLogCompaction,
   GenerationLogEntry,
+  HistoryRecovery,
   ModelListResult,
   RuntimeStatus,
 } from "../shared/types";
@@ -139,17 +141,28 @@ function formatCacheUsage(cached: number | undefined, prompt: number | undefined
   return `${cached} / ${prompt} (${Math.round((cached / prompt) * 100)}%)`;
 }
 
+const compactionTriggerLabels: Record<GenerationLogCompaction["trigger"], string> = {
+  budget: "",
+  "413": "413 后",
+  reset: "连接被重置后",
+};
+
+const historyRecoveryLabels: Record<HistoryRecovery, string> = {
+  images: "失败后丢弃全部历史截图",
+  reset: "失败后清空历史",
+};
+
 function compactionLabel(log: GenerationLogEntry): string {
-  if (!log.compaction?.length) {
-    return "-";
+  const parts = (log.compaction ?? []).map((entry) => {
+    const trigger =
+      compactionTriggerLabels[entry.trigger] || (entry.reason === "bytes" ? "超出大小" : "超出张数");
+    return `${trigger}丢弃 ${entry.droppedImages} 张`;
+  });
+  if (log.historyRecovery) {
+    parts.push(historyRecoveryLabels[log.historyRecovery]);
   }
 
-  return log.compaction
-    .map((entry) => {
-      const trigger = entry.trigger === "413" ? "413 后" : entry.reason === "bytes" ? "超出大小" : "超出张数";
-      return `${trigger}丢弃 ${entry.droppedImages} 张`;
-    })
-    .join("；");
+  return parts.length > 0 ? parts.join("；") : "-";
 }
 
 function screenLabel(log: GenerationLogEntry): string {
@@ -317,7 +330,10 @@ function GenerationLogDetail({ log }: { log: GenerationLogEntry }) {
         </div>
         <div>
           <b>输出 tokens</b>
-          <span>{log.completionTokens ?? "-"}</span>
+          <span>
+            {log.completionTokens ?? "-"}
+            {log.finishReason === "length" ? "（达到最大输出被截断，可调大最大输出）" : ""}
+          </span>
         </div>
         <div>
           <b>预填充耗时</b>

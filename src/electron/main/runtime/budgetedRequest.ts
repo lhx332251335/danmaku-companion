@@ -74,9 +74,16 @@ export async function runBudgetedRequest(
   const visionEnabled = config.model.visionEnabled;
   const prompts = renderPrompts(input, config);
   let snapshot = visionEnabled ? options.snapshot : undefined;
+  let retryCause: GenerationLogCompaction["trigger"] | undefined;
+  // A limit for the retry only; unlike a learned limit it is not kept for later requests.
+  let retryLimitBytes = Infinity;
 
   for (let attempt = 0; ; attempt += 1) {
-    const limit = Math.min(settings.requestBodyLimitBytes, trace.learnedLimitBytes ?? Infinity);
+    const limit = Math.min(
+      settings.requestBodyLimitBytes,
+      trace.learnedLimitBytes ?? Infinity,
+      retryLimitBytes,
+    );
     trace.bodyLimitBytes = limit;
 
     let requestHistory = history.forRequest(settings.historyRounds);
@@ -97,18 +104,20 @@ export async function runBudgetedRequest(
         plan.dropImageIndexes.map((index) => requestHistory[index]),
       );
       trace.compaction.push({
-        trigger: attempt > 0 ? "413" : "budget",
+        trigger: retryCause ?? "budget",
         reason: plan.reason,
         droppedImages,
       });
       requestHistory = history.forRequest(settings.historyRounds);
     }
 
+    let sentBytesEstimate = plan.estimatedBodyBytes;
     if (plan.overBudget && snapshot && deps.shrinkSnapshot) {
       const otherBytes = plan.estimatedBodyBytes - snapshot.dataUrl.length;
       const shrunk = limit > otherBytes ? deps.shrinkSnapshot(snapshot, limit - otherBytes) : undefined;
       if (shrunk) {
         snapshot = shrunk;
+        sentBytesEstimate = otherBytes + shrunk.dataUrl.length;
         trace.resizedToFit = true;
       }
     }
@@ -127,32 +136,37 @@ export async function runBudgetedRequest(
         maxBodyBytes: limit,
       });
     } catch (error) {
-      if (attempt > 0 || input.abortSignal?.aborted) {
+      if (input.abortSignal?.aborted) {
         throw error;
       }
 
-      if (!(error instanceof RequestTooLargeError)) {
-        if (!isConnectionReset(error) || plan.estimatedBodyBytes < UPLOAD_RESET_MIN_BYTES) {
-          throw error;
-        }
-        trace.learnedLimitBytes = Math.min(
-          trace.learnedLimitBytes ?? Infinity,
-          Math.floor(plan.estimatedBodyBytes * LOW_WATER_RATIO),
-        );
-        continue;
-      }
-
-      if (error.fromServer) {
+      const serverRejectedSize = error instanceof RequestTooLargeError && error.fromServer;
+      if (serverRejectedSize) {
+        // Learn from every 413, including one on the retry, so later requests start below it.
         trace.learnedLimitBytes = Math.min(
           trace.learnedLimitBytes ?? Infinity,
           learnedBodyLimit(error.requestBytes, error.serverBody ?? ""),
         );
-      } else {
+      }
+      if (attempt > 0) {
+        throw error;
+      }
+
+      if (serverRejectedSize) {
+        retryCause = "413";
+      } else if (error instanceof RequestTooLargeError) {
         // The estimate undercounted; fall back to sending no history screenshots at all.
         const droppedImages = history.dropAllImages();
         if (droppedImages > 0) {
           trace.compaction.push({ trigger: "budget", reason: "bytes", droppedImages });
         }
+      } else if (isConnectionReset(error) && sentBytesEstimate >= UPLOAD_RESET_MIN_BYTES) {
+        // A server that drops oversized uploads, or just a network blip: retry once with half the
+        // body, but keep no limit. The compaction stays in history, so later requests start smaller.
+        retryLimitBytes = Math.floor(sentBytesEstimate * LOW_WATER_RATIO);
+        retryCause = "reset";
+      } else {
+        throw error;
       }
     }
   }

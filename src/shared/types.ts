@@ -230,8 +230,11 @@ export interface GenerationLogScreenInfo {
 }
 
 export interface GenerationLogCompaction {
-  /** "budget": a configured limit was exceeded; "413": the server rejected the request size. */
-  trigger: "budget" | "413";
+  /**
+   * "budget": a configured limit was exceeded; "413": the server rejected the request size;
+   * "reset": the connection was reset while a large request was uploading.
+   */
+  trigger: "budget" | "413" | "reset";
   reason: "images" | "bytes";
   droppedImages: number;
 }
@@ -255,6 +258,8 @@ export interface GenerationLogEntry {
   promptTokens?: number;
   completionTokens?: number;
   promptMs?: number;
+  /** "length" when the reply hit max_tokens and was cut off. */
+  finishReason?: string;
   requestBytes?: number;
   bodyLimitBytes?: number;
   historyImagesSent?: number;
