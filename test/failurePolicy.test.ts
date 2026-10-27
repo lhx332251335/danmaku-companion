@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { RequestTooLargeError } from "../src/electron/main/providers/errors";
+import { OpenAICompatibleProvider } from "../src/electron/main/providers/openAiCompatibleProvider";
 import { httpStatusOf, isRepeatingRequestError } from "../src/electron/main/runtime/failurePolicy";
+import { makeConfig } from "./helpers";
 
 function providerError(status: number, body = ""): Error {
   return new Error(`Model request failed at http://llm.test/v1/chat/completions (${status}): ${body}`);
@@ -26,5 +28,26 @@ describe("failure policy", () => {
     expect(isRepeatingRequestError(providerError(401))).toBe(false);
     expect(isRepeatingRequestError(new Error("fetch failed"))).toBe(false);
     expect(isRepeatingRequestError("timeout")).toBe(false);
+  });
+});
+
+describe("provider errors", () => {
+  it("classifies the provider's HTTP failures by status, not by message text", async () => {
+    const config = makeConfig({ model: { baseUrl: "http://llm.test/v1" } });
+    const failWith = async (status: number, body: string) => {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { status })));
+      try {
+        return await new OpenAICompatibleProvider()
+          .generateDanmaku({ character: config.character, maxItems: 3 }, config)
+          .catch((error: unknown) => error);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    };
+    const contextOverflow = await failWith(400, '{"error":{"type":"exceed_context_size_error","n_prompt_tokens":300000,"n_ctx":262144}}');
+    expect((contextOverflow as { status?: number }).status).toBe(400);
+    expect(isRepeatingRequestError(contextOverflow)).toBe(true);
+    expect(isRepeatingRequestError(await failWith(502, "upstream request failed"))).toBe(false);
+    expect(isRepeatingRequestError(await failWith(429, "slow down"))).toBe(false);
   });
 });

@@ -1,3 +1,14 @@
+/** A model request answered with a non-2xx status. */
+export class ModelHttpError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ModelHttpError";
+    this.status = status;
+  }
+}
+
 /** The request body is too large: either our own pre-send check or an HTTP 413 from the server. */
 export class RequestTooLargeError extends Error {
   readonly requestBytes: number;

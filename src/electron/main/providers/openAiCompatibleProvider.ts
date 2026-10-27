@@ -7,7 +7,7 @@ import type {
   ModelOption,
 } from "../../../shared/types";
 import { buildHeaders, endpoint, lmStudioModelEndpoints } from "./endpoints";
-import { RequestTooLargeError, formatMiB, httpErrorMessage } from "./errors";
+import { ModelHttpError, RequestTooLargeError, formatMiB, httpErrorMessage } from "./errors";
 import { fetchJson, fetchText, parseJsonBody } from "./http";
 import { buildRequestBody } from "./messageBuilder";
 import { legacyModelOptions, mergeModelOptions, nativeModelOptions } from "./modelList";
@@ -77,7 +77,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
           fromServer: true,
         });
       }
-      throw new Error(message);
+      throw new ModelHttpError(message, response.status);
     }
 
     const data = parseJsonBody<ChatCompletionResponse>(response, requestEndpoint);
