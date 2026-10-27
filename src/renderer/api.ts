@@ -5,9 +5,21 @@ function cloneConfig(config: AppConfig): AppConfig {
   return JSON.parse(JSON.stringify(config)) as AppConfig;
 }
 
+export const BRIDGE_MISSING_MESSAGE =
+  "无法连接到主进程（预加载脚本没有加载），设置不会被保存，也无法启动生成。请重启应用；如果问题依旧，请重新安装。";
+
+/** The preview mock is for opening the renderer in a normal browser, never inside Electron. */
+export function isElectronUserAgent(userAgent: string): boolean {
+  return /\bElectron\//.test(userAgent);
+}
+
 export function api(): DanmakuBridge {
   if (window.danmaku) {
     return window.danmaku;
+  }
+
+  if (isElectronUserAgent(navigator.userAgent)) {
+    throw new Error(BRIDGE_MISSING_MESSAGE);
   }
 
   let config = defaultAppConfig;
@@ -24,6 +36,7 @@ export function api(): DanmakuBridge {
     },
   ];
   let running = false;
+  let cycles = 0;
   let generationLogs: Awaited<ReturnType<DanmakuBridge["getGenerationLogs"]>> = [];
   const statusListeners = new Set<Parameters<DanmakuBridge["onRuntimeStatus"]>[0]>();
   const itemListeners = new Set<Parameters<DanmakuBridge["onDanmakuItems"]>[0]>();
@@ -140,24 +153,25 @@ export function api(): DanmakuBridge {
       message: "Preview screen recording is available.",
     }),
     openScreenRecordingSettings: async () => undefined,
-    getRuntimeStatus: async () => ({ state: running ? "running" : "idle", cycles: 0 }),
+    getRuntimeStatus: async () => ({ state: running ? "running" : "idle", cycles }),
     start: async () => {
       running = true;
-      const status = { state: "running" as const, cycles: 0 };
+      const status = { state: "running" as const, cycles };
       statusListeners.forEach((listener) => listener(status));
       return status;
     },
     stop: async () => {
       running = false;
-      const status = { state: "paused" as const, cycles: 0 };
+      const status = { state: "paused" as const, cycles };
       statusListeners.forEach((listener) => listener(status));
       return status;
     },
     generateOnce: async () => {
+      cycles += 1;
       generationLogs = [
         {
           id: `${Date.now()}-preview-log`,
-          cycle: 1,
+          cycle: cycles,
           reason: "manual" as const,
           status: "success" as const,
           startedAt: new Date().toISOString(),
@@ -200,7 +214,13 @@ export function api(): DanmakuBridge {
           },
         ]),
       );
-      return { state: running ? "running" : "idle", cycles: 1 };
+      const status = {
+        state: running ? ("running" as const) : ("idle" as const),
+        cycles,
+        lastGeneratedAt: new Date().toISOString(),
+      };
+      statusListeners.forEach((listener) => listener(status));
+      return status;
     },
     clearOverlay: async () => clearListeners.forEach((listener) => listener()),
     setOverlayVisible: async () => undefined,
