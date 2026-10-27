@@ -63,7 +63,7 @@ const PREAMBLE_LINE = /[:：]$/;
 const PROMPT_EXAMPLE = /^comment\s*\d+$/i;
 const COMMENT_TEXT_KEYS = ["text", "content", "comment"] as const;
 const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" };
-const TRAILING_NOISE = /[\p{P}\p{S}\s‍️⃣]+$/u;
+const TRAILING_NOISE = /[\p{P}\p{S}\s\u200d\ufe0f\u20e3]+$/u;
 
 const graphemeSegmenter =
   typeof Intl.Segmenter === "function"
@@ -347,8 +347,9 @@ function emptyCompletionProblem(
 
 /** Reads the answer of a completion, throwing on error bodies and empty or reasoning-only output. */
 export function readCompletion(response: ChatCompletionResponse, maxTokens: number): CompletionOutput {
-  if (response.error !== undefined && response.error !== null) {
-    throw new Error(`模型服务返回了错误：${errorText(response.error) ?? "未知错误"}`);
+  const apiError = errorText(response.error);
+  if (apiError) {
+    throw new Error(`模型服务返回了错误：${apiError}`);
   }
 
   const choice = response.choices?.[0];
