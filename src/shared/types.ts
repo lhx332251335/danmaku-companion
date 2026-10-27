@@ -49,6 +49,11 @@ export interface DanmakuStyleSettings {
   zone: DanmakuZone;
   palette: string[];
   shadow: boolean;
+  /**
+   * Hide the overlay from screen capture so the model does not read its own danmaku. Needs
+   * Windows 10 2004+; it also hides the overlay from OBS and other screen recorders.
+   */
+  excludeOverlayFromCapture: boolean;
 }
 
 export interface RuntimeSettings {

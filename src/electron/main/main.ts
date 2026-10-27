@@ -150,6 +150,7 @@ app.whenReady().then(async () => {
   windowManager.createTray();
 
   const config = await configStore.get();
+  windowManager.applyConfig(config);
   if (config.runtime.enabled) {
     void controller.start();
   }

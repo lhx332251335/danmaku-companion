@@ -47,6 +47,7 @@ export const defaultAppConfig: AppConfig = {
     zone: "full",
     palette: ["#31c3a2", "#f59e0b", "#ef476f", "#5b8def", "#f8fafc"],
     shadow: true,
+    excludeOverlayFromCapture: true,
   },
   runtime: {
     enabled: false,
