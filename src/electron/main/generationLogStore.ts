@@ -1,18 +1,13 @@
 import { app } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { LIMITS, clampOr } from "../../shared/limits";
 import type { GenerationLogEntry } from "../../shared/types";
 
 const DEFAULT_LOG_LIMIT = 200;
-const LOG_LIMIT_MIN = 10;
-const LOG_LIMIT_MAX = 2000;
 
 function normalizeLimit(limit: number | undefined): number {
-  if (typeof limit !== "number" || !Number.isFinite(limit)) {
-    return DEFAULT_LOG_LIMIT;
-  }
-
-  return Math.round(Math.min(LOG_LIMIT_MAX, Math.max(LOG_LIMIT_MIN, limit)));
+  return Math.round(clampOr(limit, LIMITS.generationLogLimit, DEFAULT_LOG_LIMIT));
 }
 
 export class GenerationLogStore {

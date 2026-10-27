@@ -1,19 +1,23 @@
 import type { BrowserWindow } from "electron";
 import type {
   AppConfig,
-  DanmakuGenerationResult,
-  DanmakuHistoryRound,
   GenerationLogEntry,
-  HistoryMode,
   DanmakuItem,
   RuntimeStatus,
-  ScreenImageFormat,
   ScreenSnapshot,
 } from "../../shared/types";
 import { capturePrimaryScreen } from "./capture/screenCapture";
 import { ConfigStore } from "./configStore";
 import { GenerationLogStore } from "./generationLogStore";
 import { OpenAICompatibleProvider } from "./providers/openAiCompatibleProvider";
+import { HistoryWindow } from "./runtime/historyWindow";
+import {
+  normalizeRuntimeSettings,
+  randomBetween,
+  randomReleaseWindowSeconds,
+  releaseDelays,
+  type NormalizedRuntimeSettings,
+} from "./runtime/runtimeSettings";
 
 type OverlayGetter = () => BrowserWindow | undefined;
 
@@ -21,146 +25,6 @@ const statusIdle: RuntimeStatus = {
   state: "idle",
   cycles: 0,
 };
-const INTERVAL_MIN_SECONDS = 5;
-const INTERVAL_MAX_SECONDS = 1800;
-const ITEMS_MIN = 1;
-const ITEMS_MAX = 12;
-const RELEASE_WINDOW_MIN_SECONDS = 0;
-const RELEASE_WINDOW_MAX_SECONDS = 60;
-const CAPTURE_MAX_EDGE_MIN_PIXELS = 480;
-const CAPTURE_MAX_EDGE_MAX_PIXELS = 2160;
-const CAPTURE_JPEG_QUALITY_MIN = 0.5;
-const CAPTURE_JPEG_QUALITY_MAX = 0.95;
-const HISTORY_ROUNDS_MIN = 0;
-const HISTORY_ROUNDS_MAX = 50;
-const GENERATION_LOG_LIMIT_MIN = 10;
-const GENERATION_LOG_LIMIT_MAX = 2000;
-
-interface NormalizedRuntimeSettings {
-  intervalMinSeconds: number;
-  intervalMaxSeconds: number;
-  itemsPerCycle: number;
-  releaseWindowMinSeconds: number;
-  releaseWindowMaxSeconds: number;
-  captureMaxEdgePixels: number;
-  captureImageFormat: ScreenImageFormat;
-  captureJpegQuality: number;
-  historyRounds: number;
-  historyMode: HistoryMode;
-  historyIncludeImages: boolean;
-  generationLogLimit: number;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) {
-    return min;
-  }
-
-  return Math.min(max, Math.max(min, value));
-}
-
-function randomBetween(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
-
-function normalizeRuntimeSettings(config: AppConfig): NormalizedRuntimeSettings {
-  const runtime = config.runtime;
-  const rawIntervalMin = runtime.intervalMinSeconds ?? runtime.intervalSeconds;
-  const rawIntervalMax = runtime.intervalMaxSeconds ?? runtime.intervalSeconds;
-  const intervalMin = clamp(
-    Math.min(rawIntervalMin, rawIntervalMax),
-    INTERVAL_MIN_SECONDS,
-    INTERVAL_MAX_SECONDS,
-  );
-  const intervalMax = clamp(
-    Math.max(rawIntervalMin, rawIntervalMax),
-    INTERVAL_MIN_SECONDS,
-    INTERVAL_MAX_SECONDS,
-  );
-
-  const rawItemsPerCycle =
-    runtime.itemsPerCycle ?? runtime.itemsMaxPerCycle ?? runtime.itemsMinPerCycle;
-  const itemsPerCycle = Math.round(
-    clamp(rawItemsPerCycle, ITEMS_MIN, ITEMS_MAX),
-  );
-  const rawReleaseWindowMin =
-    runtime.releaseWindowMinSeconds ?? runtime.releaseWindowSeconds;
-  const rawReleaseWindowMax =
-    runtime.releaseWindowMaxSeconds ?? runtime.releaseWindowSeconds;
-  const releaseWindowMinSeconds = clamp(
-    Math.min(rawReleaseWindowMin, rawReleaseWindowMax),
-    RELEASE_WINDOW_MIN_SECONDS,
-    RELEASE_WINDOW_MAX_SECONDS,
-  );
-  const releaseWindowMaxSeconds = clamp(
-    Math.max(rawReleaseWindowMin, rawReleaseWindowMax),
-    RELEASE_WINDOW_MIN_SECONDS,
-    RELEASE_WINDOW_MAX_SECONDS,
-  );
-
-  return {
-    intervalMinSeconds: intervalMin,
-    intervalMaxSeconds: intervalMax,
-    itemsPerCycle,
-    releaseWindowMinSeconds,
-    releaseWindowMaxSeconds,
-    captureMaxEdgePixels: Math.round(
-      clamp(
-        runtime.captureMaxEdgePixels,
-        CAPTURE_MAX_EDGE_MIN_PIXELS,
-        CAPTURE_MAX_EDGE_MAX_PIXELS,
-      ),
-    ),
-    captureImageFormat:
-      runtime.captureImageFormat === "png" ? "png" : "jpeg",
-    captureJpegQuality: clamp(
-      runtime.captureJpegQuality,
-      CAPTURE_JPEG_QUALITY_MIN,
-      CAPTURE_JPEG_QUALITY_MAX,
-    ),
-    historyRounds: Math.round(
-      clamp(runtime.historyRounds, HISTORY_ROUNDS_MIN, HISTORY_ROUNDS_MAX),
-    ),
-    historyMode: runtime.historyMode ?? "reset-on-limit",
-    historyIncludeImages: Boolean(runtime.historyIncludeImages),
-    generationLogLimit: Math.round(
-      clamp(
-        runtime.generationLogLimit,
-        GENERATION_LOG_LIMIT_MIN,
-        GENERATION_LOG_LIMIT_MAX,
-      ),
-    ),
-  };
-}
-
-function releaseDelays(count: number, releaseWindowSeconds: number): number[] {
-  if (count <= 0) {
-    return [];
-  }
-
-  const releaseWindowMs = releaseWindowSeconds * 1000;
-  if (releaseWindowMs <= 0 || count === 1) {
-    return Array.from({ length: count }, () =>
-      Math.round(randomBetween(0, releaseWindowMs)),
-    );
-  }
-
-  const segmentMs = releaseWindowMs / count;
-  return Array.from({ length: count }, (_item, index) => {
-    const segmentStart = index * segmentMs;
-    return Math.round(
-      Math.min(releaseWindowMs, segmentStart + randomBetween(0, segmentMs)),
-    );
-  });
-}
-
-function randomReleaseWindowSeconds(minSeconds: number, maxSeconds: number): number {
-  if (maxSeconds <= 0) {
-    return 0;
-  }
-
-  return randomBetween(minSeconds, maxSeconds);
-}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -189,8 +53,7 @@ function screenLogInfo(
 export class DanmakuController {
   private timer: NodeJS.Timeout | undefined;
   private readonly releaseTimers = new Set<NodeJS.Timeout>();
-  private readonly history: DanmakuHistoryRound[] = [];
-  private historyWindowRounds = 0;
+  private readonly history = new HistoryWindow();
   private activeGenerationAbort: AbortController | undefined;
   private busy = false;
   private running = false;
@@ -283,7 +146,7 @@ export class DanmakuController {
       config = await this.configStore.get();
       runtime = normalizeRuntimeSettings(config);
       requestedCount = runtime.itemsPerCycle;
-      const requestHistory = this.historyForRequest(runtime.historyRounds);
+      const requestHistory = this.history.forRequest(runtime.historyRounds);
       requestHistoryLength = requestHistory.length;
       if (config.model.visionEnabled) {
         try {
@@ -317,7 +180,7 @@ export class DanmakuController {
       );
 
       if (!generationAbort.signal.aborted && !this.shuttingDown && (reason === "manual" || this.running)) {
-        this.rememberHistory(result, snapshot, runtime, requestHistory.length);
+        this.history.remember(result, snapshot, runtime, requestHistory.length);
         this.scheduleItems(result.items, releaseWindowSeconds);
       }
       const completedAt = new Date().toISOString();
@@ -413,7 +276,7 @@ export class DanmakuController {
   }
 
   clearHistory(): void {
-    this.resetHistoryWindow();
+    this.history.reset();
     this.status = { ...this.status, cachedInputTokens: undefined };
     this.broadcastStatus(this.status);
   }
@@ -461,63 +324,6 @@ export class DanmakuController {
       this.timer = undefined;
       void this.generateOnce("timer");
     }, delayMs);
-  }
-
-  private rememberHistory(
-    result: DanmakuGenerationResult,
-    snapshot: ScreenSnapshot | undefined,
-    runtime: NormalizedRuntimeSettings,
-    requestHistoryLength: number,
-  ): void {
-    if (runtime.historyRounds <= 0) {
-      this.resetHistoryWindow();
-      return;
-    }
-
-    const countedHistoryRounds = Math.max(this.historyWindowRounds, requestHistoryLength);
-    if (
-      runtime.historyMode === "reset-on-limit" &&
-      countedHistoryRounds >= runtime.historyRounds
-    ) {
-      this.resetHistoryWindow();
-      return;
-    }
-
-    this.historyWindowRounds = countedHistoryRounds + 1;
-
-    if (result.items.length === 0 || !result.assistantText.trim()) {
-      if (
-        runtime.historyMode === "reset-on-limit" &&
-        this.historyWindowRounds >= runtime.historyRounds
-      ) {
-        this.resetHistoryWindow();
-      }
-      return;
-    }
-
-    this.history.push({
-      userText: result.userText,
-      assistantText: result.assistantText,
-      snapshot: runtime.historyIncludeImages ? snapshot : undefined,
-    });
-
-    if (runtime.historyMode === "sliding" && this.history.length > runtime.historyRounds) {
-      this.history.splice(0, this.history.length - runtime.historyRounds);
-      this.historyWindowRounds = this.history.length;
-    }
-  }
-
-  private resetHistoryWindow(): void {
-    this.history.splice(0);
-    this.historyWindowRounds = 0;
-  }
-
-  private historyForRequest(historyRounds: number): DanmakuHistoryRound[] {
-    if (historyRounds <= 0) {
-      return [];
-    }
-
-    return this.history.slice(-historyRounds);
   }
 
   private scheduleItems(items: DanmakuItem[], releaseWindowSeconds: number): void {

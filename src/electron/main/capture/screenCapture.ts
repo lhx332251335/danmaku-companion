@@ -9,6 +9,7 @@ import type {
   ScreenImageFormat,
   ScreenSnapshot,
 } from "../../../shared/types";
+import { LIMITS, clampOr } from "../../../shared/limits";
 
 const DEFAULT_CAPTURE_MAX_EDGE_PIXELS = 960;
 const DEFAULT_CAPTURE_IMAGE_FORMAT: ScreenImageFormat = "jpeg";
@@ -52,11 +53,7 @@ function messageFromError(error: unknown): string {
 }
 
 function normalizeJpegQuality(value: number | undefined): number {
-  if (!Number.isFinite(value)) {
-    return DEFAULT_CAPTURE_JPEG_QUALITY;
-  }
-
-  return Math.min(0.95, Math.max(0.5, value ?? DEFAULT_CAPTURE_JPEG_QUALITY));
+  return clampOr(value, LIMITS.captureJpegQuality, DEFAULT_CAPTURE_JPEG_QUALITY);
 }
 
 function encodeImage(
