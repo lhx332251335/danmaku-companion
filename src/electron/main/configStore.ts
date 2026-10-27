@@ -10,26 +10,38 @@ import type {
   DeepPartial,
 } from "../../shared/types";
 import {
+  applyConfigPatch,
   cleanName,
   cloneConfig,
-  deepMerge,
   normalizeConfig,
   normalizeProfileConfig,
   parseJson,
-  serializableState,
+  sanitizeConfig,
+  serializeState,
   stateFromConfig,
-  stateFromParsed,
+  stateFromText,
+  withRunFlag,
   type ConfigProfile,
   type ConfigState,
 } from "./configModel";
+import { WriteQueue, fileTimestamp, readTextIfExists, writeFileAtomic } from "./storage/atomicFile";
 
 export class ConfigStore {
   private filePath: string | undefined;
   private state: ConfigState | undefined;
+  private loading: Promise<ConfigState> | undefined;
+  private readonly writes = new WriteQueue();
+  private lastWrittenText: string | undefined;
+  /** Only a config.json known to be valid may be copied over the backup. */
+  private diskFileIsGood = false;
 
   private getFilePath(): string {
     this.filePath ??= path.join(app.getPath("userData"), "config.json");
     return this.filePath;
+  }
+
+  private getBackupPath(): string {
+    return `${this.getFilePath()}.bak`;
   }
 
   private getLegacyFilePath(): string {
@@ -82,7 +94,9 @@ export class ConfigStore {
       throw new Error("Config profile not found.");
     }
 
+    const enabled = this.activeProfile(state).config.runtime.enabled;
     state.activeProfileId = id;
+    this.carryRunFlag(state, enabled);
     await this.saveState(state);
     return this.result(state);
   }
@@ -98,10 +112,12 @@ export class ConfigStore {
       throw new Error("Config profile not found.");
     }
 
+    const enabled = this.activeProfile(state).config.runtime.enabled;
     state.profiles = nextProfiles;
     if (state.activeProfileId === id) {
       state.activeProfileId = state.profiles[0].id;
     }
+    this.carryRunFlag(state, enabled);
     await this.saveState(state);
     return this.result(state);
   }
@@ -109,7 +125,7 @@ export class ConfigStore {
   async update(patch: DeepPartial<AppConfig>): Promise<AppConfig> {
     const state = await this.getState();
     const profile = this.activeProfile(state);
-    profile.config = normalizeConfig(deepMerge<AppConfig>(profile.config, patch));
+    profile.config = applyConfigPatch(profile.config, patch);
     profile.updatedAt = new Date().toISOString();
     await this.saveState(state);
     return profile.config;
@@ -118,25 +134,82 @@ export class ConfigStore {
   async save(config: AppConfig): Promise<void> {
     const state = await this.getState();
     const profile = this.activeProfile(state);
-    profile.config = normalizeConfig(config);
+    profile.config = normalizeConfig(sanitizeConfig(config, profile.config));
     profile.updatedAt = new Date().toISOString();
     await this.saveState(state);
   }
 
-  private async getState(): Promise<ConfigState> {
+  hasPendingWrites(): boolean {
+    return this.writes.hasPending();
+  }
+
+  /** Resolves once every queued write has settled. */
+  flush(): Promise<void> {
+    return this.writes.flush();
+  }
+
+  private getState(): Promise<ConfigState> {
     if (this.state) {
-      return this.state;
+      return Promise.resolve(this.state);
+    }
+
+    this.loading ??= this.load().finally(() => {
+      this.loading = undefined;
+    });
+    return this.loading;
+  }
+
+  private async load(): Promise<ConfigState> {
+    const filePath = this.getFilePath();
+    const raw = await readTextIfExists(filePath);
+    if (raw === undefined) {
+      return this.adoptLoadedState(stateFromConfig(await this.readLegacyConfig()));
+    }
+
+    const state = stateFromText(raw);
+    if (state) {
+      this.diskFileIsGood = true;
+      return this.adoptLoadedState(state, raw);
+    }
+
+    return this.adoptLoadedState(await this.recoverFromUnreadableFile(filePath));
+  }
+
+  /** Persists a loaded state only when its serialized form differs from what is on disk. */
+  private async adoptLoadedState(state: ConfigState, raw?: string): Promise<ConfigState> {
+    this.state = state;
+    if (raw !== undefined && raw.replace(/^﻿/, "") === serializeState(state)) {
+      this.lastWrittenText = raw;
+      return state;
     }
 
     try {
-      const raw = await fs.readFile(this.getFilePath(), "utf8");
-      this.state = stateFromParsed(parseJson(raw));
-    } catch {
-      this.state = stateFromConfig(await this.readLegacyConfig());
+      await this.saveState(state);
+    } catch (error) {
+      console.warn("Failed to write config.json after loading it.", error);
+    }
+    return state;
+  }
+
+  private async recoverFromUnreadableFile(filePath: string): Promise<ConfigState> {
+    const corruptPath = `${filePath}.corrupt-${fileTimestamp()}`;
+    await fs.copyFile(filePath, corruptPath);
+    console.warn(`config.json is not a valid config; kept a copy at ${corruptPath}.`);
+
+    const backup = await readTextIfExists(this.getBackupPath()).catch(() => undefined);
+    const restored = backup === undefined ? undefined : stateFromText(backup);
+    if (restored) {
+      console.warn(`Restored config from ${this.getBackupPath()}.`);
+      return restored;
     }
 
-    await this.saveState(this.state);
-    return this.state;
+    return stateFromConfig(defaultAppConfig);
+  }
+
+  /** The run flag is global even though it is stored per profile. */
+  private carryRunFlag(state: ConfigState, enabled: boolean): void {
+    const profile = this.activeProfile(state);
+    profile.config = withRunFlag(profile.config, enabled);
   }
 
   private activeProfile(state: ConfigState): ConfigProfile {
@@ -166,15 +239,27 @@ export class ConfigStore {
     };
   }
 
-  private async saveState(state: ConfigState): Promise<void> {
+  /** Queues a write of the latest state; writes run one at a time and identical ones are skipped. */
+  private saveState(state: ConfigState): Promise<void> {
     this.state = state;
-    const filePath = this.getFilePath();
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(
-      filePath,
-      `${JSON.stringify(serializableState(state), null, 2)}\n`,
-      "utf8",
-    );
+    return this.writes.run(() => this.writeLatestState());
+  }
+
+  private async writeLatestState(): Promise<void> {
+    if (!this.state) {
+      return;
+    }
+
+    const text = serializeState(this.state);
+    if (text === this.lastWrittenText) {
+      return;
+    }
+
+    await writeFileAtomic(this.getFilePath(), text, {
+      backupPath: this.diskFileIsGood ? this.getBackupPath() : undefined,
+    });
+    this.lastWrittenText = text;
+    this.diskFileIsGood = true;
   }
 
   private async readLegacyConfig(): Promise<AppConfig> {

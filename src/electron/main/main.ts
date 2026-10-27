@@ -1,7 +1,8 @@
 import { app, ipcMain, shell } from "electron";
 import fs from "node:fs";
 import path from "node:path";
-import type { AppConfig, ConfigProfileResult, DeepPartial } from "../../shared/types";
+import type { ConfigProfileResult } from "../../shared/types";
+import { stripRunFlag } from "./configModel";
 import { ConfigStore } from "./configStore";
 import { DanmakuController } from "./danmakuController";
 import { GenerationLogStore } from "./generationLogStore";
@@ -54,8 +55,8 @@ function registerIpc(): void {
 
   ipcMain.handle("config:get", () => configStore.get());
 
-  ipcMain.handle("config:update", async (_event, patch: DeepPartial<AppConfig>) => {
-    const config = await configStore.update(patch);
+  ipcMain.handle("config:update", async (_event, patch: unknown) => {
+    const config = await configStore.update(stripRunFlag(patch));
     await controller.refreshSchedule();
     windowManager.broadcastConfig(config);
     return config;

@@ -1,6 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { defaultAppConfig } from "../../shared/defaultConfig";
-import type { AppConfig, DeepPartial } from "../../shared/types";
+import { LIMITS, clampToRange, type NumericRange } from "../../shared/limits";
+import type {
+  AppConfig,
+  DanmakuZone,
+  DeepPartial,
+  HistoryMode,
+  ProviderKind,
+  ScreenImageFormat,
+} from "../../shared/types";
 
 export interface ConfigProfile {
   id: string;
@@ -23,7 +31,7 @@ export function deepMerge<T>(base: T, patch: DeepPartial<T>): T {
   const output: Record<string, unknown> = { ...(base as Record<string, unknown>) };
 
   for (const [key, value] of Object.entries(patch as Record<string, unknown>)) {
-    if (value === undefined) {
+    if (value === undefined || value === null) {
       continue;
     }
 
@@ -39,6 +47,154 @@ export function deepMerge<T>(base: T, patch: DeepPartial<T>): T {
 
 export function cloneConfig(config: AppConfig): AppConfig {
   return JSON.parse(JSON.stringify(config)) as AppConfig;
+}
+
+interface NumberRule {
+  range: NumericRange;
+  integer?: boolean;
+}
+
+type SectionKey = "model" | "danmaku" | "runtime";
+type KeysOfType<T, V> = { [K in keyof T]: T[K] extends V ? K & string : never }[keyof T];
+type SectionPath<V> = { [S in SectionKey]: `${S}.${KeysOfType<AppConfig[S], V>}` }[SectionKey];
+
+const NUMBER_RULES: Readonly<Partial<Record<SectionPath<number>, NumberRule>>> = {
+  "model.temperature": { range: LIMITS.temperature },
+  "model.maxTokens": { range: LIMITS.maxTokens, integer: true },
+  "model.timeoutMs": { range: LIMITS.timeoutMs, integer: true },
+  "danmaku.fontSize": { range: LIMITS.fontSize },
+  "danmaku.opacity": { range: LIMITS.opacity },
+  "danmaku.speedSeconds": { range: LIMITS.speedSeconds },
+  "danmaku.maxCommentLength": { range: LIMITS.maxCommentLength, integer: true },
+  "danmaku.density": { range: LIMITS.density },
+  "runtime.intervalMinSeconds": { range: LIMITS.intervalSeconds },
+  "runtime.intervalMaxSeconds": { range: LIMITS.intervalSeconds },
+  "runtime.intervalSeconds": { range: LIMITS.intervalSeconds },
+  "runtime.itemsPerCycle": { range: LIMITS.itemsPerCycle, integer: true },
+  "runtime.itemsMinPerCycle": { range: LIMITS.itemsPerCycle, integer: true },
+  "runtime.itemsMaxPerCycle": { range: LIMITS.itemsPerCycle, integer: true },
+  "runtime.maxItemsPerCycle": { range: LIMITS.itemsPerCycle, integer: true },
+  "runtime.releaseWindowMinSeconds": { range: LIMITS.releaseWindowSeconds },
+  "runtime.releaseWindowMaxSeconds": { range: LIMITS.releaseWindowSeconds },
+  "runtime.releaseWindowSeconds": { range: LIMITS.releaseWindowSeconds },
+  "runtime.captureMaxEdgePixels": { range: LIMITS.captureMaxEdgePixels, integer: true },
+  "runtime.captureJpegQuality": { range: LIMITS.captureJpegQuality },
+  "runtime.historyRounds": { range: LIMITS.historyRounds, integer: true },
+  "runtime.historyMaxImages": { range: LIMITS.historyMaxImages, integer: true },
+  "runtime.requestBodyLimitMB": { range: LIMITS.requestBodyLimitMB },
+  "runtime.generationLogLimit": { range: LIMITS.generationLogLimit, integer: true },
+};
+
+function enumValues<T extends string>(values: Record<T, true>): readonly string[] {
+  return Object.keys(values);
+}
+
+const ENUM_RULES: Readonly<Partial<Record<SectionPath<string>, readonly string[]>>> = {
+  "model.provider": enumValues<ProviderKind>({ "openai-compatible": true }),
+  "danmaku.zone": enumValues<DanmakuZone>({ full: true, top: true, middle: true, bottom: true }),
+  "runtime.captureImageFormat": enumValues<ScreenImageFormat>({ jpeg: true, png: true }),
+  "runtime.historyMode": enumValues<HistoryMode>({
+    "reset-on-limit": true,
+    sliding: true,
+    "batch-sliding": true,
+  }),
+};
+
+const NON_EMPTY_LISTS: ReadonlySet<string> = new Set(["danmaku.palette"]);
+
+function sameKind(value: unknown, schema: unknown): boolean {
+  if (isRecord(schema)) {
+    return isRecord(value);
+  }
+  if (Array.isArray(schema)) {
+    return Array.isArray(value);
+  }
+  return typeof value === typeof schema;
+}
+
+function sanitizeNumber(value: unknown, fallback: number, rule: NumberRule | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return fallback;
+  }
+  if (!rule) {
+    return value;
+  }
+
+  const clamped = clampToRange(value, rule.range);
+  return rule.integer ? Math.round(clamped) : clamped;
+}
+
+function sanitizeString(value: unknown, fallback: string, allowed: readonly string[] | undefined): string {
+  if (typeof value !== "string" || (allowed && !allowed.includes(value))) {
+    return fallback;
+  }
+  return value;
+}
+
+function sanitizeStringList(value: unknown, fallback: string[], requireItems: boolean): string[] {
+  const items = Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+  return Array.isArray(value) && (items.length > 0 || !requireItems) ? items : [...fallback];
+}
+
+function sanitizeValue(value: unknown, schema: unknown, fallback: unknown, path: string): unknown {
+  const base = sameKind(fallback, schema) ? fallback : schema;
+
+  if (isRecord(schema)) {
+    const source = isRecord(value) ? value : {};
+    const baseRecord = base as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(schema).map(([key, child]) => [
+        key,
+        sanitizeValue(source[key], child, baseRecord[key], path ? `${path}.${key}` : key),
+      ]),
+    );
+  }
+  if (Array.isArray(schema)) {
+    return sanitizeStringList(value, base as string[], NON_EMPTY_LISTS.has(path));
+  }
+  if (typeof schema === "number") {
+    return sanitizeNumber(value, base as number, NUMBER_RULES[path as SectionPath<number>]);
+  }
+  if (typeof schema === "string") {
+    return sanitizeString(value, base as string, ENUM_RULES[path as SectionPath<string>]);
+  }
+  return typeof value === typeof schema ? value : base;
+}
+
+/**
+ * Rebuilds a config from the shape of defaultAppConfig: unknown keys are dropped, values of the
+ * wrong type or outside an enum fall back to `fallback`, and numbers are clamped to LIMITS.
+ * `fallback` must itself be a sanitized config.
+ */
+export function sanitizeConfig(value: unknown, fallback: AppConfig = defaultAppConfig): AppConfig {
+  return sanitizeValue(value, defaultAppConfig, fallback, "") as AppConfig;
+}
+
+/** Merges an untrusted patch into a config without letting it break the config's shape. */
+export function applyConfigPatch(config: AppConfig, patch: unknown): AppConfig {
+  const merged = deepMerge<AppConfig>(config, isRecord(patch) ? patch : {});
+  return normalizeConfig(sanitizeConfig(merged, config));
+}
+
+/** runtime.enabled is owned by the main process; renderer patches must not overwrite it. */
+export function stripRunFlag(patch: unknown): DeepPartial<AppConfig> {
+  if (!isRecord(patch)) {
+    return {};
+  }
+  if (!isRecord(patch.runtime) || !("enabled" in patch.runtime)) {
+    return patch as DeepPartial<AppConfig>;
+  }
+
+  const { enabled: _enabled, ...runtime } = patch.runtime;
+  return { ...patch, runtime } as DeepPartial<AppConfig>;
+}
+
+export function withRunFlag(config: AppConfig, enabled: boolean): AppConfig {
+  return config.runtime.enabled === enabled
+    ? config
+    : { ...config, runtime: { ...config.runtime, enabled } };
 }
 
 export function parseJson(raw: string): unknown {
@@ -120,7 +276,7 @@ export function isConfigLike(value: unknown): value is DeepPartial<AppConfig> {
 
 export function normalizeProfileConfig(value: unknown): AppConfig {
   const patch = isConfigLike(value) ? migrateParsedConfig(value) : {};
-  return normalizeConfig(deepMerge<AppConfig>(defaultAppConfig, patch));
+  return normalizeConfig(sanitizeConfig(patch));
 }
 
 export function cleanName(name: unknown, fallback: string): string {
@@ -189,4 +345,26 @@ export function serializableState(state: ConfigState): Record<string, unknown> {
     activeProfileId: state.activeProfileId,
     profiles: state.profiles,
   };
+}
+
+export function serializeState(state: ConfigState): string {
+  return `${JSON.stringify(serializableState(state), null, 2)}\n`;
+}
+
+function isStoredState(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return Array.isArray(value.profiles) ? value.profiles.some(isRecord) : isConfigLike(value);
+}
+
+/** Parses config.json text; undefined means it is not JSON or holds nothing recognizable. */
+export function stateFromText(raw: string): ConfigState | undefined {
+  let value: unknown;
+  try {
+    value = parseJson(raw);
+  } catch {
+    return undefined;
+  }
+  return isStoredState(value) ? stateFromParsed(value) : undefined;
 }
