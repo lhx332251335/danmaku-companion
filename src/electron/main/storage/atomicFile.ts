@@ -98,7 +98,8 @@ export async function writeFileAtomic(
   options: AtomicWriteOptions = {},
 ): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const tempPath = `${filePath}.tmp`;
+  // Per process: without a single-instance lock, a second app instance may write the same file.
+  const tempPath = `${filePath}.${process.pid}.tmp`;
   try {
     await writeAndSync(tempPath, data);
     if (options.backupPath) {

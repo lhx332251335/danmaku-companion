@@ -56,6 +56,9 @@ describe("ConfigStore loading", () => {
     await fs.mkdir(path.dirname(legacyFile), { recursive: true });
     await fs.writeFile(legacyFile, JSON.stringify({ model: { model: "legacy" } }));
     expect((await new ConfigStore().get()).model.model).toBe("legacy");
+
+    await fs.writeFile(legacyFile, JSON.stringify({ model: { model: "newer legacy" } }));
+    expect((await new ConfigStore().get()).model.model).toBe("legacy");
   });
 
   it("loads once when called concurrently", async () => {

@@ -178,7 +178,7 @@ export class ConfigStore {
   /** Persists a loaded state only when its serialized form differs from what is on disk. */
   private async adoptLoadedState(state: ConfigState, raw?: string): Promise<ConfigState> {
     this.state = state;
-    if (raw !== undefined && raw.replace(/^﻿/, "") === serializeState(state)) {
+    if (raw !== undefined && raw.replace(/^\uFEFF/, "") === serializeState(state)) {
       this.lastWrittenText = raw;
       return state;
     }

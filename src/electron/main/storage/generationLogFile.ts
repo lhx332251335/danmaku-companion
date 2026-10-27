@@ -39,7 +39,7 @@ function parseLegacyArray(text: string): ParsedGenerationLog {
 
 /** Parses the JSON Lines log, skipping damaged lines. Also accepts the old pretty-printed JSON array. */
 export function parseGenerationLog(raw: string): ParsedGenerationLog {
-  const text = raw.replace(/^﻿/, "");
+  const text = raw.replace(/^\uFEFF/, "");
   if (text.trimStart().startsWith("[")) {
     return parseLegacyArray(text);
   }

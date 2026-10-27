@@ -87,6 +87,18 @@ describe("GenerationLogStore", () => {
     expect((await fileLines()).map((line) => JSON.parse(line).id)).toEqual(["a", "c"]);
   });
 
+  it("rewrites the whole file after a failed append", async () => {
+    const store = new GenerationLogStore();
+    await store.append(makeLogEntry("a"), 200);
+    await fs.rm(logFile);
+    await fs.mkdir(logFile);
+    await expect(store.append(makeLogEntry("b"), 200)).rejects.toThrow();
+
+    await fs.rm(logFile, { recursive: true });
+    await store.append(makeLogEntry("c"), 200);
+    expect((await fileLines()).map((line) => JSON.parse(line).id)).toEqual(["a", "b", "c"]);
+  });
+
   it("orders queued appends and clears without duplicating or resurrecting entries", async () => {
     const store = new GenerationLogStore();
     await store.append(makeLogEntry("a"), 200);

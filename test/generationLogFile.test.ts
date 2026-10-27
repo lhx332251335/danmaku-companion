@@ -25,7 +25,7 @@ describe("parseGenerationLog", () => {
   });
 
   it("skips lines that are not log entries", () => {
-    const parsed = parseGenerationLog(`﻿${toJsonLines([makeLogEntry("a")])}[1]\n{"id":"x"}\n`);
+    const parsed = parseGenerationLog(`\uFEFF${toJsonLines([makeLogEntry("a")])}[1]\n{"id":"x"}\n`);
     expect(parsed.entries.map((entry) => entry.id)).toEqual(["a"]);
     expect(parsed.needsRewrite).toBe(true);
   });

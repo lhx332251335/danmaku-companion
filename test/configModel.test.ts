@@ -224,7 +224,7 @@ describe("stateFromText", () => {
   });
 
   it("reads profile files with a BOM and legacy flat configs", () => {
-    const text = `﻿${JSON.stringify({ activeProfileId: "p1", profiles: [{ id: "p1", name: "A", config: {} }] })}`;
+    const text = `\uFEFF${JSON.stringify({ activeProfileId: "p1", profiles: [{ id: "p1", name: "A", config: {} }] })}`;
     expect(stateFromText(text)?.activeProfileId).toBe("p1");
     expect(stateFromText(JSON.stringify({ model: { model: "legacy" } }))?.profiles[0].config.model.model).toBe(
       "legacy",
