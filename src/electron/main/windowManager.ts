@@ -156,6 +156,10 @@ export class WindowManager {
   }
 
   showSettings(): void {
+    // A launch right after Quit hands over to this instance; do not reopen a half-closed app.
+    if (this.quitting) {
+      return;
+    }
     if (!this.settingsWindow || this.settingsWindow.isDestroyed()) {
       this.createSettingsWindow();
     }
@@ -173,7 +177,7 @@ export class WindowManager {
 
   /**
    * Overlay to push danmaku to. Called for every released item, so it only shows the window when
-   * it is hidden and re-asserts topmost at most every few seconds.
+   * it is hidden and re-asserts its bounds and topmost at most every few seconds.
    */
   getOverlayWindow(): BrowserWindow | undefined {
     const overlay = this.ensureOverlayWindow();
@@ -181,8 +185,10 @@ export class WindowManager {
       if (!overlay.isVisible()) {
         this.showOverlayWindow();
       } else {
-        // Re-assert on every item: another topmost window (a game, a video player) may have
-        // covered the overlay since the last one. setAlwaysOnTop/moveTop are cheap.
+        // Re-check on every item: Windows can move or resize the overlay after a display event,
+        // and another topmost window (a game, a video player) may have covered it. Both calls
+        // are cheap; setBounds only runs when the bounds actually differ.
+        this.fitOverlayToPrimaryDisplay();
         this.applyOverlayWindowLevel();
       }
     }
