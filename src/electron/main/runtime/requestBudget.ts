@@ -220,3 +220,25 @@ export function learnedBodyLimit(rejectedBytes: number, serverBody: string): num
   }
   return Math.floor(rejectedBytes * LOW_WATER_RATIO);
 }
+
+const UPLOAD_RESET_CODES = new Set(["ECONNRESET", "EPIPE", "UND_ERR_SOCKET"]);
+
+/** Bodies at least this large are assumed rejected for size when the upload is cut off. */
+export const UPLOAD_RESET_MIN_BYTES = 8 * 1024 * 1024;
+
+/**
+ * True when the connection was reset (anywhere in the cause chain). Servers that enforce a body
+ * limit without reading the body, e.g. waitress reached directly on a LAN, close the socket
+ * mid-upload instead of returning a 413.
+ */
+export function isConnectionReset(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current && typeof current === "object"; depth += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === "string" && UPLOAD_RESET_CODES.has(code)) {
+      return true;
+    }
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}

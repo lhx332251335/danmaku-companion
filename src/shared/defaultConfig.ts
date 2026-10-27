@@ -66,7 +66,7 @@ export const defaultAppConfig: AppConfig = {
     historyRounds: 4,
     historyMode: "reset-on-limit",
     historyIncludeImages: false,
-    historyMaxImages: 12,
+    historyMaxImages: 24,
     requestBodyLimitMB: 48,
     persistScreenshots: false,
     generationLogLimit: 200,

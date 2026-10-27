@@ -8,7 +8,13 @@ import type {
 import { RequestTooLargeError } from "../providers/errors";
 import { renderPrompts } from "../providers/messageBuilder";
 import type { HistoryWindow } from "./historyWindow";
-import { learnedBodyLimit, planCompaction } from "./requestBudget";
+import {
+  LOW_WATER_RATIO,
+  UPLOAD_RESET_MIN_BYTES,
+  isConnectionReset,
+  learnedBodyLimit,
+  planCompaction,
+} from "./requestBudget";
 
 export interface BudgetSettings {
   historyRounds: number;
@@ -49,8 +55,9 @@ export function createBudgetTrace(learnedLimitBytes?: number): BudgetTrace {
  * Send one generation request while keeping it under the body budget.
  *
  * Before sending, drops history screenshots in a batch if a limit is exceeded (see planCompaction)
- * and shrinks the current screenshot if it alone is too large. If the server still answers 413,
- * learns its limit, compacts again and retries once.
+ * and shrinks the current screenshot if it alone is too large. If the server still answers 413
+ * (or resets the connection while a large body is uploading), learns its limit, compacts again
+ * and retries once.
  */
 export async function runBudgetedRequest(
   options: {
@@ -120,12 +127,19 @@ export async function runBudgetedRequest(
         maxBodyBytes: limit,
       });
     } catch (error) {
-      if (
-        !(error instanceof RequestTooLargeError) ||
-        attempt > 0 ||
-        input.abortSignal?.aborted
-      ) {
+      if (attempt > 0 || input.abortSignal?.aborted) {
         throw error;
+      }
+
+      if (!(error instanceof RequestTooLargeError)) {
+        if (!isConnectionReset(error) || plan.estimatedBodyBytes < UPLOAD_RESET_MIN_BYTES) {
+          throw error;
+        }
+        trace.learnedLimitBytes = Math.min(
+          trace.learnedLimitBytes ?? Infinity,
+          Math.floor(plan.estimatedBodyBytes * LOW_WATER_RATIO),
+        );
+        continue;
       }
 
       if (error.fromServer) {

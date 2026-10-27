@@ -3,6 +3,7 @@ import { buildMessages } from "../src/electron/main/providers/messageBuilder";
 import {
   LOW_WATER_RATIO,
   estimateRequestBytes,
+  isConnectionReset,
   jsonStringBytes,
   learnedBodyLimit,
   parseBodyLimitFromError,
@@ -157,5 +158,14 @@ describe("413 learning", () => {
   it("learns just under the reported limit, or half the rejected body", () => {
     expect(learnedBodyLimit(73_518_731, llmApiBody)).toBe(Math.floor(67108864 * 0.95));
     expect(learnedBodyLimit(10_000_000, "<html>413</html>")).toBe(5_000_000);
+  });
+});
+
+describe("isConnectionReset", () => {
+  it("finds reset codes anywhere in the cause chain", () => {
+    expect(isConnectionReset(Object.assign(new TypeError("fetch failed"), { cause: { code: "UND_ERR_SOCKET" } }))).toBe(true);
+    expect(isConnectionReset(new Error("wrapped", { cause: Object.assign(new Error("x"), { code: "EPIPE" }) }))).toBe(true);
+    expect(isConnectionReset(Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND" } }))).toBe(false);
+    expect(isConnectionReset("nope")).toBe(false);
   });
 });

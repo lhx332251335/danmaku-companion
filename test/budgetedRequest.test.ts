@@ -94,6 +94,36 @@ describe("runBudgetedRequest", () => {
     expect(generate).toHaveBeenCalledTimes(2);
   });
 
+  it("treats a connection reset during a large upload as a size rejection", async () => {
+    const history = filledHistory(4, 3 * MIB);
+    const reset = Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } });
+    const generate = vi
+      .fn(async (_input: DanmakuInput) => okResult())
+      .mockRejectedValueOnce(reset);
+    const trace = createBudgetTrace();
+    await runBudgetedRequest(
+      { config, history, input, snapshot: makeSnapshot(3 * MIB), trace, settings: { historyRounds: 50, historyMaxImages: 50, requestBodyLimitBytes: 48 * MIB } },
+      { generate },
+    );
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(trace.learnedLimitBytes).toBeLessThan(8 * MIB);
+    expect(trace.compaction[0]).toMatchObject({ trigger: "413", reason: "bytes" });
+  });
+
+  it("does not treat a reset on a small request as a size problem", async () => {
+    const reset = Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } });
+    const generate = vi.fn(async (_input: DanmakuInput): Promise<DanmakuGenerationResult> => {
+      throw reset;
+    });
+    await expect(
+      runBudgetedRequest(
+        { config, history: filledHistory(2, 1000), input, trace: createBudgetTrace(), settings: { historyRounds: 50, historyMaxImages: 12, requestBodyLimitBytes: 48 * MIB } },
+        { generate },
+      ),
+    ).rejects.toBe(reset);
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
   it("does not retry other errors", async () => {
     const generate = vi.fn(async (_input: DanmakuInput): Promise<DanmakuGenerationResult> => {
       throw new Error("HTTP 500");

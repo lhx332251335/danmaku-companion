@@ -1205,7 +1205,10 @@ export function SettingsApp() {
           <p className="panel-note">
             保留历史截图时，截图数超过上限或请求体超过上限，会一次性丢弃最早的一半截图（保留它们的文字），
             只有这一轮需要重新预填充，其余轮次都能命中服务端的前缀缓存。逐轮滑动每轮都会改变请求开头，缓存基本失效。
-            服务器返回 413 时会按它报告的上限自动压缩并重试一次。
+            服务器返回 413 时会按它报告的上限自动压缩并重试一次。每一轮都会上传完整请求，上限越大越占上行带宽。
+            {draft.runtime.historyIncludeImages && draft.runtime.captureImageFormat === "png"
+              ? " PNG 截图体积通常是 JPEG 的 10 倍以上，而模型看到的 token 数相同，保留历史截图时建议改用 JPEG。"
+              : ""}
           </p>
           <label className="toggle-row">
             <input

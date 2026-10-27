@@ -20,7 +20,7 @@ export interface NormalizedRuntimeSettings {
 
 const HISTORY_MODES: readonly HistoryMode[] = ["reset-on-limit", "sliding", "batch-sliding"];
 const MIB = 1024 * 1024;
-const DEFAULT_HISTORY_MAX_IMAGES = 12;
+const DEFAULT_HISTORY_MAX_IMAGES = 24;
 const DEFAULT_REQUEST_BODY_LIMIT_MB = 48;
 
 export type RandomSource = () => number;
