@@ -1,4 +1,4 @@
-import { app, ipcMain, shell } from "electron";
+import { app, ipcMain, session, shell } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import type { ConfigProfileResult } from "../../shared/types";
@@ -14,6 +14,13 @@ import {
 import { WindowManager } from "./windowManager";
 
 app.setName("Danmaku Companion");
+
+// A second instance would run its own overlay and generation loop and overwrite config.json and
+// the generation log with its own in-memory state, so it only hands over to the first one.
+const isPrimaryInstance = app.requestSingleInstanceLock();
+if (!isPrimaryInstance) {
+  app.quit();
+}
 
 const configStore = new ConfigStore();
 const generationLogStore = new GenerationLogStore();
@@ -43,6 +50,14 @@ function configureDockIcon(): void {
     app.dock?.setIcon(iconPath);
   }
   app.dock?.show();
+}
+
+/** The renderer needs no browser permissions (camera, microphone, notifications, ...). */
+function denyPermissionRequests(): void {
+  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
+    callback(false),
+  );
+  session.defaultSession.setPermissionCheckHandler(() => false);
 }
 
 function registerIpc(): void {
@@ -119,8 +134,17 @@ function registerIpc(): void {
   });
 }
 
+app.on("second-instance", () => {
+  void app.whenReady().then(() => windowManager.showSettings());
+});
+
 app.whenReady().then(async () => {
+  if (!isPrimaryInstance) {
+    return;
+  }
+
   configureDockIcon();
+  denyPermissionRequests();
   registerIpc();
   windowManager.createWindows();
   windowManager.createTray();
@@ -152,6 +176,10 @@ function deferQuitForPendingWrites(event: { preventDefault(): void }): void {
 }
 
 app.on("before-quit", (event) => {
+  if (!isPrimaryInstance) {
+    return;
+  }
+
   app.removeAllListeners("window-all-closed");
   controller.shutdown();
   windowManager.prepareForQuit();

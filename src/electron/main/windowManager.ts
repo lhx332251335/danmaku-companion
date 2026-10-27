@@ -9,8 +9,10 @@ import {
 } from "electron";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { AppConfig, RuntimeStatus } from "../../shared/types";
 import type { DanmakuController } from "./danmakuController";
+import { isAppUrl } from "./windowPolicy";
 
 const trayIconSvg = Buffer.from(`
 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
@@ -49,6 +51,37 @@ function createTrayIcon(): Electron.NativeImage {
   );
 }
 
+function rendererIndexPath(): string {
+  return app.isPackaged
+    ? path.join(app.getAppPath(), "dist/renderer/index.html")
+    : path.join(process.cwd(), "dist/renderer/index.html");
+}
+
+function appEntryUrl(): string {
+  return process.env.VITE_DEV_SERVER_URL || pathToFileURL(rendererIndexPath()).href;
+}
+
+function secureWebPreferences(): Electron.WebPreferences {
+  return {
+    contextIsolation: true,
+    nodeIntegration: false,
+    // The preload only requires contextBridge/ipcRenderer, which a sandboxed preload may use.
+    sandbox: true,
+    preload: path.join(__dirname, "../preload/index.js"),
+  };
+}
+
+/** Keep our windows on the app's own page: no popups, no navigation to dropped links or files. */
+function guardNavigation(contents: Electron.WebContents): void {
+  contents.setWindowOpenHandler(() => ({ action: "deny" }));
+  contents.on("will-navigate", (event) => {
+    if (!isAppUrl(event.url, appEntryUrl())) {
+      event.preventDefault();
+      console.warn(`Blocked navigation to ${event.url}`);
+    }
+  });
+}
+
 export class WindowManager {
   private settingsWindow: BrowserWindow | undefined;
   private overlayWindow: BrowserWindow | undefined;
@@ -74,8 +107,27 @@ export class WindowManager {
       this.tray.setTitle("弹幕");
       app.dock?.show();
     }
+    if (process.platform === "win32") {
+      this.tray.on("click", () => this.showSettings());
+    }
     this.tray.setToolTip("Danmaku Companion");
     this.updateTrayMenu();
+  }
+
+  showSettings(): void {
+    if (!this.settingsWindow || this.settingsWindow.isDestroyed()) {
+      this.createSettingsWindow();
+    }
+
+    const window = this.settingsWindow;
+    if (!window) {
+      return;
+    }
+    if (window.isMinimized()) {
+      window.restore();
+    }
+    window.show();
+    window.focus();
   }
 
   getOverlayWindow(): BrowserWindow | undefined {
@@ -136,14 +188,10 @@ export class WindowManager {
       minHeight: 660,
       title: "Danmaku Companion",
       backgroundColor: "#f6f8fb",
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: false,
-        preload: path.join(__dirname, "../preload/index.js"),
-      },
+      webPreferences: secureWebPreferences(),
     });
 
+    guardNavigation(this.settingsWindow.webContents);
     void this.loadView(this.settingsWindow, "settings");
 
     this.settingsWindow.on("closed", () => {
@@ -170,14 +218,10 @@ export class WindowManager {
       show: false,
       fullscreenable: false,
       backgroundColor: "#00000000",
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: false,
-        preload: path.join(__dirname, "../preload/index.js"),
-      },
+      webPreferences: secureWebPreferences(),
     });
 
+    guardNavigation(this.overlayWindow.webContents);
     this.overlayWindow.setIgnoreMouseEvents(true, { forward: true });
     void this.loadView(this.overlayWindow, "overlay").then(() => {
       if (this.overlayVisible) {
@@ -244,11 +288,7 @@ export class WindowManager {
       return;
     }
 
-    const rendererIndex = app.isPackaged
-      ? path.join(app.getAppPath(), "dist/renderer/index.html")
-      : path.join(process.cwd(), "dist/renderer/index.html");
-
-    await window.loadFile(rendererIndex, {
+    await window.loadFile(rendererIndexPath(), {
       query: { view },
     });
   }
@@ -276,13 +316,7 @@ export class WindowManager {
     const template = Menu.buildFromTemplate([
       {
         label: "Open Settings",
-        click: () => {
-          if (!this.settingsWindow) {
-            this.createSettingsWindow();
-          }
-          this.settingsWindow?.show();
-          this.settingsWindow?.focus();
-        },
+        click: () => this.showSettings(),
       },
       {
         label: running ? "Pause" : "Start",
