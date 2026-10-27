@@ -201,6 +201,9 @@ export class DanmakuController {
         historyMode: runtime.historyMode,
         historyImagesIncluded: runtime.historyIncludeImages,
         cachedInputTokens: result.cachedInputTokens,
+        promptTokens: result.promptTokens,
+        completionTokens: result.completionTokens,
+        promptMs: result.promptMs,
         screen: screenLogInfo(config.model.visionEnabled, snapshot, captureError),
         comments: result.items.map((item) => item.text),
         rawOutput: result.assistantText,
@@ -212,6 +215,7 @@ export class DanmakuController {
         lastError: undefined,
         providerLatencyMs: durationMs,
         cachedInputTokens: result.cachedInputTokens,
+        promptTokens: result.promptTokens,
       };
     } catch (error) {
       const aborted = generationAbort.signal.aborted || this.shuttingDown;
@@ -242,6 +246,7 @@ export class DanmakuController {
           state: "paused",
           lastError: undefined,
           cachedInputTokens: undefined,
+          promptTokens: undefined,
         };
       } else {
         this.status = {
@@ -249,6 +254,7 @@ export class DanmakuController {
           state: this.running ? "running" : "error",
           lastError: errorMessage(error),
           cachedInputTokens: undefined,
+          promptTokens: undefined,
         };
       }
     } finally {
@@ -277,7 +283,7 @@ export class DanmakuController {
 
   clearHistory(): void {
     this.history.reset();
-    this.status = { ...this.status, cachedInputTokens: undefined };
+    this.status = { ...this.status, cachedInputTokens: undefined, promptTokens: undefined };
     this.broadcastStatus(this.status);
   }
 

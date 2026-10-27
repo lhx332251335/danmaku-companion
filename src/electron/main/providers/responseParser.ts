@@ -8,13 +8,35 @@ export interface ChatCompletionResponse {
     };
   }>;
   usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    input_tokens?: number;
+    output_tokens?: number;
     input_tokens_details?: {
       cached_tokens?: number;
     };
     prompt_tokens_details?: {
       cached_tokens?: number;
     };
+    /** DeepSeek */
+    prompt_cache_hit_tokens?: number;
+    /** Anthropic-style gateways */
+    cache_read_input_tokens?: number;
   };
+  /** llama.cpp server: cache_n tokens were reused, prompt_n tokens were newly processed. */
+  timings?: {
+    cache_n?: number;
+    prompt_n?: number;
+    prompt_ms?: number;
+  };
+}
+
+export interface UsageSummary {
+  promptTokens?: number;
+  completionTokens?: number;
+  cachedTokens?: number;
+  /** Time the server spent processing the uncached part of the prompt (llama.cpp timings). */
+  promptMs?: number;
 }
 
 const COMMENT_LENGTH_DEFAULT = 50;
@@ -219,9 +241,35 @@ export function sanitize(
     }));
 }
 
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+export function extractUsage(response: ChatCompletionResponse): UsageSummary {
+  const usage = response.usage;
+  const timings = response.timings;
+  const cacheN = finiteNumber(timings?.cache_n);
+  const promptN = finiteNumber(timings?.prompt_n);
+  const cachedTokens =
+    finiteNumber(usage?.prompt_tokens_details?.cached_tokens) ??
+    finiteNumber(usage?.input_tokens_details?.cached_tokens) ??
+    finiteNumber(usage?.prompt_cache_hit_tokens) ??
+    finiteNumber(usage?.cache_read_input_tokens) ??
+    cacheN;
+  const promptTokens =
+    finiteNumber(usage?.prompt_tokens) ??
+    finiteNumber(usage?.input_tokens) ??
+    (cacheN !== undefined && promptN !== undefined ? cacheN + promptN : undefined);
+
+  return {
+    promptTokens,
+    completionTokens:
+      finiteNumber(usage?.completion_tokens) ?? finiteNumber(usage?.output_tokens),
+    cachedTokens,
+    promptMs: finiteNumber(timings?.prompt_ms),
+  };
+}
+
 export function cachedInputTokens(response: ChatCompletionResponse): number | undefined {
-  return (
-    response.usage?.input_tokens_details?.cached_tokens ??
-    response.usage?.prompt_tokens_details?.cached_tokens
-  );
+  return extractUsage(response).cachedTokens;
 }

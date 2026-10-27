@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   arrayLiteralFromKey,
   cachedInputTokens,
+  extractUsage,
   parseModelText,
   parseQuotedStringArray,
   sanitize,
@@ -69,5 +70,32 @@ describe("sanitize", () => {
     expect(items.map((item) => item.text)).toEqual(["hello world", "xxxxxxxxx...", "extra"]);
     expect(items[0].color).toBe(config.danmaku.palette[0]);
     expect(items.every((item) => item.source === "model")).toBe(true);
+  });
+});
+
+describe("extractUsage", () => {
+  it("reads Halogen/llama.cpp responses on a cold and a warm request", () => {
+    // Shapes observed from llm_api + Halogen: the cached field is absent when nothing was reused.
+    const cold = {
+      usage: { prompt_tokens: 98, completion_tokens: 2, total_tokens: 100 },
+      timings: { prompt_n: 98, cache_n: 0, prompt_ms: 460.2 },
+    };
+    const warm = {
+      usage: { prompt_tokens: 98, completion_tokens: 2, prompt_tokens_details: { cached_tokens: 98 } },
+      timings: { prompt_n: 0, cache_n: 98, prompt_ms: 0.3 },
+    };
+    expect(extractUsage(cold)).toEqual({ promptTokens: 98, completionTokens: 2, cachedTokens: 0, promptMs: 460.2 });
+    expect(extractUsage(warm)).toEqual({ promptTokens: 98, completionTokens: 2, cachedTokens: 98, promptMs: 0.3 });
+  });
+
+  it("supports other gateway formats and timings-only servers", () => {
+    expect(extractUsage({ usage: { prompt_cache_hit_tokens: 5, prompt_tokens: 9 } }).cachedTokens).toBe(5);
+    expect(extractUsage({ usage: { cache_read_input_tokens: 7, input_tokens: 11, output_tokens: 3 } })).toMatchObject({
+      cachedTokens: 7,
+      promptTokens: 11,
+      completionTokens: 3,
+    });
+    expect(extractUsage({ timings: { cache_n: 40, prompt_n: 2 } })).toMatchObject({ cachedTokens: 40, promptTokens: 42 });
+    expect(extractUsage({})).toEqual({});
   });
 });

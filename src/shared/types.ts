@@ -106,6 +106,7 @@ export interface RuntimeStatus {
   lastError?: string;
   providerLatencyMs?: number;
   cachedInputTokens?: number;
+  promptTokens?: number;
 }
 
 export interface ConnectionTestResult {
@@ -169,6 +170,9 @@ export interface DanmakuGenerationResult {
   userText: string;
   assistantText: string;
   cachedInputTokens?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  promptMs?: number;
 }
 
 export interface DanmakuItem {
@@ -213,6 +217,9 @@ export interface GenerationLogEntry {
   historyMode?: HistoryMode;
   historyImagesIncluded?: boolean;
   cachedInputTokens?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  promptMs?: number;
   screen: GenerationLogScreenInfo;
   comments: string[];
   rawOutput?: string;

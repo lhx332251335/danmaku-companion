@@ -94,6 +94,18 @@ function formatBytes(bytes: number | undefined): string {
   return `${Math.round(bytes / 1024)} KB`;
 }
 
+function formatCacheUsage(cached: number | undefined, prompt: number | undefined): string {
+  if (cached === undefined) {
+    return prompt === undefined ? "-" : `? / ${prompt}`;
+  }
+
+  if (!prompt) {
+    return String(cached);
+  }
+
+  return `${cached} / ${prompt} (${Math.round((cached / prompt) * 100)}%)`;
+}
+
 function screenLabel(log: GenerationLogEntry): string {
   if (!log.screen.enabled) {
     return "无截图";
@@ -392,7 +404,7 @@ export function SettingsApp() {
         </div>
         <div>Cycles: {status.cycles}</div>
         <div>Latency: {status.providerLatencyMs ? `${status.providerLatencyMs} ms` : "-"}</div>
-        <div>Cached: {status.cachedInputTokens ?? "-"}</div>
+        <div>Cached: {formatCacheUsage(status.cachedInputTokens, status.promptTokens)}</div>
         <div>Last: {status.lastGeneratedAt ? new Date(status.lastGeneratedAt).toLocaleTimeString() : "-"}</div>
       </section>
 
@@ -1251,8 +1263,16 @@ export function SettingsApp() {
                         <span>{log.historyImagesIncluded ? "保留" : "不保留"}</span>
                       </div>
                       <div>
-                        <b>缓存 tokens</b>
-                        <span>{log.cachedInputTokens ?? "-"}</span>
+                        <b>缓存 / 输入 tokens</b>
+                        <span>{formatCacheUsage(log.cachedInputTokens, log.promptTokens)}</span>
+                      </div>
+                      <div>
+                        <b>输出 tokens</b>
+                        <span>{log.completionTokens ?? "-"}</span>
+                      </div>
+                      <div>
+                        <b>预填充耗时</b>
+                        <span>{log.promptMs !== undefined ? formatDuration(Math.round(log.promptMs)) : "-"}</span>
                       </div>
                       <div>
                         <b>截图来源</b>

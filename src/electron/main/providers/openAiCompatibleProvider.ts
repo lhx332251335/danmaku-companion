@@ -11,7 +11,7 @@ import { buildMessages } from "./messageBuilder";
 import { legacyModelOptions, mergeModelOptions, nativeModelOptions } from "./modelList";
 import type { ModelProvider } from "./modelProvider";
 import {
-  cachedInputTokens,
+  extractUsage,
   historyComments,
   parseModelText,
   sanitize,
@@ -77,11 +77,15 @@ export class OpenAICompatibleProvider implements ModelProvider {
 
       const data = (await response.json()) as ChatCompletionResponse;
       const text = textFromContent(data.choices);
+      const usage = extractUsage(data);
       return {
         items: sanitize(parseModelText(text), config, input.maxItems, historyComments(input.history)),
         userText,
         assistantText: text,
-        cachedInputTokens: cachedInputTokens(data),
+        cachedInputTokens: usage.cachedTokens,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        promptMs: usage.promptMs,
       };
     } finally {
       clearTimeout(timeout);
