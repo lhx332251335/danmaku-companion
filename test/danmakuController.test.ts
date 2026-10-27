@@ -251,6 +251,20 @@ describe("DanmakuController", () => {
     await vi.waitFor(() => expect(h.logs).toHaveLength(3));
   });
 
+  it("applies an interval change even when a settings save turned the saved running flag off", async () => {
+    vi.useFakeTimers();
+    const h = setup({ intervalMinSeconds: 100, intervalMaxSeconds: 100 });
+    mocks.generate.mockImplementation(async () => reply("x"));
+    await h.controller.start();
+    await vi.waitFor(() => expect(h.logs).toHaveLength(1));
+
+    // The settings window saves its whole draft, including the flag it loaded before Start.
+    Object.assign(h.config.runtime, { enabled: false, intervalMinSeconds: 5, intervalMaxSeconds: 5 });
+    await h.controller.refreshSchedule();
+    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.waitFor(() => expect(h.logs).toHaveLength(2));
+  });
+
   it("switches state even when saving the running flag fails", async () => {
     const h = setup();
     vi.spyOn(console, "warn").mockImplementation(() => {});

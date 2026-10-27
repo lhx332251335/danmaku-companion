@@ -146,8 +146,10 @@ export class DanmakuController {
 
   async refreshSchedule(): Promise<void> {
     const config = await this.configStore.get();
-    // Without an armed timer a timer generation is in flight, and it re-reads the config when done.
-    if (!this.running || !config.runtime.enabled || !this.cycleTimer) {
+    // `running` is the loop's state; the saved flag only means "start on launch" and a settings
+    // save can carry a stale copy of it. Without an armed timer a timer generation is in flight,
+    // and it re-reads the config when done.
+    if (!this.running || !this.cycleTimer) {
       return;
     }
 
