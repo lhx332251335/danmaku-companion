@@ -1,5 +1,5 @@
 import type { AppConfig, HistoryMode, ScreenImageFormat } from "../../../shared/types";
-import { LIMITS, clamp, clampToRange } from "../../../shared/limits";
+import { LIMITS, clamp, clampOr, clampToRange } from "../../../shared/limits";
 
 export interface NormalizedRuntimeSettings {
   intervalMinSeconds: number;
@@ -13,8 +13,15 @@ export interface NormalizedRuntimeSettings {
   historyRounds: number;
   historyMode: HistoryMode;
   historyIncludeImages: boolean;
+  historyMaxImages: number;
+  requestBodyLimitBytes: number;
   generationLogLimit: number;
 }
+
+const HISTORY_MODES: readonly HistoryMode[] = ["reset-on-limit", "sliding", "batch-sliding"];
+const MIB = 1024 * 1024;
+const DEFAULT_HISTORY_MAX_IMAGES = 12;
+const DEFAULT_REQUEST_BODY_LIMIT_MB = 48;
 
 export type RandomSource = () => number;
 
@@ -60,8 +67,14 @@ export function normalizeRuntimeSettings(config: AppConfig): NormalizedRuntimeSe
     captureImageFormat: runtime.captureImageFormat === "png" ? "png" : "jpeg",
     captureJpegQuality: clampToRange(runtime.captureJpegQuality, LIMITS.captureJpegQuality),
     historyRounds: Math.round(clampToRange(runtime.historyRounds, LIMITS.historyRounds)),
-    historyMode: runtime.historyMode ?? "reset-on-limit",
+    historyMode: HISTORY_MODES.includes(runtime.historyMode) ? runtime.historyMode : "reset-on-limit",
     historyIncludeImages: Boolean(runtime.historyIncludeImages),
+    historyMaxImages: Math.round(
+      clampOr(runtime.historyMaxImages, LIMITS.historyMaxImages, DEFAULT_HISTORY_MAX_IMAGES),
+    ),
+    requestBodyLimitBytes: Math.round(
+      clampOr(runtime.requestBodyLimitMB, LIMITS.requestBodyLimitMB, DEFAULT_REQUEST_BODY_LIMIT_MB) * MIB,
+    ),
     generationLogLimit: Math.round(
       clampToRange(runtime.generationLogLimit, LIMITS.generationLogLimit),
     ),

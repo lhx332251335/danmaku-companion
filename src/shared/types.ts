@@ -4,7 +4,7 @@ export type RuntimeState = "idle" | "running" | "paused" | "error";
 
 export type DanmakuZone = "full" | "top" | "middle" | "bottom";
 
-export type HistoryMode = "reset-on-limit" | "sliding";
+export type HistoryMode = "reset-on-limit" | "sliding" | "batch-sliding";
 
 export type ScreenImageFormat = "jpeg" | "png";
 
@@ -66,6 +66,10 @@ export interface RuntimeSettings {
   historyRounds: number;
   historyMode: HistoryMode;
   historyIncludeImages: boolean;
+  /** Screenshots kept in history before the oldest are dropped in a batch. */
+  historyMaxImages: number;
+  /** Ceiling for the serialized request body in MiB; history screenshots are dropped to stay under it. */
+  requestBodyLimitMB: number;
   persistScreenshots: boolean;
   generationLogLimit: number;
   privacyBlacklist: string[];
@@ -107,6 +111,8 @@ export interface RuntimeStatus {
   providerLatencyMs?: number;
   cachedInputTokens?: number;
   promptTokens?: number;
+  requestBytes?: number;
+  historyImages?: number;
 }
 
 export interface ConnectionTestResult {
@@ -154,6 +160,8 @@ export interface DanmakuHistoryRound {
   userText: string;
   assistantText: string;
   snapshot?: ScreenSnapshot;
+  /** The screenshot of this round was dropped to keep requests under the size budget. */
+  imageOmitted?: boolean;
 }
 
 export interface DanmakuInput {
@@ -162,6 +170,8 @@ export interface DanmakuInput {
   character: CharacterProfile;
   history?: DanmakuHistoryRound[];
   maxItems: number;
+  /** The provider refuses to send a body larger than this (bytes). */
+  maxBodyBytes?: number;
   abortSignal?: AbortSignal;
 }
 
@@ -173,6 +183,8 @@ export interface DanmakuGenerationResult {
   promptTokens?: number;
   completionTokens?: number;
   promptMs?: number;
+  /** Size of the request body that was sent. */
+  requestBytes?: number;
 }
 
 export interface DanmakuItem {
@@ -198,7 +210,16 @@ export interface GenerationLogScreenInfo {
   jpegQuality?: number;
   sourceName?: string;
   capturedAt?: string;
+  /** The screenshot was re-encoded smaller because it alone exceeded the request budget. */
+  resizedToFit?: boolean;
   error?: string;
+}
+
+export interface GenerationLogCompaction {
+  /** "budget": a configured limit was exceeded; "413": the server rejected the request size. */
+  trigger: "budget" | "413";
+  reason: "images" | "bytes";
+  droppedImages: number;
 }
 
 export interface GenerationLogEntry {
@@ -220,6 +241,10 @@ export interface GenerationLogEntry {
   promptTokens?: number;
   completionTokens?: number;
   promptMs?: number;
+  requestBytes?: number;
+  bodyLimitBytes?: number;
+  historyImagesSent?: number;
+  compaction?: GenerationLogCompaction[];
   screen: GenerationLogScreenInfo;
   comments: string[];
   rawOutput?: string;

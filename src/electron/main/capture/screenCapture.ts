@@ -153,6 +153,46 @@ async function captureWithDesktopCapturer(
   };
 }
 
+const SHRINK_MIN_EDGE_PIXELS = 320;
+const SHRINK_SCALE_STEP = 0.75;
+const SHRINK_MAX_JPEG_QUALITY = 0.8;
+
+/**
+ * Re-encode a screenshot as a smaller JPEG until its data URL fits in maxDataUrlBytes. Used when
+ * the current screenshot alone exceeds the request budget (e.g. a large PNG against a server with
+ * a small body limit). Returns undefined if it cannot fit above the minimum size.
+ */
+export function shrinkSnapshotToFit(
+  snapshot: ScreenSnapshot,
+  maxDataUrlBytes: number,
+): ScreenSnapshot | undefined {
+  const original = nativeImage.createFromDataURL(snapshot.dataUrl);
+  if (original.isEmpty()) {
+    return undefined;
+  }
+
+  const originalSize = original.getSize();
+  let scale = 1;
+  let quality = Math.min(snapshot.jpegQuality ?? SHRINK_MAX_JPEG_QUALITY, SHRINK_MAX_JPEG_QUALITY);
+
+  while (Math.max(originalSize.width, originalSize.height) * scale >= SHRINK_MIN_EDGE_PIXELS) {
+    const size = {
+      width: Math.max(1, Math.round(originalSize.width * scale)),
+      height: Math.max(1, Math.round(originalSize.height * scale)),
+    };
+    const image = scale === 1 ? original : original.resize({ ...size, quality: "good" });
+    const encoded = encodeImage(image, { format: "jpeg", jpegQuality: quality });
+    if (encoded.dataUrlBytes <= maxDataUrlBytes) {
+      return { ...snapshot, ...encoded, ...size };
+    }
+
+    scale *= SHRINK_SCALE_STEP;
+    quality = Math.max(LIMITS.captureJpegQuality.min, quality - 0.1);
+  }
+
+  return undefined;
+}
+
 export async function probeScreenCapturePermission(): Promise<ScreenCaptureProbeResult> {
   try {
     await capturePrimaryScreen(8);

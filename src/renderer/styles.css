@@ -364,6 +364,13 @@ label {
   white-space: nowrap;
 }
 
+.panel-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .error-note {
   color: #be123c;
 }

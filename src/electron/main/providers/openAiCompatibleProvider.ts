@@ -7,7 +7,8 @@ import type {
   ModelOption,
 } from "../../../shared/types";
 import { buildHeaders, endpoint, serverRoot } from "./endpoints";
-import { buildMessages } from "./messageBuilder";
+import { RequestTooLargeError, formatMiB } from "./errors";
+import { buildRequestBody } from "./messageBuilder";
 import { legacyModelOptions, mergeModelOptions, nativeModelOptions } from "./modelList";
 import type { ModelProvider } from "./modelProvider";
 import {
@@ -47,16 +48,17 @@ export class OpenAICompatibleProvider implements ModelProvider {
 
     try {
       const requestEndpoint = endpoint(config.model.baseUrl, "chat/completions");
-      const { messages, userText } = buildMessages(input, config);
-      const requestBody: Record<string, unknown> = {
-        model: config.model.model,
-        messages,
-        max_tokens: config.model.maxTokens,
-        stream: false,
-      };
+      const { body: requestBody, userText } = buildRequestBody(input, config);
+      const serializedBody = JSON.stringify(requestBody);
+      const requestBytes = Buffer.byteLength(serializedBody, "utf8");
 
-      if (config.model.sendTemperature) {
-        requestBody.temperature = config.model.temperature;
+      if (input.maxBodyBytes !== undefined && requestBytes > input.maxBodyBytes) {
+        throw new RequestTooLargeError({
+          message: `Request body ${formatMiB(requestBytes)} exceeds the ${formatMiB(input.maxBodyBytes)} limit.`,
+          requestBytes,
+          limitBytes: input.maxBodyBytes,
+          fromServer: false,
+        });
       }
 
       const response = await fetch(requestEndpoint, {
@@ -65,14 +67,21 @@ export class OpenAICompatibleProvider implements ModelProvider {
         headers: buildHeaders(config.model.apiKey, {
           "Content-Type": "application/json",
         }),
-        body: JSON.stringify(requestBody),
+        body: serializedBody,
       });
 
       if (!response.ok) {
         const body = await response.text();
-        throw new Error(
-          `Model request failed at ${requestEndpoint} (${response.status}): ${body.slice(0, 240)}`,
-        );
+        const message = `Model request failed at ${requestEndpoint} (${response.status}): ${body.slice(0, 240)}`;
+        if (response.status === 413) {
+          throw new RequestTooLargeError({
+            message: `${message} [request body ${formatMiB(requestBytes)}]`,
+            requestBytes,
+            serverBody: body.slice(0, 2000),
+            fromServer: true,
+          });
+        }
+        throw new Error(message);
       }
 
       const data = (await response.json()) as ChatCompletionResponse;
@@ -86,6 +95,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         promptMs: usage.promptMs,
+        requestBytes,
       };
     } finally {
       clearTimeout(timeout);

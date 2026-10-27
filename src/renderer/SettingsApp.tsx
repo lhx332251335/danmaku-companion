@@ -106,6 +106,19 @@ function formatCacheUsage(cached: number | undefined, prompt: number | undefined
   return `${cached} / ${prompt} (${Math.round((cached / prompt) * 100)}%)`;
 }
 
+function compactionLabel(log: GenerationLogEntry): string {
+  if (!log.compaction?.length) {
+    return "-";
+  }
+
+  return log.compaction
+    .map((entry) => {
+      const trigger = entry.trigger === "413" ? "413 后" : entry.reason === "bytes" ? "超出大小" : "超出张数";
+      return `${trigger}丢弃 ${entry.droppedImages} 张`;
+    })
+    .join("；");
+}
+
 function screenLabel(log: GenerationLogEntry): string {
   if (!log.screen.enabled) {
     return "无截图";
@@ -405,6 +418,10 @@ export function SettingsApp() {
         <div>Cycles: {status.cycles}</div>
         <div>Latency: {status.providerLatencyMs ? `${status.providerLatencyMs} ms` : "-"}</div>
         <div>Cached: {formatCacheUsage(status.cachedInputTokens, status.promptTokens)}</div>
+        <div>
+          Request: {formatBytes(status.requestBytes)}
+          {status.historyImages ? ` · ${status.historyImages} 张历史截图` : ""}
+        </div>
         <div>Last: {status.lastGeneratedAt ? new Date(status.lastGeneratedAt).toLocaleTimeString() : "-"}</div>
       </section>
 
@@ -1057,7 +1074,7 @@ export function SettingsApp() {
               />
             </label>
             <label>
-              History rounds
+              历史轮数
               <input
                 type="number"
                 min="0"
@@ -1072,7 +1089,7 @@ export function SettingsApp() {
               />
             </label>
             <label>
-              History mode
+              历史模式
               <select
                 value={draft.runtime.historyMode}
                 onChange={(event) =>
@@ -1085,9 +1102,40 @@ export function SettingsApp() {
                   })
                 }
               >
-                <option value="reset-on-limit">Reset at limit</option>
-                <option value="sliding">Sliding</option>
+                <option value="reset-on-limit">满额重置</option>
+                <option value="batch-sliding">分批滑动（缓存友好）</option>
+                <option value="sliding">逐轮滑动（每轮失去缓存）</option>
               </select>
+            </label>
+            <label>
+              历史截图上限（张）
+              <input
+                type="number"
+                min="0"
+                max="50"
+                value={draft.runtime.historyMaxImages}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    runtime: { ...draft.runtime, historyMaxImages: Number(event.target.value) },
+                  })
+                }
+              />
+            </label>
+            <label>
+              请求体上限（MB）
+              <input
+                type="number"
+                min="1"
+                max="512"
+                value={draft.runtime.requestBodyLimitMB}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    runtime: { ...draft.runtime, requestBodyLimitMB: Number(event.target.value) },
+                  })
+                }
+              />
             </label>
             <label>
               Items per cycle
@@ -1152,8 +1200,13 @@ export function SettingsApp() {
                 })
               }
             />
-            History images
+            保留历史截图
           </label>
+          <p className="panel-note">
+            保留历史截图时，截图数超过上限或请求体超过上限，会一次性丢弃最早的一半截图（保留它们的文字），
+            只有这一轮需要重新预填充，其余轮次都能命中服务端的前缀缓存。逐轮滑动每轮都会改变请求开头，缓存基本失效。
+            服务器返回 413 时会按它报告的上限自动压缩并重试一次。
+          </p>
           <label className="toggle-row">
             <input
               type="checkbox"
@@ -1259,8 +1312,24 @@ export function SettingsApp() {
                         <span>{log.historyMode ?? "-"}</span>
                       </div>
                       <div>
-                        <b>历史图片</b>
-                        <span>{log.historyImagesIncluded ? "保留" : "不保留"}</span>
+                        <b>历史截图</b>
+                        <span>
+                          {log.historyImagesIncluded
+                            ? `保留 · 本次 ${log.historyImagesSent ?? 0} 张`
+                            : "不保留"}
+                        </span>
+                      </div>
+                      <div>
+                        <b>请求体</b>
+                        <span>
+                          {log.requestBytes !== undefined
+                            ? `${formatBytes(log.requestBytes)} / ${formatBytes(log.bodyLimitBytes)}`
+                            : "-"}
+                        </span>
+                      </div>
+                      <div>
+                        <b>历史压缩</b>
+                        <span>{compactionLabel(log)}</span>
                       </div>
                       <div>
                         <b>缓存 / 输入 tokens</b>
@@ -1295,7 +1364,10 @@ export function SettingsApp() {
                       </div>
                       <div>
                         <b>传输大小</b>
-                        <span>{formatBytes(log.screen.dataUrlBytes)}</span>
+                        <span>
+                          {formatBytes(log.screen.dataUrlBytes)}
+                          {log.screen.resizedToFit ? "（已缩小以适应上限）" : ""}
+                        </span>
                       </div>
                       <div>
                         <b>开始时间</b>

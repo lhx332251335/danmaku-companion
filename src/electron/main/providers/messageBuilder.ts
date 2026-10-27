@@ -13,6 +13,9 @@ export interface ChatMessage {
   content: ChatMessageContent;
 }
 
+/** Text that replaces a history screenshot dropped to keep requests under the size budget. */
+export const OMITTED_SCREENSHOT_NOTE = "[Earlier screenshot omitted to keep the request small]";
+
 export const JSON_SHAPE = "{\"comments\":[\"comment 1\",\"comment 2\"]}";
 
 export function renderTemplate(template: string, values: Record<string, string>): string {
@@ -25,12 +28,17 @@ export function userContent(
   userText: string,
   snapshot: ScreenSnapshot | undefined,
   visionEnabled: boolean,
+  imageOmitted = false,
 ): ChatMessageContent {
   const content: Exclude<ChatMessageContent, string> = [];
   const trimmedText = userText.trim();
 
   if (trimmedText) {
     content.push({ type: "text", text: trimmedText });
+  }
+
+  if (imageOmitted) {
+    content.push({ type: "text", text: OMITTED_SCREENSHOT_NOTE });
   }
 
   if (visionEnabled && snapshot) {
@@ -47,7 +55,10 @@ export function userContent(
   return content;
 }
 
-export function templateValues(input: DanmakuInput, config: AppConfig): Record<string, string> {
+export function templateValues(
+  input: Pick<DanmakuInput, "character" | "activeAppName" | "maxItems">,
+  config: AppConfig,
+): Record<string, string> {
   const user = config.user ?? defaultAppConfig.user;
   return {
     "companion.name": input.character.name,
@@ -66,14 +77,23 @@ export function templateValues(input: DanmakuInput, config: AppConfig): Record<s
   };
 }
 
+export function renderPrompts(
+  input: Pick<DanmakuInput, "character" | "activeAppName" | "maxItems">,
+  config: AppConfig,
+): { systemText: string; userText: string } {
+  const prompt = config.prompt ?? defaultAppConfig.prompt;
+  const values = templateValues(input, config);
+  return {
+    systemText: renderTemplate(prompt.systemTemplate, values),
+    userText: renderTemplate(prompt.userTemplate, values),
+  };
+}
+
 export function buildMessages(
   input: DanmakuInput,
   config: AppConfig,
 ): { messages: ChatMessage[]; userText: string } {
-  const prompt = config.prompt ?? defaultAppConfig.prompt;
-  const values = templateValues(input, config);
-  const system = renderTemplate(prompt.systemTemplate, values);
-  const userText = renderTemplate(prompt.userTemplate, values);
+  const { systemText: system, userText } = renderPrompts(input, config);
 
   const messages: ChatMessage[] = [
     { role: "system", content: system },
@@ -82,7 +102,12 @@ export function buildMessages(
   (input.history ?? []).forEach((round) => {
     messages.push({
       role: "user",
-      content: userContent(round.userText, round.snapshot, config.model.visionEnabled),
+      content: userContent(
+        round.userText,
+        round.snapshot,
+        config.model.visionEnabled,
+        round.imageOmitted,
+      ),
     });
     messages.push({
       role: "assistant",
@@ -96,4 +121,23 @@ export function buildMessages(
   });
 
   return { messages, userText };
+}
+
+export function buildRequestBody(
+  input: DanmakuInput,
+  config: AppConfig,
+): { body: Record<string, unknown>; userText: string } {
+  const { messages, userText } = buildMessages(input, config);
+  const body: Record<string, unknown> = {
+    model: config.model.model,
+    messages,
+    max_tokens: config.model.maxTokens,
+    stream: false,
+  };
+
+  if (config.model.sendTemperature) {
+    body.temperature = config.model.temperature;
+  }
+
+  return { body, userText };
 }

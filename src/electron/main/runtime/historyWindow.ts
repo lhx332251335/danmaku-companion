@@ -4,6 +4,7 @@ import type {
   HistoryMode,
   ScreenSnapshot,
 } from "../../../shared/types";
+import { LOW_WATER_RATIO } from "./requestBudget";
 
 export interface HistoryWindowSettings {
   historyRounds: number;
@@ -15,7 +16,10 @@ export interface HistoryWindowSettings {
  * Conversation history sent with each request.
  *
  * "reset-on-limit" appends rounds until the window is full and then starts over, which keeps the
- * request prefix stable between resets. "sliding" drops the oldest round once the window is full.
+ * request prefix stable between resets. "sliding" drops the oldest round once the window is full,
+ * which changes the prefix (and misses the server's prompt cache) on every round from then on.
+ * "batch-sliding" drops the oldest half in one go once the window is full: one cache miss per
+ * half window, while always keeping at least half a window of context.
  */
 export class HistoryWindow {
   private readonly rounds: DanmakuHistoryRound[] = [];
@@ -71,10 +75,41 @@ export class HistoryWindow {
       snapshot: settings.historyIncludeImages ? snapshot : undefined,
     });
 
-    if (settings.historyMode === "sliding" && this.rounds.length > settings.historyRounds) {
-      this.rounds.splice(0, this.rounds.length - settings.historyRounds);
-      this.windowRounds = this.rounds.length;
+    if (this.rounds.length > settings.historyRounds) {
+      if (settings.historyMode === "sliding") {
+        this.rounds.splice(0, this.rounds.length - settings.historyRounds);
+        this.windowRounds = this.rounds.length;
+      } else if (settings.historyMode === "batch-sliding") {
+        const keep = Math.max(1, Math.ceil(settings.historyRounds * LOW_WATER_RATIO));
+        this.rounds.splice(0, this.rounds.length - keep);
+        this.windowRounds = this.rounds.length;
+      }
     }
+  }
+
+  /** Number of stored rounds that still carry a screenshot. */
+  get imageCount(): number {
+    return this.rounds.filter((round) => round.snapshot).length;
+  }
+
+  /**
+   * Replace the screenshot of the given rounds (matched by identity, e.g. from forRequest) with an
+   * omitted-screenshot marker. Their text stays in history.
+   */
+  dropImages(rounds: readonly DanmakuHistoryRound[]): number {
+    const targets = new Set(rounds);
+    let dropped = 0;
+    this.rounds.forEach((round, index) => {
+      if (targets.has(round) && round.snapshot) {
+        this.rounds[index] = { ...round, snapshot: undefined, imageOmitted: true };
+        dropped += 1;
+      }
+    });
+    return dropped;
+  }
+
+  dropAllImages(): number {
+    return this.dropImages(this.rounds);
   }
 
   reset(): void {

@@ -34,6 +34,31 @@ describe("HistoryWindow", () => {
     ]);
   });
 
+  it("batch-sliding drops the oldest half once the window is full", () => {
+    const window = new HistoryWindow();
+    const settings: HistoryWindowSettings = { historyRounds: 4, historyMode: "batch-sliding", historyIncludeImages: false };
+    const sent = ["a", "b", "c", "d", "e", "f", "g", "h"].map((text) => cycle(window, settings, text));
+    // Grows to 4, drops to 2 after the 5th round, grows again: the prefix only changes once per batch.
+    expect(sent).toEqual([0, 1, 2, 3, 4, 2, 3, 4]);
+    // The 8th round filled the window again, so it was just halved.
+    expect(window.forRequest(4).map((round) => round.assistantText)).toEqual(
+      ["g", "h"].map((text) => JSON.stringify({ comments: [text] })),
+    );
+  });
+
+  it("drops screenshots by identity and keeps the text", () => {
+    const window = new HistoryWindow();
+    const settings: HistoryWindowSettings = { historyRounds: 5, historyMode: "reset-on-limit", historyIncludeImages: true };
+    ["a", "b", "c"].forEach((text) => cycle(window, settings, text));
+    const [first] = window.forRequest(5);
+    expect(window.dropImages([first])).toBe(1);
+    const after = window.forRequest(5);
+    expect(after[0]).toMatchObject({ imageOmitted: true, snapshot: undefined, assistantText: first.assistantText });
+    expect(window.imageCount).toBe(2);
+    expect(window.dropAllImages()).toBe(2);
+    expect(window.imageCount).toBe(0);
+  });
+
   it("keeps snapshots only when history images are enabled", () => {
     const withImages = new HistoryWindow();
     cycle(withImages, { historyRounds: 3, historyMode: "sliding", historyIncludeImages: true }, "a");

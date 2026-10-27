@@ -10,6 +10,8 @@ export const LIMITS = {
   captureMaxEdgePixels: { min: 480, max: 2160 },
   captureJpegQuality: { min: 0.5, max: 0.95 },
   historyRounds: { min: 0, max: 50 },
+  historyMaxImages: { min: 0, max: 50 },
+  requestBodyLimitMB: { min: 1, max: 512 },
   generationLogLimit: { min: 10, max: 2000 },
   maxCommentLength: { min: 10, max: 200 },
 } as const satisfies Record<string, NumericRange>;

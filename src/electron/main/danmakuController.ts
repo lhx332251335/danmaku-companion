@@ -6,10 +6,12 @@ import type {
   RuntimeStatus,
   ScreenSnapshot,
 } from "../../shared/types";
-import { capturePrimaryScreen } from "./capture/screenCapture";
+import { capturePrimaryScreen, shrinkSnapshotToFit } from "./capture/screenCapture";
 import { ConfigStore } from "./configStore";
 import { GenerationLogStore } from "./generationLogStore";
+import { endpoint } from "./providers/endpoints";
 import { OpenAICompatibleProvider } from "./providers/openAiCompatibleProvider";
+import { createBudgetTrace, runBudgetedRequest, type BudgetTrace } from "./runtime/budgetedRequest";
 import { HistoryWindow } from "./runtime/historyWindow";
 import {
   normalizeRuntimeSettings,
@@ -30,10 +32,23 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function budgetLogInfo(trace: BudgetTrace | undefined): Partial<GenerationLogEntry> {
+  if (!trace) {
+    return {};
+  }
+
+  return {
+    bodyLimitBytes: trace.bodyLimitBytes,
+    historyImagesSent: trace.historyImagesSent,
+    compaction: trace.compaction.length > 0 ? trace.compaction : undefined,
+  };
+}
+
 function screenLogInfo(
   visionEnabled: boolean,
   snapshot: ScreenSnapshot | undefined,
   captureError: string | undefined,
+  resizedToFit = false,
 ): GenerationLogEntry["screen"] {
   return {
     enabled: visionEnabled,
@@ -46,6 +61,7 @@ function screenLogInfo(
     jpegQuality: snapshot?.jpegQuality,
     sourceName: snapshot?.sourceName,
     capturedAt: snapshot?.capturedAt,
+    resizedToFit: resizedToFit || undefined,
     error: captureError,
   };
 }
@@ -54,6 +70,8 @@ export class DanmakuController {
   private timer: NodeJS.Timeout | undefined;
   private readonly releaseTimers = new Set<NodeJS.Timeout>();
   private readonly history = new HistoryWindow();
+  /** Body limits learned from HTTP 413 responses, per chat-completions endpoint. */
+  private readonly learnedBodyLimits = new Map<string, number>();
   private activeGenerationAbort: AbortController | undefined;
   private busy = false;
   private running = false;
@@ -138,16 +156,14 @@ export class DanmakuController {
     let logEntry: GenerationLogEntry | undefined;
     let runtime: NormalizedRuntimeSettings | undefined;
     let requestedCount = 0;
-    let requestHistoryLength = 0;
     let snapshot: ScreenSnapshot | undefined;
     let captureError: string | undefined;
+    let budgetTrace: BudgetTrace | undefined;
 
     try {
       config = await this.configStore.get();
       runtime = normalizeRuntimeSettings(config);
       requestedCount = runtime.itemsPerCycle;
-      const requestHistory = this.history.forRequest(runtime.historyRounds);
-      requestHistoryLength = requestHistory.length;
       if (config.model.visionEnabled) {
         try {
           snapshot = await capturePrimaryScreen(runtime.captureMaxEdgePixels, {
@@ -163,16 +179,33 @@ export class DanmakuController {
         }
       }
 
-      const result = await this.provider.generateDanmaku(
+      const activeConfig = config;
+      const endpointKey = endpoint(activeConfig.model.baseUrl, "chat/completions");
+      const trace = createBudgetTrace(this.learnedBodyLimits.get(endpointKey));
+      budgetTrace = trace;
+      const result = await runBudgetedRequest(
         {
+          config: activeConfig,
+          history: this.history,
+          settings: runtime,
+          input: {
+            character: activeConfig.character,
+            maxItems: requestedCount,
+            abortSignal: generationAbort.signal,
+          },
           snapshot,
-          character: config.character,
-          maxItems: requestedCount,
-          history: requestHistory,
-          abortSignal: generationAbort.signal,
+          trace,
         },
-        config,
-      );
+        {
+          generate: (input) => this.provider.generateDanmaku(input, activeConfig),
+          shrinkSnapshot: shrinkSnapshotToFit,
+        },
+      ).finally(() => {
+        if (trace.learnedLimitBytes !== undefined) {
+          this.learnedBodyLimits.set(endpointKey, trace.learnedLimitBytes);
+        }
+      });
+      const sentSnapshot = trace.snapshot;
 
       const releaseWindowSeconds = randomReleaseWindowSeconds(
         runtime.releaseWindowMinSeconds,
@@ -180,7 +213,7 @@ export class DanmakuController {
       );
 
       if (!generationAbort.signal.aborted && !this.shuttingDown && (reason === "manual" || this.running)) {
-        this.history.remember(result, snapshot, runtime, requestHistory.length);
+        this.history.remember(result, sentSnapshot, runtime, trace.requestHistoryLength);
         this.scheduleItems(result.items, releaseWindowSeconds);
       }
       const completedAt = new Date().toISOString();
@@ -197,14 +230,21 @@ export class DanmakuController {
         requestedCount,
         generatedCount: result.items.length,
         releaseWindowSeconds: Math.round(releaseWindowSeconds * 100) / 100,
-        historyRoundsUsed: requestHistory.length,
+        historyRoundsUsed: trace.requestHistoryLength,
         historyMode: runtime.historyMode,
         historyImagesIncluded: runtime.historyIncludeImages,
         cachedInputTokens: result.cachedInputTokens,
         promptTokens: result.promptTokens,
         completionTokens: result.completionTokens,
         promptMs: result.promptMs,
-        screen: screenLogInfo(config.model.visionEnabled, snapshot, captureError),
+        requestBytes: result.requestBytes,
+        ...budgetLogInfo(trace),
+        screen: screenLogInfo(
+          config.model.visionEnabled,
+          sentSnapshot ?? snapshot,
+          captureError,
+          trace.resizedToFit,
+        ),
         comments: result.items.map((item) => item.text),
         rawOutput: result.assistantText,
       };
@@ -216,6 +256,8 @@ export class DanmakuController {
         providerLatencyMs: durationMs,
         cachedInputTokens: result.cachedInputTokens,
         promptTokens: result.promptTokens,
+        requestBytes: result.requestBytes,
+        historyImages: trace.historyImagesSent,
       };
     } catch (error) {
       const aborted = generationAbort.signal.aborted || this.shuttingDown;
@@ -231,12 +273,16 @@ export class DanmakuController {
         durationMs,
         model: config?.model.model,
         requestedCount: requestedCount || undefined,
-        historyRoundsUsed: requestHistoryLength,
+        historyRoundsUsed: budgetTrace?.requestHistoryLength ?? 0,
         historyMode: runtime?.historyMode,
         historyImagesIncluded: runtime?.historyIncludeImages,
-        screen: {
-          ...screenLogInfo(Boolean(config?.model.visionEnabled), snapshot, captureError),
-        },
+        ...budgetLogInfo(budgetTrace),
+        screen: screenLogInfo(
+          Boolean(config?.model.visionEnabled),
+          budgetTrace?.snapshot ?? snapshot,
+          captureError,
+          budgetTrace?.resizedToFit,
+        ),
         comments: [],
         error: aborted ? undefined : errorMessage(error),
       };
