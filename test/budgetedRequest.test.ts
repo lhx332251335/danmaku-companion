@@ -162,3 +162,33 @@ describe("history messages after compaction", () => {
     expect(messages[1].content).toEqual([{ type: "text", text: OMITTED_SCREENSHOT_NOTE }]);
   });
 });
+
+describe("upload reset through the real provider", () => {
+  it("recognizes a reset wrapped by the provider's network error and retries smaller", async () => {
+    const { OpenAICompatibleProvider } = await import("../src/electron/main/providers/openAiCompatibleProvider");
+    const providerConfig = makeConfig({ model: { baseUrl: "http://llm.test/v1", visionEnabled: true } });
+    const reset = Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }) });
+    const bodies: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        bodies.push(String(init.body).length);
+        if (bodies.length === 1) throw reset;
+        return Response.json({ choices: [{ message: { content: '{"comments":["好"]}' } }] });
+      }),
+    );
+    try {
+      const provider = new OpenAICompatibleProvider();
+      const trace = createBudgetTrace();
+      const result = await runBudgetedRequest(
+        { config: providerConfig, history: filledHistory(4, 3 * MIB), input, snapshot: makeSnapshot(3 * MIB), trace, settings: { historyRounds: 50, historyMaxImages: 50, requestBodyLimitBytes: 48 * MIB } },
+        { generate: (request) => provider.generateDanmaku(request, providerConfig) },
+      );
+      expect(result.items.map((item) => item.text)).toEqual(["好"]);
+      expect(bodies).toHaveLength(2);
+      expect(bodies[1]).toBeLessThan(bodies[0] / 2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
