@@ -1128,6 +1128,19 @@ export function SettingsApp() {
             />
             文字阴影
           </label>
+          <label
+            className="toggle-row"
+            title="截图里不包含弹幕层，模型不会看到并评论自己的弹幕。Windows 需要 10 2004 及以上；开启后 OBS 等录屏软件也录不到弹幕。"
+          >
+            <input
+              type="checkbox"
+              checked={draft.danmaku.excludeOverlayFromCapture}
+              onChange={(event) =>
+                editSection("danmaku", { excludeOverlayFromCapture: event.target.checked })
+              }
+            />
+            截图时排除弹幕层（录屏也看不到弹幕）
+          </label>
         </form>
 
         <form className="panel" onSubmit={(event) => event.preventDefault()}>
