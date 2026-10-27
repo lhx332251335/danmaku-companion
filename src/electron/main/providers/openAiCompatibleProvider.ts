@@ -6,7 +6,7 @@ import type {
   ModelListResult,
   ModelOption,
 } from "../../../shared/types";
-import { buildHeaders, endpoint, serverRoot } from "./endpoints";
+import { buildHeaders, endpoint, lmStudioModelEndpoints } from "./endpoints";
 import { RequestTooLargeError, formatMiB } from "./errors";
 import { buildRequestBody } from "./messageBuilder";
 import { legacyModelOptions, mergeModelOptions, nativeModelOptions } from "./modelList";
@@ -19,9 +19,22 @@ import {
   type ChatCompletionResponse,
 } from "./responseParser";
 
-async function fetchJson<T>(url: string, config: AppConfig): Promise<T> {
+const MODEL_LIST_TIMEOUT_MS = 12_000;
+const LM_STUDIO_PROBE_TIMEOUT_MS = 4_000;
+
+interface ModelListCandidate {
+  endpoint: string;
+  timeoutMs: number;
+  parse: (data: never) => ModelOption[];
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function fetchJson<T>(url: string, config: AppConfig, timeoutMs: number): Promise<T> {
   const response = await fetch(url, {
-    signal: AbortSignal.timeout(Math.min(config.model.timeoutMs, 12000)),
+    signal: AbortSignal.timeout(timeoutMs),
     headers: buildHeaders(config.model.apiKey),
   });
 
@@ -108,7 +121,13 @@ export class OpenAICompatibleProvider implements ModelProvider {
 export async function testOpenAICompatibleConnection(
   config: AppConfig,
 ): Promise<ConnectionTestResult> {
-  const requestEndpoint = endpoint(config.model.baseUrl, "models");
+  let requestEndpoint: string;
+  try {
+    requestEndpoint = endpoint(config.model.baseUrl, "models");
+  } catch (error) {
+    return { ok: false, endpoint: config.model.baseUrl, message: errorMessage(error) };
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), Math.min(config.model.timeoutMs, 12000));
 
@@ -146,41 +165,55 @@ export async function testOpenAICompatibleConnection(
   }
 }
 
-export async function listOpenAICompatibleModels(config: AppConfig): Promise<ModelListResult> {
-  const candidates = [
-    {
-      endpoint: `${serverRoot(config.model.baseUrl)}/api/v1/models`,
-      parse: nativeModelOptions,
-    },
-    {
-      endpoint: `${serverRoot(config.model.baseUrl)}/api/v0/models`,
-      parse: legacyModelOptions,
-    },
+function modelListCandidates(config: AppConfig): ModelListCandidate[] {
+  const listTimeoutMs = Math.min(config.model.timeoutMs, MODEL_LIST_TIMEOUT_MS);
+  const probeTimeoutMs = Math.min(listTimeoutMs, LM_STUDIO_PROBE_TIMEOUT_MS);
+  const lmStudio = lmStudioModelEndpoints(config.model.baseUrl);
+  const probes: ModelListCandidate[] = lmStudio
+    ? [
+        { endpoint: lmStudio.native, timeoutMs: probeTimeoutMs, parse: nativeModelOptions },
+        { endpoint: lmStudio.legacy, timeoutMs: probeTimeoutMs, parse: legacyModelOptions },
+      ]
+    : [];
+  return [
+    ...probes,
     {
       endpoint: endpoint(config.model.baseUrl, "models"),
+      timeoutMs: listTimeoutMs,
       parse: legacyModelOptions,
     },
   ];
+}
+
+export async function listOpenAICompatibleModels(config: AppConfig): Promise<ModelListResult> {
+  let candidates: ModelListCandidate[];
+  try {
+    candidates = modelListCandidates(config);
+  } catch (error) {
+    return { ok: false, endpoint: config.model.baseUrl, message: errorMessage(error), models: [] };
+  }
+
+  // In parallel: a hanging LM Studio probe costs its own short timeout, not the whole refresh.
+  const outcomes = await Promise.allSettled(
+    candidates.map(async (candidate) =>
+      candidate.parse((await fetchJson<unknown>(candidate.endpoint, config, candidate.timeoutMs)) as never),
+    ),
+  );
   const errors: string[] = [];
   const successfulEndpoints: string[] = [];
   const modelGroups: ModelOption[][] = [];
 
-  for (const candidate of candidates) {
-    try {
-      const data = await fetchJson<unknown>(candidate.endpoint, config);
-      const models = candidate.parse(data as never);
-      if (models.length > 0) {
-        successfulEndpoints.push(candidate.endpoint);
-        modelGroups.push(models);
-      } else {
-        errors.push(`${candidate.endpoint}: empty`);
-      }
-    } catch (error) {
-      errors.push(
-        `${candidate.endpoint}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+  outcomes.forEach((outcome, index) => {
+    const candidateEndpoint = candidates[index].endpoint;
+    if (outcome.status === "rejected") {
+      errors.push(`${candidateEndpoint}: ${errorMessage(outcome.reason)}`);
+    } else if (outcome.value.length === 0) {
+      errors.push(`${candidateEndpoint}: empty`);
+    } else {
+      successfulEndpoints.push(candidateEndpoint);
+      modelGroups.push(outcome.value);
     }
-  }
+  });
 
   const models = mergeModelOptions(modelGroups);
   if (models.length > 0) {

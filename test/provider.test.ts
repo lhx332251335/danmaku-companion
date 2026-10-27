@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RequestTooLargeError } from "../src/electron/main/providers/errors";
-import { OpenAICompatibleProvider } from "../src/electron/main/providers/openAiCompatibleProvider";
+import {
+  OpenAICompatibleProvider,
+  listOpenAICompatibleModels,
+  testOpenAICompatibleConnection,
+} from "../src/electron/main/providers/openAiCompatibleProvider";
 import { makeConfig, makeSnapshot } from "./helpers";
 
 const config = makeConfig({ model: { baseUrl: "http://llm.test/v1", model: "m" } });
@@ -78,5 +82,56 @@ describe("OpenAICompatibleProvider", () => {
     await expect(new OpenAICompatibleProvider().generateDanmaku(input, config)).rejects.toThrow(
       /max_tokens（260）/,
     );
+  });
+});
+
+describe("listOpenAICompatibleModels", () => {
+  it("probes LM Studio and the standard list in parallel and merges them in a fixed order", async () => {
+    const pending: Array<() => void> = [];
+    const bodies: Record<string, unknown> = {
+      "http://llm.test/api/v1/models": {
+        models: [{ key: "vl", display_name: "VL", type: "vlm", capabilities: { vision: true }, loaded_instances: [{ id: "vl" }] }],
+      },
+      "http://llm.test/api/v0/models": { data: [{ id: "text", type: "llm", state: "not-loaded" }] },
+      "http://llm.test/v1/models": { data: [{ id: "text" }, { id: "vl" }] },
+    };
+    const fetchMock = vi.fn(
+      (url: string) =>
+        new Promise<Response>((resolve) => {
+          pending.push(() => resolve(Response.json(bodies[url])));
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = listOpenAICompatibleModels(config);
+    await Promise.resolve();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    pending.reverse().forEach((resolve) => resolve());
+
+    const list = await result;
+    expect(list.ok).toBe(true);
+    expect(list.models).toEqual([
+      { id: "vl", name: "VL", state: "loaded", type: "vlm", vision: true },
+      { id: "text", name: undefined, state: "not-loaded", type: "llm", vision: false },
+    ]);
+  });
+
+  it("only asks the standard endpoint when the base is not an LM Studio /v1 API", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ data: [{ id: "a" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const list = await listOpenAICompatibleModels(
+      makeConfig({ model: { baseUrl: "https://gw.test/v1beta/openai" } }),
+    );
+    expect(fetchMock.mock.calls.map((call) => (call as unknown[])[0])).toEqual(["https://gw.test/v1beta/openai/models"]);
+    expect(list.models.map((model) => model.id)).toEqual(["a"]);
+  });
+
+  it("reports an invalid base URL instead of throwing", async () => {
+    const bad = makeConfig({ model: { baseUrl: "localhost:1234" } });
+    await expect(listOpenAICompatibleModels(bad)).resolves.toMatchObject({ ok: false, models: [] });
+    await expect(testOpenAICompatibleConnection(bad)).resolves.toMatchObject({
+      ok: false,
+      message: expect.stringContaining("http://"),
+    });
   });
 });
