@@ -113,11 +113,7 @@ function registerIpc(): void {
   ipcMain.handle("runtime:start", () => controller.start());
   ipcMain.handle("runtime:stop", () => controller.stop());
   ipcMain.handle("runtime:generateOnce", () => controller.generateOnce("manual"));
-  ipcMain.handle("overlay:clear", () => {
-    controller.clearPendingItems();
-    controller.clearHistory();
-    windowManager.sendOverlayClear();
-  });
+  ipcMain.handle("overlay:clear", () => controller.clearOverlay());
   ipcMain.handle("overlay:visible", (_event, visible: boolean) => {
     windowManager.setOverlayVisible(visible);
   });

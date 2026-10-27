@@ -3,6 +3,8 @@ import type {
   AppConfig,
   GenerationLogEntry,
   DanmakuItem,
+  HistoryRecovery,
+  RuntimeState,
   RuntimeStatus,
   ScreenSnapshot,
 } from "../../shared/types";
@@ -12,16 +14,21 @@ import { GenerationLogStore } from "./generationLogStore";
 import { endpoint } from "./providers/endpoints";
 import { OpenAICompatibleProvider } from "./providers/openAiCompatibleProvider";
 import { createBudgetTrace, runBudgetedRequest, type BudgetTrace } from "./runtime/budgetedRequest";
+import { isRepeatingRequestError } from "./runtime/failurePolicy";
 import { HistoryWindow } from "./runtime/historyWindow";
 import {
+  cycleDelayMs,
   normalizeRuntimeSettings,
-  randomBetween,
   randomReleaseWindowSeconds,
   releaseDelays,
+  rescheduledDelayMs,
+  type ArmedCycle,
+  type CycleInterval,
   type NormalizedRuntimeSettings,
 } from "./runtime/runtimeSettings";
 
 type OverlayGetter = () => BrowserWindow | undefined;
+type GenerationReason = "manual" | "timer";
 
 const statusIdle: RuntimeStatus = {
   state: "idle",
@@ -67,14 +74,20 @@ function screenLogInfo(
 }
 
 export class DanmakuController {
-  private timer: NodeJS.Timeout | undefined;
+  private cycleTimer: { handle: NodeJS.Timeout; armed: ArmedCycle } | undefined;
   private readonly releaseTimers = new Set<NodeJS.Timeout>();
   private readonly history = new HistoryWindow();
   /** Body limits learned from HTTP 413 responses, per chat-completions endpoint. */
   private readonly learnedBodyLimits = new Map<string, number>();
-  private activeGenerationAbort: AbortController | undefined;
+  private activeGeneration: { abort: AbortController; reason: GenerationReason } | undefined;
+  // Bumped on every clear, so a generation that was in flight cannot bring back what was cleared.
+  private historyEpoch = 0;
+  private overlayEpoch = 0;
+  private attempts = 0;
   private busy = false;
   private running = false;
+  /** Paused by the user, as opposed to never started. */
+  private stopped = false;
   private shuttingDown = false;
   private status: RuntimeStatus = statusIdle;
   private readonly provider = new OpenAICompatibleProvider();
@@ -90,56 +103,62 @@ export class DanmakuController {
     return this.status;
   }
 
+  // start() and stop() switch state before persisting it, so a failed or slow config write
+  // cannot leave the UI out of step with the loop.
   async start(): Promise<RuntimeStatus> {
-    if (this.running) {
+    if (this.running || this.shuttingDown) {
       return this.status;
     }
 
-    this.shuttingDown = false;
-    await this.configStore.update({ runtime: { enabled: true } });
     this.running = true;
+    this.stopped = false;
     this.status = { ...this.status, state: "running", lastError: undefined };
     this.broadcastStatus(this.status);
     void this.generateOnce("timer");
+    await this.persistEnabled(true);
 
     return this.status;
   }
 
   shutdown(): void {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = undefined;
-    }
+    this.clearCycleTimer();
     this.clearPendingItems();
     this.running = false;
     this.shuttingDown = true;
-    this.activeGenerationAbort?.abort();
+    this.activeGeneration?.abort.abort();
   }
 
   async stop(): Promise<RuntimeStatus> {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = undefined;
-    }
+    this.clearCycleTimer();
     this.clearPendingItems();
     this.running = false;
+    this.stopped = true;
+    // A manual generation is still shown while paused; a timer one is not wanted any more.
+    if (this.activeGeneration?.reason === "timer") {
+      this.activeGeneration.abort.abort();
+    }
 
-    await this.configStore.update({ runtime: { enabled: false } });
     this.status = { ...this.status, state: "paused" };
     this.broadcastStatus(this.status);
+    await this.persistEnabled(false);
     return this.status;
   }
 
   async refreshSchedule(): Promise<void> {
     const config = await this.configStore.get();
-    if (!this.running || !config.runtime.enabled) {
+    // Without an armed timer a timer generation is in flight, and it re-reads the config when done.
+    if (!this.running || !config.runtime.enabled || !this.cycleTimer) {
       return;
     }
 
-    this.scheduleNextCycle(config);
+    const interval = normalizeRuntimeSettings(config);
+    const delayMs = rescheduledDelayMs(this.cycleTimer.armed, interval, Date.now());
+    if (delayMs !== undefined) {
+      this.armCycleTimer(interval, delayMs);
+    }
   }
 
-  async generateOnce(reason: "manual" | "timer"): Promise<RuntimeStatus> {
+  async generateOnce(reason: GenerationReason): Promise<RuntimeStatus> {
     if (this.busy) {
       if (reason === "timer" && this.running) {
         this.scheduleNextCycle(await this.configStore.get());
@@ -148,10 +167,14 @@ export class DanmakuController {
     }
 
     this.busy = true;
+    this.attempts += 1;
+    const attempt = this.attempts;
+    const historyEpoch = this.historyEpoch;
+    const overlayEpoch = this.overlayEpoch;
     const startedAt = performance.now();
     const startedAtIso = new Date().toISOString();
     const generationAbort = new AbortController();
-    this.activeGenerationAbort = generationAbort;
+    this.activeGeneration = { abort: generationAbort, reason };
     let config: AppConfig | undefined;
     let logEntry: GenerationLogEntry | undefined;
     let runtime: NormalizedRuntimeSettings | undefined;
@@ -164,6 +187,11 @@ export class DanmakuController {
       config = await this.configStore.get();
       runtime = normalizeRuntimeSettings(config);
       requestedCount = runtime.itemsPerCycle;
+      if (!runtime.historyIncludeImages || !config.model.visionEnabled) {
+        // Screenshots stored before the setting changed would otherwise be sent (and held) for
+        // as long as their rounds stay in the window.
+        this.history.dropAllImages();
+      }
       if (config.model.visionEnabled) {
         try {
           snapshot = await capturePrimaryScreen(runtime.captureMaxEdgePixels, {
@@ -212,15 +240,18 @@ export class DanmakuController {
         runtime.releaseWindowMaxSeconds,
       );
 
-      if (!generationAbort.signal.aborted && !this.shuttingDown && (reason === "manual" || this.running)) {
+      generationAbort.signal.throwIfAborted();
+      if (historyEpoch === this.historyEpoch) {
         this.history.remember(result, sentSnapshot, runtime, trace.requestHistoryLength);
+      }
+      if (overlayEpoch === this.overlayEpoch) {
         this.scheduleItems(result.items, releaseWindowSeconds);
       }
       const completedAt = new Date().toISOString();
       const durationMs = Math.round(performance.now() - startedAt);
       logEntry = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        cycle: this.status.cycles + 1,
+        cycle: attempt,
         reason,
         status: "success",
         startedAt: startedAtIso,
@@ -249,7 +280,7 @@ export class DanmakuController {
         rawOutput: result.assistantText,
       };
       this.status = {
-        state: this.running ? "running" : reason === "timer" ? "paused" : "idle",
+        state: this.restingState(),
         cycles: this.status.cycles + 1,
         lastGeneratedAt: completedAt,
         lastError: undefined,
@@ -262,11 +293,15 @@ export class DanmakuController {
       };
     } catch (error) {
       const aborted = generationAbort.signal.aborted || this.shuttingDown;
+      const historyRecovery =
+        !aborted && historyEpoch === this.historyEpoch
+          ? this.recoverHistoryAfter(error)
+          : undefined;
       const completedAt = new Date().toISOString();
       const durationMs = Math.round(performance.now() - startedAt);
       logEntry = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        cycle: this.status.cycles + 1,
+        cycle: attempt,
         reason,
         status: aborted ? "aborted" : "error",
         startedAt: startedAtIso,
@@ -278,6 +313,7 @@ export class DanmakuController {
         historyMode: runtime?.historyMode,
         historyImagesIncluded: runtime?.historyIncludeImages,
         ...budgetLogInfo(budgetTrace),
+        historyRecovery,
         screen: screenLogInfo(
           Boolean(config?.model.visionEnabled),
           budgetTrace?.snapshot ?? snapshot,
@@ -290,7 +326,7 @@ export class DanmakuController {
       if (aborted) {
         this.status = {
           ...this.status,
-          state: "paused",
+          state: this.restingState(),
           lastError: undefined,
           cachedInputTokens: undefined,
           promptTokens: undefined,
@@ -309,11 +345,12 @@ export class DanmakuController {
         await this.appendGenerationLog(logEntry, config);
       }
       this.busy = false;
-      if (this.activeGenerationAbort === generationAbort) {
-        this.activeGenerationAbort = undefined;
+      if (this.activeGeneration?.abort === generationAbort) {
+        this.activeGeneration = undefined;
       }
       if (reason === "timer" && this.running && !this.shuttingDown) {
-        this.scheduleNextCycle(config ?? (await this.configStore.get()));
+        // Re-read: the interval may have been changed while the request ran.
+        this.scheduleNextCycle(await this.configStore.get());
       }
       if (!this.shuttingDown) {
         this.broadcastStatus(this.status);
@@ -329,9 +366,18 @@ export class DanmakuController {
   }
 
   clearHistory(): void {
+    this.historyEpoch += 1;
     this.history.reset();
     this.status = { ...this.status, cachedInputTokens: undefined, promptTokens: undefined };
     this.broadcastStatus(this.status);
+  }
+
+  /** Clear the overlay, the comments still waiting to be released, and history. */
+  clearOverlay(): void {
+    this.overlayEpoch += 1;
+    this.clearPendingItems();
+    this.clearHistory();
+    this.sendToOverlay("overlay:clear");
   }
 
   pushSystemMessage(text: string): void {
@@ -343,6 +389,22 @@ export class DanmakuController {
         source: "system",
       },
     ]);
+  }
+
+  private restingState(): RuntimeState {
+    return this.running ? "running" : this.stopped ? "paused" : "idle";
+  }
+
+  private recoverHistoryAfter(error: unknown): HistoryRecovery | undefined {
+    return isRepeatingRequestError(error) ? this.history.shrinkAfterRejection() : undefined;
+  }
+
+  private async persistEnabled(enabled: boolean): Promise<void> {
+    try {
+      await this.configStore.update({ runtime: { enabled } });
+    } catch (error) {
+      console.warn("Failed to save the running state.", errorMessage(error));
+    }
   }
 
   private async appendGenerationLog(
@@ -360,23 +422,35 @@ export class DanmakuController {
   }
 
   private scheduleNextCycle(config: AppConfig): void {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = undefined;
-    }
+    const interval = normalizeRuntimeSettings(config);
+    this.armCycleTimer(interval, cycleDelayMs(interval));
+  }
 
+  private armCycleTimer(interval: CycleInterval, delayMs: number): void {
+    this.clearCycleTimer();
     if (!this.running) {
       return;
     }
 
-    const runtime = normalizeRuntimeSettings(config);
-    const delayMs = Math.round(
-      randomBetween(runtime.intervalMinSeconds, runtime.intervalMaxSeconds) * 1000,
-    );
-    this.timer = setTimeout(() => {
-      this.timer = undefined;
+    const handle = setTimeout(() => {
+      this.cycleTimer = undefined;
       void this.generateOnce("timer");
     }, delayMs);
+    this.cycleTimer = {
+      handle,
+      armed: {
+        intervalMinSeconds: interval.intervalMinSeconds,
+        intervalMaxSeconds: interval.intervalMaxSeconds,
+        dueAt: Date.now() + delayMs,
+      },
+    };
+  }
+
+  private clearCycleTimer(): void {
+    if (this.cycleTimer) {
+      clearTimeout(this.cycleTimer.handle);
+      this.cycleTimer = undefined;
+    }
   }
 
   private scheduleItems(items: DanmakuItem[], releaseWindowSeconds: number): void {
@@ -391,15 +465,15 @@ export class DanmakuController {
   }
 
   private pushItems(items: DanmakuItem[]): void {
-    if (items.length === 0) {
-      return;
+    if (items.length > 0) {
+      this.sendToOverlay("danmaku:items", items);
     }
+  }
 
+  private sendToOverlay(channel: string, ...args: unknown[]): void {
     const overlay = this.getOverlay();
-    if (!overlay || overlay.isDestroyed()) {
-      return;
+    if (overlay && !overlay.isDestroyed()) {
+      overlay.webContents.send(channel, ...args);
     }
-
-    overlay.webContents.send("danmaku:items", items);
   }
 }

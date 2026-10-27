@@ -78,6 +78,18 @@ describe("HistoryWindow", () => {
     expect(cycle(window, settings, "b")).toBe(0);
   });
 
+  it("shrinks after a rejected request: screenshots first, then the whole window", () => {
+    const window = new HistoryWindow();
+    const settings: HistoryWindowSettings = { historyRounds: 5, historyMode: "sliding", historyIncludeImages: true };
+    ["a", "b"].forEach((text) => cycle(window, settings, text));
+    expect(window.shrinkAfterRejection()).toBe("images");
+    expect(window.imageCount).toBe(0);
+    expect(window.length).toBe(2);
+    expect(window.shrinkAfterRejection()).toBe("reset");
+    expect(window.length).toBe(0);
+    expect(window.shrinkAfterRejection()).toBeUndefined();
+  });
+
   it("disables history when the round limit is 0", () => {
     const window = new HistoryWindow();
     const settings: HistoryWindowSettings = { historyRounds: 0, historyMode: "sliding", historyIncludeImages: true };

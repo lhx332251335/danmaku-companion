@@ -6,6 +6,9 @@ export type DanmakuZone = "full" | "top" | "middle" | "bottom";
 
 export type HistoryMode = "reset-on-limit" | "sliding" | "batch-sliding";
 
+/** How history was shrunk after a request error that would otherwise repeat every cycle. */
+export type HistoryRecovery = "images" | "reset";
+
 export type ScreenImageFormat = "jpeg" | "png";
 
 export interface OpenAICompatibleSettings {
@@ -251,6 +254,7 @@ export interface GenerationLogEntry {
   bodyLimitBytes?: number;
   historyImagesSent?: number;
   compaction?: GenerationLogCompaction[];
+  historyRecovery?: HistoryRecovery;
   screen: GenerationLogScreenInfo;
   comments: string[];
   rawOutput?: string;

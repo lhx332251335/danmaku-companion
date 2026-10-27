@@ -302,7 +302,7 @@ export class WindowManager {
       },
       {
         label: "Clear Overlay",
-        click: () => this.sendOverlayClear(),
+        click: () => this.controller?.clearOverlay(),
       },
       { type: "separator" },
       {

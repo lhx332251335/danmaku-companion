@@ -2,6 +2,7 @@ import type {
   DanmakuGenerationResult,
   DanmakuHistoryRound,
   HistoryMode,
+  HistoryRecovery,
   ScreenSnapshot,
 } from "../../../shared/types";
 import { LOW_WATER_RATIO } from "./requestBudget";
@@ -110,6 +111,21 @@ export class HistoryWindow {
 
   dropAllImages(): number {
     return this.dropImages(this.rounds);
+  }
+
+  /**
+   * Make the next request smaller after the server rejected one in a way that would repeat:
+   * drop the history screenshots first, and start over once there are none left.
+   */
+  shrinkAfterRejection(): HistoryRecovery | undefined {
+    if (this.dropAllImages() > 0) {
+      return "images";
+    }
+    if (this.rounds.length > 0) {
+      this.reset();
+      return "reset";
+    }
+    return undefined;
   }
 
   reset(): void {

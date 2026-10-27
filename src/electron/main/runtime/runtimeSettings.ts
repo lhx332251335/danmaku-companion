@@ -117,3 +117,34 @@ export function randomReleaseWindowSeconds(
 
   return randomBetween(minSeconds, maxSeconds, random);
 }
+
+export type CycleInterval = Pick<NormalizedRuntimeSettings, "intervalMinSeconds" | "intervalMaxSeconds">;
+
+/** An armed cycle timer: the interval it was drawn from and when it fires (epoch ms). */
+export interface ArmedCycle extends CycleInterval {
+  dueAt: number;
+}
+
+export function cycleDelayMs(interval: CycleInterval, random: RandomSource = Math.random): number {
+  return Math.round(randomBetween(interval.intervalMinSeconds, interval.intervalMaxSeconds, random) * 1000);
+}
+
+/**
+ * Delay to re-arm the cycle timer with after a config save, or undefined to leave it alone.
+ * Only an interval change re-arms it, and never later than it was already due.
+ */
+export function rescheduledDelayMs(
+  armed: ArmedCycle,
+  interval: CycleInterval,
+  now: number,
+  random: RandomSource = Math.random,
+): number | undefined {
+  if (
+    armed.intervalMinSeconds === interval.intervalMinSeconds &&
+    armed.intervalMaxSeconds === interval.intervalMaxSeconds
+  ) {
+    return undefined;
+  }
+
+  return Math.min(Math.max(0, armed.dueAt - now), cycleDelayMs(interval, random));
+}
