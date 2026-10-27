@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { LIMITS } from "../src/shared/limits";
-import type { RuntimeStatus } from "../src/shared/types";
 import {
   PALETTE_MAX_COLORS,
   describeError,
@@ -9,7 +8,6 @@ import {
   parseNumberInput,
   parsePaletteInput,
   rebaseDraft,
-  shouldReloadLogs,
   toConfigPatch,
 } from "../src/renderer/settingsModel";
 import { makeConfig } from "./helpers";
@@ -96,6 +94,23 @@ describe("rebaseDraft", () => {
     expect(isDraftDirty(saved, rebased)).toBe(false);
   });
 
+  it("ends clean when main's broadcast arrives before the save reply", () => {
+    const saved = makeConfig();
+    const sent = makeConfig({ prompt: { systemTemplate: "short" } });
+    const normalized = makeConfig({
+      prompt: { systemTemplate: "short\nnormalized" },
+      runtime: { enabled: true },
+    });
+
+    // config:updated is rebased on the last saved config, then the invoke reply on `sent`.
+    const afterBroadcast = rebaseDraft(saved, normalized, sent);
+    const afterReply = rebaseDraft(sent, normalized, afterBroadcast);
+
+    expect(afterBroadcast.prompt.systemTemplate).toBe("short");
+    expect(afterReply).toEqual(normalized);
+    expect(isDraftDirty(normalized, afterReply)).toBe(false);
+  });
+
   it("keeps edits typed while a save was in flight", () => {
     const sent = makeConfig({ character: { name: "Sent" } });
     const current = makeConfig({ character: { name: "Sent", tone: "typed later" } });
@@ -178,39 +193,5 @@ describe("describeError", () => {
     expect(describeError("boom")).toBe("boom");
     expect(describeError(undefined)).toBe("未知错误");
     expect(describeError(new Error(""))).toBe("未知错误");
-  });
-});
-
-describe("shouldReloadLogs", () => {
-  const base: RuntimeStatus = {
-    state: "running",
-    cycles: 3,
-    lastGeneratedAt: "2026-01-01T00:00:00.000Z",
-  };
-
-  it("reloads when a generation finished", () => {
-    expect(
-      shouldReloadLogs(base, { ...base, cycles: 4, lastGeneratedAt: "2026-01-01T00:00:20.000Z" }),
-    ).toBe(true);
-  });
-
-  it("reloads on every error broadcast, even when the message repeats", () => {
-    const failed = { ...base, lastError: "fetch failed" };
-
-    expect(shouldReloadLogs(failed, failed)).toBe(true);
-  });
-
-  it("reloads when the state changes", () => {
-    expect(shouldReloadLogs(base, { ...base, state: "paused" })).toBe(true);
-  });
-
-  it("skips broadcasts that add no log entry", () => {
-    expect(shouldReloadLogs(base, { ...base })).toBe(false);
-    expect(
-      shouldReloadLogs(
-        { ...base, cachedInputTokens: 100, promptTokens: 200 },
-        { ...base, cachedInputTokens: undefined, promptTokens: undefined },
-      ),
-    ).toBe(false);
   });
 });

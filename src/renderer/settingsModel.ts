@@ -1,5 +1,5 @@
 import { clampToRange, type NumericRange } from "../shared/limits";
-import type { AppConfig, DeepPartial, RuntimeStatus } from "../shared/types";
+import type { AppConfig, DeepPartial } from "../shared/types";
 
 type ConfigRecord = Record<string, unknown>;
 
@@ -120,17 +120,4 @@ export function describeError(error: unknown): string {
     .replace(/^(?:[A-Za-z]*Error:\s*)+/, "")
     .trim();
   return cleaned || "未知错误";
-}
-
-/**
- * Main appends a log entry at the end of every generation and then broadcasts the status.
- * Other broadcasts (cleared history, repeated identical states) add no entry.
- */
-export function shouldReloadLogs(previous: RuntimeStatus, next: RuntimeStatus): boolean {
-  return (
-    next.cycles !== previous.cycles ||
-    next.state !== previous.state ||
-    next.lastGeneratedAt !== previous.lastGeneratedAt ||
-    next.lastError !== undefined
-  );
 }

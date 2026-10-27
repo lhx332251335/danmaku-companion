@@ -40,7 +40,6 @@ import {
   parseNumberInput,
   parsePaletteInput,
   rebaseDraft,
-  shouldReloadLogs,
   toConfigPatch,
 } from "./settingsModel";
 
@@ -460,7 +459,6 @@ export function SettingsApp() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const configRef = useRef<AppConfig | null>(null);
-  const statusRef = useRef(status);
 
   useEffect(() => {
     let bridge: DanmakuBridge;
@@ -479,7 +477,7 @@ export function SettingsApp() {
           resetConfig(loadedConfig);
         }
         showProfiles(loadedProfiles);
-        showStatus(loadedStatus);
+        setStatus(loadedStatus);
         runInBackground(loadModelList(false));
         runInBackground(loadGenerationLogs(false));
       },
@@ -544,17 +542,13 @@ export function SettingsApp() {
     setProfileName(activeProfileName(next));
   }
 
-  function showStatus(next: RuntimeStatus) {
-    statusRef.current = next;
-    setStatus(next);
-  }
-
+  /**
+   * Main broadcasts the status after it appends a log entry. A status alone cannot tell whether
+   * an entry was added (an aborted run looks like the pause before it), so always reload.
+   */
   function handleStatusBroadcast(next: RuntimeStatus) {
-    const previous = statusRef.current;
-    showStatus(next);
-    if (shouldReloadLogs(previous, next)) {
-      runInBackground(loadGenerationLogs(false));
-    }
+    setStatus(next);
+    runInBackground(loadGenerationLogs(false));
   }
 
   async function saveDraft() {
@@ -632,7 +626,7 @@ export function SettingsApp() {
     setWorkingAction("generate");
     try {
       await saveDraft();
-      showStatus(await api().generateOnce());
+      setStatus(await api().generateOnce());
     } finally {
       setWorkingAction(null);
     }
@@ -642,10 +636,10 @@ export function SettingsApp() {
     setWorkingAction("start");
     try {
       if (status.state === "running") {
-        showStatus(await api().stop());
+        setStatus(await api().stop());
       } else {
         await saveDraft();
-        showStatus(await api().start());
+        setStatus(await api().start());
       }
     } finally {
       setWorkingAction(null);
