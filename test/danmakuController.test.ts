@@ -265,6 +265,20 @@ describe("DanmakuController", () => {
     await vi.waitFor(() => expect(h.logs).toHaveLength(2));
   });
 
+  it("runs a cycle right away when start() resumes the loop while a stopped request winds down", async () => {
+    const h = setup();
+    pendingRequest();
+    await h.controller.start();
+    await vi.waitFor(() => expect(mocks.generate).toHaveBeenCalledTimes(1));
+    mocks.generate.mockImplementation(async () => reply("resumed"));
+
+    void h.controller.stop();
+    await h.controller.start();
+
+    await vi.waitFor(() => expect(h.logs.map((entry) => entry.status)).toEqual(["aborted", "success"]));
+    expect(h.controller.getStatus()).toMatchObject({ state: "running", cycles: 1 });
+  });
+
   it("switches state even when saving the running flag fails", async () => {
     const h = setup();
     vi.spyOn(console, "warn").mockImplementation(() => {});

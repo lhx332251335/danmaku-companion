@@ -351,8 +351,10 @@ export class DanmakuController {
         this.activeGeneration = undefined;
       }
       if (reason === "timer" && this.running && !this.shuttingDown) {
-        // Re-read: the interval may have been changed while the request ran.
-        this.scheduleNextCycle(await this.configStore.get());
+        // Re-read: the interval may have been changed while the request ran. A run that stop()
+        // aborted only gets here if start() resumed the loop meanwhile, and that start's own
+        // first cycle was skipped as busy, so run it now instead of a whole interval later.
+        this.scheduleNextCycle(await this.configStore.get(), generationAbort.signal.aborted);
       }
       if (!this.shuttingDown) {
         this.broadcastStatus(this.status);
@@ -423,9 +425,9 @@ export class DanmakuController {
     }
   }
 
-  private scheduleNextCycle(config: AppConfig): void {
+  private scheduleNextCycle(config: AppConfig, immediately = false): void {
     const interval = normalizeRuntimeSettings(config);
-    this.armCycleTimer(interval, cycleDelayMs(interval));
+    this.armCycleTimer(interval, immediately ? 0 : cycleDelayMs(interval));
   }
 
   private armCycleTimer(interval: CycleInterval, delayMs: number): void {
