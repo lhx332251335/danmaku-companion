@@ -16,10 +16,12 @@ export const LIMITS = {
   maxCommentLength: { min: 10, max: 200 },
   temperature: { min: 0, max: 2 },
   maxTokens: { min: 16, max: 32768 },
-  timeoutMs: { min: 5000, max: 600000 },
-  fontSize: { min: 14, max: 48 },
+  // Wide enough for values 0.1.27 accepted (its inputs only hinted min/max), so upgrading
+  // does not rewrite them.
+  timeoutMs: { min: 5000, max: 1800000 },
+  fontSize: { min: 10, max: 96 },
   opacity: { min: 0.2, max: 1 },
-  speedSeconds: { min: 4, max: 30 },
+  speedSeconds: { min: 2, max: 60 },
   density: { min: 0.1, max: 1 },
 } as const satisfies Record<string, NumericRange>;
 

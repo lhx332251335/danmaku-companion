@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { LIMITS, clampOr } from "../../shared/limits";
 import type { GenerationLogEntry } from "../../shared/types";
-import { WriteQueue, readTextIfExists, writeFileAtomic } from "./storage/atomicFile";
+import { WriteQueue, fileTimestamp, readTextIfExists, writeFileAtomic } from "./storage/atomicFile";
 import {
   parseGenerationLog,
   shouldCompact,
@@ -23,6 +23,14 @@ function normalizeLimit(limit: number | undefined): number {
  * Keeps the log as JSON Lines: each entry is one appended line, and the file is rewritten
  * atomically only when it has grown well past the limit or was damaged.
  */
+function isJsonArray(text: string): boolean {
+  try {
+    return Array.isArray(JSON.parse(text.replace(/^\uFEFF/, "")));
+  } catch {
+    return false;
+  }
+}
+
 export class GenerationLogStore {
   private dir: string | undefined;
   private entries: GenerationLogEntry[] | undefined;
@@ -99,9 +107,16 @@ export class GenerationLogStore {
   }
 
   private async read(): Promise<GenerationLogEntry[]> {
-    const raw =
-      (await readTextIfExists(this.getFilePath())) ??
-      (await readTextIfExists(this.getLegacyFilePath()));
+    const current = await readTextIfExists(this.getFilePath());
+    const legacy = current === undefined ? await readTextIfExists(this.getLegacyFilePath()) : undefined;
+    if (legacy !== undefined && !isJsonArray(legacy)) {
+      // Keep an unreadable old log (e.g. truncated by a forced exit) instead of deleting it later.
+      const legacyPath = this.getLegacyFilePath();
+      await fs
+        .rename(legacyPath, `${legacyPath}.corrupt-${fileTimestamp()}`)
+        .catch((error) => console.warn("Failed to set aside the unreadable generation log.", error));
+    }
+    const raw = current ?? legacy;
     const parsed = parseGenerationLog(raw ?? "");
     this.fileLineCount = parsed.lineCount;
     // A missing file is rewritten too, so the first write also creates the directory.

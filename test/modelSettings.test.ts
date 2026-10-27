@@ -12,7 +12,7 @@ describe("model settings at use", () => {
     ["", 45_000],
     [1, 5_000],
     [12_345.6, 12_346],
-    [10_000_000, 600_000],
+    [10_000_000, 1_800_000],
   ])("timeoutMs %j -> %j", (value, expected) => {
     expect(normalizedTimeoutMs(makeConfig({ model: { timeoutMs: value as number } }))).toBe(expected);
   });

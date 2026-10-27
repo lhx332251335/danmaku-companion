@@ -77,6 +77,20 @@ describe("GenerationLogStore", () => {
     await expect(fs.stat(legacyFile)).rejects.toThrow();
   });
 
+  it("keeps an unreadable old log aside instead of deleting it", async () => {
+    await fs.mkdir(paths.userData, { recursive: true });
+    const truncated = JSON.stringify([makeLogEntry("old")], null, 2).slice(0, 40);
+    await fs.writeFile(legacyFile, truncated);
+
+    const store = new GenerationLogStore();
+    expect(await ids(store)).toEqual([]);
+    await store.append(makeLogEntry("new"), 200);
+
+    const kept = (await fs.readdir(paths.userData)).filter((name) => name.startsWith("generation-log.json.corrupt-"));
+    expect(kept).toHaveLength(1);
+    expect(await fs.readFile(path.join(paths.userData, kept[0]), "utf8")).toBe(truncated);
+  });
+
   it("skips a cut-off last line and rewrites a clean file on the next append", async () => {
     await fs.mkdir(paths.userData, { recursive: true });
     await fs.writeFile(logFile, `${JSON.stringify(makeLogEntry("a"))}\n{"id":"b","cy`);

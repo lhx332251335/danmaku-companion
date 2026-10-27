@@ -99,7 +99,9 @@ export async function writeFileAtomic(
 ): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   // Per process: without a single-instance lock, a second app instance may write the same file.
-  const tempPath = `${filePath}.${process.pid}.tmp`;
+  // One instance (single-instance lock) and one queued writer per file, so a fixed name is safe,
+  // and a temp file left by a killed process is simply reused by the next write.
+  const tempPath = `${filePath}.tmp`;
   try {
     await writeAndSync(tempPath, data);
     if (options.backupPath) {
