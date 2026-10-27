@@ -1,5 +1,6 @@
 import type { AppConfig, DanmakuInput, ScreenSnapshot } from "../../../shared/types";
 import { defaultAppConfig } from "../../../shared/defaultConfig";
+import { normalizedMaxTokens } from "./modelSettings";
 
 export type ChatMessageContent =
   | string
@@ -131,7 +132,7 @@ export function buildRequestBody(
   const body: Record<string, unknown> = {
     model: config.model.model,
     messages,
-    max_tokens: config.model.maxTokens,
+    max_tokens: normalizedMaxTokens(config),
     stream: false,
   };
 

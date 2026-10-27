@@ -7,10 +7,12 @@ import type {
   ModelOption,
 } from "../../../shared/types";
 import { buildHeaders, endpoint, lmStudioModelEndpoints } from "./endpoints";
-import { RequestTooLargeError, formatMiB } from "./errors";
+import { RequestTooLargeError, formatMiB, httpErrorMessage } from "./errors";
+import { fetchJson, fetchText, parseJsonBody } from "./http";
 import { buildRequestBody } from "./messageBuilder";
 import { legacyModelOptions, mergeModelOptions, nativeModelOptions } from "./modelList";
 import type { ModelProvider } from "./modelProvider";
+import { normalizedMaxTokens, normalizedTimeoutMs } from "./modelSettings";
 import {
   extractUsage,
   historyComments,
@@ -32,122 +34,85 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function fetchJson<T>(url: string, config: AppConfig, timeoutMs: number): Promise<T> {
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(timeoutMs),
-    headers: buildHeaders(config.model.apiKey),
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`HTTP ${response.status}: ${body.slice(0, 240)}`);
-  }
-
-  return (await response.json()) as T;
+function listTimeoutMs(config: AppConfig): number {
+  return Math.min(normalizedTimeoutMs(config), MODEL_LIST_TIMEOUT_MS);
 }
 
 export class OpenAICompatibleProvider implements ModelProvider {
   async generateDanmaku(input: DanmakuInput, config: AppConfig): Promise<DanmakuGenerationResult> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), config.model.timeoutMs);
-    const externalAbort = () => controller.abort();
+    const requestEndpoint = endpoint(config.model.baseUrl, "chat/completions");
+    const { body: requestBody, userText } = buildRequestBody(input, config);
+    const serializedBody = JSON.stringify(requestBody);
+    const requestBytes = Buffer.byteLength(serializedBody, "utf8");
 
-    if (input.abortSignal?.aborted) {
-      externalAbort();
-    } else {
-      input.abortSignal?.addEventListener("abort", externalAbort, { once: true });
+    if (input.maxBodyBytes !== undefined && requestBytes > input.maxBodyBytes) {
+      throw new RequestTooLargeError({
+        message: `Request body ${formatMiB(requestBytes)} exceeds the ${formatMiB(input.maxBodyBytes)} limit.`,
+        requestBytes,
+        limitBytes: input.maxBodyBytes,
+        fromServer: false,
+      });
     }
 
-    try {
-      const requestEndpoint = endpoint(config.model.baseUrl, "chat/completions");
-      const { body: requestBody, userText } = buildRequestBody(input, config);
-      const serializedBody = JSON.stringify(requestBody);
-      const requestBytes = Buffer.byteLength(serializedBody, "utf8");
-
-      if (input.maxBodyBytes !== undefined && requestBytes > input.maxBodyBytes) {
-        throw new RequestTooLargeError({
-          message: `Request body ${formatMiB(requestBytes)} exceeds the ${formatMiB(input.maxBodyBytes)} limit.`,
-          requestBytes,
-          limitBytes: input.maxBodyBytes,
-          fromServer: false,
-        });
-      }
-
-      const response = await fetch(requestEndpoint, {
+    const response = await fetchText(
+      requestEndpoint,
+      {
         method: "POST",
-        signal: controller.signal,
         headers: buildHeaders(config.model.apiKey, {
           "Content-Type": "application/json",
         }),
         body: serializedBody,
-      });
+      },
+      normalizedTimeoutMs(config),
+      input.abortSignal,
+    );
 
-      if (!response.ok) {
-        const body = await response.text();
-        const message = `Model request failed at ${requestEndpoint} (${response.status}): ${body.slice(0, 240)}`;
-        if (response.status === 413) {
-          throw new RequestTooLargeError({
-            message: `${message} [request body ${formatMiB(requestBytes)}]`,
-            requestBytes,
-            serverBody: body.slice(0, 2000),
-            fromServer: true,
-          });
-        }
-        throw new Error(message);
+    if (!response.ok) {
+      const message = `模型请求失败 ${httpErrorMessage(response.status, response.statusText, response.body, requestEndpoint)}`;
+      if (response.status === 413) {
+        throw new RequestTooLargeError({
+          message: `${message} [request body ${formatMiB(requestBytes)}]`,
+          requestBytes,
+          serverBody: response.body.slice(0, 2000),
+          fromServer: true,
+        });
       }
-
-      const data = (await response.json()) as ChatCompletionResponse;
-      const completion = readCompletion(data, config.model.maxTokens);
-      const usage = extractUsage(data);
-      return {
-        items: sanitize(completion.comments, config, input.maxItems, historyComments(input.history)),
-        userText,
-        assistantText: completion.text,
-        rawOutput: completion.rawText,
-        finishReason: completion.finishReason,
-        cachedInputTokens: usage.cachedTokens,
-        promptTokens: usage.promptTokens,
-        completionTokens: usage.completionTokens,
-        promptMs: usage.promptMs,
-        requestBytes,
-      };
-    } finally {
-      clearTimeout(timeout);
-      input.abortSignal?.removeEventListener("abort", externalAbort);
+      throw new Error(message);
     }
+
+    const data = parseJsonBody<ChatCompletionResponse>(response, requestEndpoint);
+    const completion = readCompletion(data, normalizedMaxTokens(config));
+    const usage = extractUsage(data);
+    return {
+      items: sanitize(completion.comments, config, input.maxItems, historyComments(input.history)),
+      userText,
+      assistantText: completion.text,
+      rawOutput: completion.rawText,
+      finishReason: completion.finishReason,
+      cachedInputTokens: usage.cachedTokens,
+      promptTokens: usage.promptTokens,
+      completionTokens: usage.completionTokens,
+      promptMs: usage.promptMs,
+      requestBytes,
+    };
   }
 }
 
 export async function testOpenAICompatibleConnection(
   config: AppConfig,
 ): Promise<ConnectionTestResult> {
-  let requestEndpoint: string;
+  let requestEndpoint = config.model.baseUrl;
+
   try {
     requestEndpoint = endpoint(config.model.baseUrl, "models");
-  } catch (error) {
-    return { ok: false, endpoint: config.model.baseUrl, message: errorMessage(error) };
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), Math.min(config.model.timeoutMs, 12000));
-
-  try {
-    const response = await fetch(requestEndpoint, {
-      signal: controller.signal,
-      headers: buildHeaders(config.model.apiKey),
-    });
-
-    if (!response.ok) {
-      const body = await response.text();
-      return {
-        ok: false,
-        endpoint: requestEndpoint,
-        message: `HTTP ${response.status}: ${body.slice(0, 240)}`,
-      };
-    }
-
-    const data = (await response.json()) as { data?: Array<{ id?: string }> };
-    const models = data.data?.map((item) => item.id).filter(Boolean) as string[] | undefined;
+    const data = await fetchJson<{ data?: Array<{ id?: string }> } | null>(
+      requestEndpoint,
+      { headers: buildHeaders(config.model.apiKey) },
+      listTimeoutMs(config),
+    );
+    const models = Array.isArray(data?.data)
+      ? data.data.map((item) => item?.id).filter((id): id is string => typeof id === "string" && id.length > 0)
+      : undefined;
     return {
       ok: true,
       endpoint: requestEndpoint,
@@ -158,16 +123,14 @@ export async function testOpenAICompatibleConnection(
     return {
       ok: false,
       endpoint: requestEndpoint,
-      message: error instanceof Error ? error.message : String(error),
+      message: errorMessage(error),
     };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
 function modelListCandidates(config: AppConfig): ModelListCandidate[] {
-  const listTimeoutMs = Math.min(config.model.timeoutMs, MODEL_LIST_TIMEOUT_MS);
-  const probeTimeoutMs = Math.min(listTimeoutMs, LM_STUDIO_PROBE_TIMEOUT_MS);
+  const timeoutMs = listTimeoutMs(config);
+  const probeTimeoutMs = Math.min(timeoutMs, LM_STUDIO_PROBE_TIMEOUT_MS);
   const lmStudio = lmStudioModelEndpoints(config.model.baseUrl);
   const probes: ModelListCandidate[] = lmStudio
     ? [
@@ -179,7 +142,7 @@ function modelListCandidates(config: AppConfig): ModelListCandidate[] {
     ...probes,
     {
       endpoint: endpoint(config.model.baseUrl, "models"),
-      timeoutMs: listTimeoutMs,
+      timeoutMs,
       parse: legacyModelOptions,
     },
   ];
@@ -193,10 +156,11 @@ export async function listOpenAICompatibleModels(config: AppConfig): Promise<Mod
     return { ok: false, endpoint: config.model.baseUrl, message: errorMessage(error), models: [] };
   }
 
+  const headers = buildHeaders(config.model.apiKey);
   // In parallel: a hanging LM Studio probe costs its own short timeout, not the whole refresh.
   const outcomes = await Promise.allSettled(
     candidates.map(async (candidate) =>
-      candidate.parse((await fetchJson<unknown>(candidate.endpoint, config, candidate.timeoutMs)) as never),
+      candidate.parse((await fetchJson<unknown>(candidate.endpoint, { headers }, candidate.timeoutMs)) as never),
     ),
   );
   const errors: string[] = [];
@@ -206,9 +170,9 @@ export async function listOpenAICompatibleModels(config: AppConfig): Promise<Mod
   outcomes.forEach((outcome, index) => {
     const candidateEndpoint = candidates[index].endpoint;
     if (outcome.status === "rejected") {
-      errors.push(`${candidateEndpoint}: ${errorMessage(outcome.reason)}`);
+      errors.push(errorMessage(outcome.reason));
     } else if (outcome.value.length === 0) {
-      errors.push(`${candidateEndpoint}: empty`);
+      errors.push(`没有返回模型（${candidateEndpoint}）`);
     } else {
       successfulEndpoints.push(candidateEndpoint);
       modelGroups.push(outcome.value);

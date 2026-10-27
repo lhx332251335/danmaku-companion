@@ -14,6 +14,8 @@ export const LIMITS = {
   requestBodyLimitMB: { min: 1, max: 512 },
   generationLogLimit: { min: 10, max: 2000 },
   maxCommentLength: { min: 10, max: 200 },
+  timeoutMs: { min: 5000, max: 600000 },
+  maxTokens: { min: 16, max: 32768 },
 } as const satisfies Record<string, NumericRange>;
 
 export function clamp(value: number, min: number, max: number): number {
