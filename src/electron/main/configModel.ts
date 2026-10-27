@@ -305,16 +305,25 @@ export function stateFromConfig(config: AppConfig, name = "默认配置"): Confi
   };
 }
 
+/** A hand-edited file may repeat an id; deleting it would then remove every copy at once. */
+function uniqueProfileId(value: unknown, usedIds: Set<string>): string {
+  const cleaned = cleanName(value, "");
+  const id = cleaned && !usedIds.has(cleaned) ? cleaned : randomUUID();
+  usedIds.add(id);
+  return id;
+}
+
 export function stateFromParsed(value: unknown): ConfigState {
   if (isRecord(value) && Array.isArray(value.profiles)) {
     const now = new Date().toISOString();
+    const usedIds = new Set<string>();
     const profiles = value.profiles
       .map((entry, index): ConfigProfile | undefined => {
         if (!isRecord(entry)) {
           return undefined;
         }
 
-        const id = cleanName(entry.id, randomUUID());
+        const id = uniqueProfileId(entry.id, usedIds);
         return {
           id,
           name: cleanName(entry.name, `配置 ${index + 1}`),

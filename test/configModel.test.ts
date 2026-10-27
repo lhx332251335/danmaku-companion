@@ -73,6 +73,17 @@ describe("stateFromParsed", () => {
     expect(state.profiles).toHaveLength(1);
     expect(state.profiles[0].config.model.model).toBe("legacy");
   });
+
+  it("gives repeated or missing profile ids a fresh id", () => {
+    const state = stateFromParsed({
+      activeProfileId: "p1",
+      profiles: [{ id: "p1", name: "A" }, { id: " p1 ", name: "B" }, { name: "C" }],
+    });
+    const ids = state.profiles.map((profile) => profile.id);
+    expect(ids[0]).toBe("p1");
+    expect(new Set(ids).size).toBe(3);
+    expect(state.activeProfileId).toBe("p1");
+  });
 });
 
 describe("deepMerge with null", () => {

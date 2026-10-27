@@ -188,4 +188,18 @@ describe("ConfigStore writes", () => {
     expect(remaining.config.runtime.enabled).toBe(true);
     expect((await readJson(configFile)).profiles[0].config.runtime.enabled).toBe(true);
   });
+
+  it("deletes only one profile when a hand-edited file repeats an id", async () => {
+    await fs.mkdir(paths.userData, { recursive: true });
+    const profiles = [
+      { id: "same", name: "A", config: {} },
+      { id: "same", name: "B", config: {} },
+    ];
+    await fs.writeFile(configFile, JSON.stringify({ activeProfileId: "same", profiles }));
+
+    const store = new ConfigStore();
+    const result = await store.deleteProfile("same");
+    expect(result.profiles.profiles.map((profile) => profile.name)).toEqual(["B"]);
+    expect((await store.get()).model).toEqual(defaultAppConfig.model);
+  });
 });
