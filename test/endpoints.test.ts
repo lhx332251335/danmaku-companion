@@ -20,7 +20,9 @@ describe("normalizeApiBase", () => {
     ["non-/vN prefix is kept", "https://generativelanguage.example/v1beta/openai", "https://generativelanguage.example/v1beta/openai"],
     ["gateway path after /v1", "https://gateway.example/v1/acc/gw/openai", "https://gateway.example/v1/acc/gw/openai"],
     ["reverse proxy prefix", "https://proxy.example/llm/v1/", "https://proxy.example/llm/v1"],
-    ["prefix without version", "https://proxy.example/openai/chat/completions", "https://proxy.example/openai"],
+    ["pasted endpoint without version", "https://proxy.example/openai/chat/completions", "https://proxy.example/openai"],
+    ["typed prefix without version keeps getting /v1", "https://proxy.example/llm", "https://proxy.example/llm/v1"],
+    ["typed prefix with trailing slash", "https://proxy.example/llm/", "https://proxy.example/llm/v1"],
   ])("%s", (_name, input, expected) => {
     expect(normalizeApiBase(input)).toBe(expected);
   });

@@ -1,3 +1,4 @@
+const VERSION_SEGMENT = /\/v\d+[a-z0-9]*(?:\/|$)/i;
 const ENDPOINT_SUFFIX = /\/(?:chat\/completions|completions|models)$/i;
 const LM_STUDIO_SUFFIX = /\/v1$/i;
 
@@ -25,10 +26,13 @@ function parseApiBase(baseUrl: string): ApiBase {
     );
   }
 
-  const path = url.pathname.replace(/\/+$/, "").replace(ENDPOINT_SUFFIX, "").replace(/\/+$/, "");
+  const typedPath = url.pathname.replace(/\/+$/, "");
+  const path = typedPath.replace(ENDPOINT_SUFFIX, "").replace(/\/+$/, "");
   const search = url.search;
-  // Only a bare host gets the conventional /v1; any other path is the server's own prefix.
-  url.pathname = path || "/v1";
+  // A pasted endpoint tells us the exact prefix. A typed base gets the conventional /v1 unless its
+  // path already has a version segment (/v1, /v1beta/openai, /v1/account/gateway/openai, ...).
+  const pastedEndpoint = path !== typedPath;
+  url.pathname = pastedEndpoint || VERSION_SEGMENT.test(path) ? path || "/v1" : `${path}/v1`;
   url.search = "";
   url.hash = "";
   return { base: url.href.replace(/\/+$/, ""), search };

@@ -84,6 +84,7 @@ export class DanmakuController {
   private historyEpoch = 0;
   private overlayEpoch = 0;
   private attempts = 0;
+  private systemMessageCount = 0;
   private busy = false;
   private running = false;
   /** Paused by the user, as opposed to never started. */
@@ -279,7 +280,7 @@ export class DanmakuController {
           trace.resizedToFit,
         ),
         comments: result.items.map((item) => item.text),
-        rawOutput: result.assistantText,
+        rawOutput: result.rawOutput ?? result.assistantText,
       };
       this.status = {
         state: this.restingState(),
@@ -387,7 +388,7 @@ export class DanmakuController {
   pushSystemMessage(text: string): void {
     this.pushItems([
       {
-        id: `${Date.now()}-system`,
+        id: `${Date.now()}-system-${(this.systemMessageCount += 1)}`,
         text,
         createdAt: new Date().toISOString(),
         source: "system",

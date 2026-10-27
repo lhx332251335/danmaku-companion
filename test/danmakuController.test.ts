@@ -279,6 +279,13 @@ describe("DanmakuController", () => {
     expect(h.controller.getStatus()).toMatchObject({ state: "running", cycles: 1 });
   });
 
+  it("logs the raw model output, including reasoning the history copy leaves out", async () => {
+    const h = setup();
+    mocks.generate.mockResolvedValueOnce({ ...reply("hi"), rawOutput: '<think>plan</think>{"comments":["hi"]}' });
+    await h.controller.generateOnce("manual");
+    expect(h.logs[0].rawOutput).toBe('<think>plan</think>{"comments":["hi"]}');
+  });
+
   it("switches state even when saving the running flag fails", async () => {
     const h = setup();
     vi.spyOn(console, "warn").mockImplementation(() => {});

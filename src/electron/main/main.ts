@@ -149,7 +149,15 @@ app.whenReady().then(async () => {
   windowManager.createWindows();
   windowManager.createTray();
 
-  const config = await configStore.get();
+  let config;
+  try {
+    config = await configStore.get();
+  } catch (error) {
+    // configStore leaves an unreadable config.json untouched; the settings window shows the error.
+    console.error("Failed to load config.json.", error);
+    return;
+  }
+
   windowManager.applyConfig(config);
   if (config.runtime.enabled) {
     void controller.start();
