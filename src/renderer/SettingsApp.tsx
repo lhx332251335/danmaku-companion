@@ -66,7 +66,6 @@ const promptPlaceholders = [
 
 const unimplementedHints = {
   activeApp: "尚未实现：目前总是填入 unknown",
-  density: "尚未实现：弹幕层不读取密度，修改它没有效果",
   blacklist: "尚未实现：截图前不会检查前台应用，名单里的应用照样会被截图并发送",
   persistScreenshots: "尚未实现：截图从不写入磁盘",
 };
@@ -183,8 +182,6 @@ interface NumberFieldProps {
   range: NumericRange;
   step: number;
   integer?: boolean;
-  disabled?: boolean;
-  title?: string;
   onCommit: (value: number) => void;
 }
 
@@ -195,8 +192,6 @@ function NumberField({
   range,
   step,
   integer = false,
-  disabled,
-  title,
   onCommit,
 }: NumberFieldProps) {
   const [text, setText] = useState<string | null>(null);
@@ -210,7 +205,7 @@ function NumberField({
   }
 
   return (
-    <label title={title}>
+    <label>
       <span>{label}</span>
       <input
         type="number"
@@ -218,7 +213,6 @@ function NumberField({
         max={range.max}
         step={step}
         value={text ?? String(value)}
-        disabled={disabled}
         onChange={(event) => handleChange(event.target.value)}
         onBlur={() => setText(null)}
         onKeyDown={(event) => {
@@ -989,7 +983,7 @@ export function SettingsApp() {
               label="最大输出 (tokens)"
               value={draft.model.maxTokens}
               range={LIMITS.maxTokens}
-              step={10}
+              step={1}
               integer
               onCommit={(maxTokens) => editSection("model", { maxTokens })}
             />
@@ -1089,16 +1083,10 @@ export function SettingsApp() {
               onCommit={(maxCommentLength) => editSection("danmaku", { maxCommentLength })}
             />
             <NumberField
-              label={
-                <>
-                  密度 <TodoTag hint={unimplementedHints.density} />
-                </>
-              }
-              title={unimplementedHints.density}
+              label="密度 (0.1–1)"
               value={draft.danmaku.density}
               range={LIMITS.density}
               step={0.1}
-              disabled
               onCommit={(density) => editSection("danmaku", { density })}
             />
           </div>
