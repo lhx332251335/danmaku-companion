@@ -1,3 +1,5 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { describeFetchError, summarizeErrorBody } from "../src/electron/main/providers/errors";
 import { fetchJson, fetchText, parseJsonBody } from "../src/electron/main/providers/http";
@@ -89,6 +91,21 @@ describe("fetchText", () => {
     const request = fetchText(url, {}, 60_000, controller.signal);
     controller.abort();
     await expect(request).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("times out when the body stalls after the headers", async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.write('{"choices":');
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await expect(fetchText(`http://127.0.0.1:${port}/`, {}, 100)).rejects.toThrow(/请求超时/);
+    } finally {
+      server.closeAllConnections();
+      server.close();
+    }
   });
 
   it("returns status and body", async () => {
