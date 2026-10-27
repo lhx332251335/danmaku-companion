@@ -1,16 +1,31 @@
 import { readFileSync } from "node:fs";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 const preloadSource = readFileSync(new URL("../src/electron/preload/index.ts", import.meta.url), "utf8");
 
+/** Modules the compiled CommonJS output requires at runtime (type-only imports are erased). */
+function runtimeRequires(source: string): string[] {
+  const { outputText } = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  });
+  return [...outputText.matchAll(/\brequire\("([^"]+)"\)/g)].map((match) => match[1]);
+}
+
 describe("preload", () => {
   // Both windows run with sandbox: true, where a preload can only require "electron".
-  it("imports nothing but electron at runtime", () => {
-    const imports = [...preloadSource.matchAll(/^import\s+(type\s+)?[\s\S]*?\sfrom\s+"([^"]+)";/gm)];
-    expect(imports.length).toBeGreaterThan(0);
-    const runtimeModules = imports.filter((match) => !match[1]).map((match) => match[2]);
-    expect(runtimeModules).toEqual(["electron"]);
-    expect(preloadSource).not.toMatch(/\brequire\s*\(/);
-    expect(preloadSource).not.toMatch(/\bimport\s*\(/);
+  it("requires nothing but electron once compiled", () => {
+    expect(runtimeRequires(preloadSource)).toEqual(["electron"]);
+  });
+
+  it("would notice side-effect imports, re-exports and dynamic imports", () => {
+    const source = [
+      'import type { AppConfig } from "../../shared/types";',
+      'import "./polyfill";',
+      'export { helper } from "./helper";',
+      'export const load = () => import("./lazy");',
+      "export type Config = AppConfig;",
+    ].join("\n");
+    expect(runtimeRequires(source)).toEqual(["./polyfill", "./helper", "./lazy"]);
   });
 });
