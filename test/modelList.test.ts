@@ -20,4 +20,28 @@ describe("model list parsing", () => {
     const merged = mergeModelOptions([native, legacy]);
     expect(merged.find((model) => model.id === "text-only")?.state).toBe("loaded");
   });
+
+  it("reads capability flags sent as an object", () => {
+    const models = legacyModelOptions({
+      data: [
+        { id: "vl", capabilities: { vision: true } },
+        { id: "text", capabilities: { vision: false } },
+        { id: "listed", capabilities: ["vision"] },
+      ],
+    });
+    expect(models.map((model) => [model.id, model.vision])).toEqual([
+      ["vl", true],
+      ["text", false],
+      ["listed", true],
+    ]);
+  });
+
+  it.each([
+    ["a null body", null],
+    ["a non-array list", { data: { id: "a" }, models: { key: "a" } }],
+    ["null items", { data: [null], models: [null] }],
+  ])("treats %s as an empty list", (_name, body) => {
+    expect(legacyModelOptions(body as never)).toEqual([]);
+    expect(nativeModelOptions(body as never)).toEqual([]);
+  });
 });

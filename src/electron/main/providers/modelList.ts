@@ -17,7 +17,19 @@ export interface LmStudioLegacyModel {
   id?: string;
   type?: string;
   state?: string;
-  capabilities?: string[];
+  /** LM Studio lists capability names; other OpenAI-compatible servers send an object of flags. */
+  capabilities?: string[] | { vision?: boolean };
+}
+
+/** The object items of a list field; anything else the server sent counts as an empty list. */
+function listItems<T extends object>(value: T[] | undefined): T[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is T => typeof item === "object" && item !== null)
+    : [];
+}
+
+function hasVisionCapability(capabilities: LmStudioLegacyModel["capabilities"]): boolean {
+  return Array.isArray(capabilities) ? capabilities.includes("vision") : Boolean(capabilities?.vision);
 }
 
 export function uniqueModels(models: ModelOption[]): ModelOption[] {
@@ -65,9 +77,9 @@ export function mergeModelOptions(groups: ModelOption[][]): ModelOption[] {
   return [...merged.values()];
 }
 
-export function nativeModelOptions(data: { models?: LmStudioNativeModel[] }): ModelOption[] {
+export function nativeModelOptions(data: { models?: LmStudioNativeModel[] } | null): ModelOption[] {
   return uniqueModels(
-    (data.models ?? [])
+    listItems(data?.models)
       .map((model) => ({
         id: model.loaded_instances?.[0]?.id ?? model.key ?? "",
         name: model.display_name,
@@ -79,14 +91,14 @@ export function nativeModelOptions(data: { models?: LmStudioNativeModel[] }): Mo
   );
 }
 
-export function legacyModelOptions(data: { data?: LmStudioLegacyModel[] }): ModelOption[] {
+export function legacyModelOptions(data: { data?: LmStudioLegacyModel[] } | null): ModelOption[] {
   return uniqueModels(
-    (data.data ?? [])
+    listItems(data?.data)
       .map((model) => ({
         id: model.id ?? "",
         state: model.state,
         type: model.type,
-        vision: model.type === "vlm" || model.capabilities?.includes("vision"),
+        vision: model.type === "vlm" || hasVisionCapability(model.capabilities),
       }))
       .filter((model) => model.id),
   );
