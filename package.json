@@ -11,7 +11,8 @@
     "dev": "npm-run-all build:electron --parallel dev:renderer dev:electron",
     "dev:renderer": "vite --host 127.0.0.1",
     "dev:electron": "wait-on tcp:5173 dist-electron/electron/main/main.js dist-electron/electron/preload/index.js && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron dist-electron/electron/main/main.js",
-    "build": "npm-run-all typecheck build:electron build:renderer",
+    "clean": "node -e \"for (const dir of ['dist', 'dist-electron']) require('node:fs').rmSync(dir, { recursive: true, force: true })\"",
+    "build": "npm-run-all clean typecheck build:electron build:renderer",
     "build:electron": "tsc -p tsconfig.electron.json",
     "build:renderer": "vite build",
     "package:mac": "npm run build && electron-builder --mac --arm64",
@@ -19,7 +20,8 @@
     "package:all": "npm run build && electron-builder --mac --arm64 && electron-builder --win --x64",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run",
-    "lint": "tsc --noEmit",
+    "test:watch": "vitest",
+    "lint": "npm run typecheck",
     "preview": "vite preview --host 127.0.0.1"
   },
   "build": {
