@@ -10,6 +10,7 @@ import type {
   ScreenSnapshot,
 } from "../../../shared/types";
 import { LIMITS, clampOr } from "../../../shared/limits";
+import { desktopThumbnailSize, fitWithinMaxEdge } from "./captureSize";
 
 const DEFAULT_CAPTURE_MAX_EDGE_PIXELS = 960;
 const DEFAULT_CAPTURE_IMAGE_FORMAT: ScreenImageFormat = "jpeg";
@@ -19,19 +20,6 @@ const execFileAsync = promisify(execFile);
 interface CaptureEncodingOptions {
   format?: ScreenImageFormat;
   jpegQuality?: number;
-}
-
-function getThumbnailSize(
-  displaySize: Electron.Size,
-  maxEdgePixels: number,
-): { width: number; height: number } {
-  const longestEdge = Math.max(displaySize.width, displaySize.height);
-  const scale = Math.min(1, maxEdgePixels / longestEdge);
-
-  return {
-    width: Math.max(1, Math.round(displaySize.width * scale)),
-    height: Math.max(1, Math.round(displaySize.height * scale)),
-  };
 }
 
 function getScreenAccessStatus(): ReturnType<typeof systemPreferences.getMediaAccessStatus> {
@@ -104,7 +92,7 @@ async function captureWithMacScreencapture(
     }
 
     const imageSize = image.getSize();
-    const thumbnailSize = getThumbnailSize(imageSize, maxEdgePixels);
+    const thumbnailSize = fitWithinMaxEdge(imageSize, maxEdgePixels);
     const thumbnail =
       thumbnailSize.width === imageSize.width && thumbnailSize.height === imageSize.height
         ? image
@@ -131,19 +119,24 @@ async function captureWithDesktopCapturer(
   options: CaptureEncodingOptions,
 ): Promise<ScreenSnapshot> {
   const primary = screen.getPrimaryDisplay();
-  const { width, height } = getThumbnailSize(primary.size, maxEdgePixels);
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
-    thumbnailSize: { width, height },
+    thumbnailSize: desktopThumbnailSize(primary.size, primary.scaleFactor, maxEdgePixels),
   });
 
-  const source =
-    sources.find((item) => item.display_id === String(primary.id)) ?? sources[0];
+  const primarySource = sources.find((item) => item.display_id === String(primary.id));
+  const source = primarySource ?? sources[0];
+  if (!primarySource && sources.length > 1) {
+    console.warn(
+      `No capture source matches primary display ${primary.id}; using "${source.name}".`,
+    );
+  }
 
   if (!source || source.thumbnail.isEmpty()) {
     throw screenPermissionError(getScreenAccessStatus());
   }
 
+  const { width, height } = source.thumbnail.getSize();
   return {
     ...encodeImage(source.thumbnail, options),
     width,
