@@ -7,8 +7,6 @@ export interface Bounds {
 
 /** Windows 10 2004 is the first build where WDA_EXCLUDEFROMCAPTURE exists. */
 export const WINDOWS_CAPTURE_EXCLUSION_MIN_BUILD = 19041;
-/** Minimum time between re-asserting the overlay's topmost state while danmaku are pushed. */
-export const OVERLAY_TOPMOST_REFRESH_MS = 10_000;
 export const OVERLAY_RECOVERY_WINDOW_MS = 60_000;
 export const OVERLAY_RECOVERY_MAX_ATTEMPTS = 5;
 const OVERLAY_RECOVERY_BASE_DELAY_MS = 500;
@@ -66,10 +64,6 @@ export function supportsCaptureExclusion(platform: string, release: string): boo
 /** Human-readable accelerator for messages ("CommandOrControl+Alt+D" -> "Ctrl+Alt+D"). */
 export function formatAccelerator(accelerator: string, platform: string): string {
   return accelerator.replace(/CommandOrControl|CmdOrCtrl/g, platform === "darwin" ? "Cmd" : "Ctrl");
-}
-
-export function shouldRefreshTopmost(lastRefreshedAt: number | undefined, now: number): boolean {
-  return lastRefreshedAt === undefined || now - lastRefreshedAt >= OVERLAY_TOPMOST_REFRESH_MS;
 }
 
 export function sameBounds(a: Bounds, b: Bounds): boolean {

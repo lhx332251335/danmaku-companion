@@ -20,7 +20,6 @@ import {
   overlayRecoveryDelay,
   recordOverlayCrash,
   sameBounds,
-  shouldRefreshTopmost,
   supportsCaptureExclusion,
 } from "./windowPolicy";
 
@@ -104,7 +103,6 @@ export class WindowManager {
   private latestStatus: RuntimeStatus = { state: "idle", cycles: 0 };
   private overlayVisible = true;
   private overlayFullscreenSpacesConfigured = false;
-  private overlayTopmostRefreshedAt: number | undefined;
   private overlayCrashTimes: number[] = [];
   private overlayRecoveryTimer: NodeJS.Timeout | undefined;
   private excludeOverlayFromCapture = defaultAppConfig.danmaku.excludeOverlayFromCapture;
@@ -182,7 +180,9 @@ export class WindowManager {
     if (overlay && this.overlayVisible) {
       if (!overlay.isVisible()) {
         this.showOverlayWindow();
-      } else if (shouldRefreshTopmost(this.overlayTopmostRefreshedAt, Date.now())) {
+      } else {
+        // Re-assert on every item: another topmost window (a game, a video player) may have
+        // covered the overlay since the last one. setAlwaysOnTop/moveTop are cheap.
         this.applyOverlayWindowLevel();
       }
     }
@@ -336,7 +336,6 @@ export class WindowManager {
     });
     this.overlayWindow = overlay;
     this.overlayFullscreenSpacesConfigured = false;
-    this.overlayTopmostRefreshedAt = undefined;
 
     guardNavigation(overlay.webContents);
     // No { forward: true }: on Windows that installs a global low-level mouse hook, and the
@@ -407,7 +406,6 @@ export class WindowManager {
 
     overlay.setAlwaysOnTop(true, "screen-saver", 1);
     overlay.moveTop();
-    this.overlayTopmostRefreshedAt = Date.now();
 
     if (
       process.platform === "darwin" &&

@@ -3,13 +3,11 @@ import { normalizeProfileConfig } from "../src/electron/main/configModel";
 import {
   OVERLAY_RECOVERY_MAX_ATTEMPTS,
   OVERLAY_RECOVERY_WINDOW_MS,
-  OVERLAY_TOPMOST_REFRESH_MS,
   formatAccelerator,
   isAppUrl,
   overlayRecoveryDelay,
   recordOverlayCrash,
   sameBounds,
-  shouldRefreshTopmost,
   supportsCaptureExclusion,
   windowsBuildNumber,
 } from "../src/electron/main/windowPolicy";
@@ -84,12 +82,6 @@ describe("formatAccelerator", () => {
 });
 
 describe("overlay upkeep", () => {
-  it("re-asserts topmost at most once per refresh interval", () => {
-    expect(shouldRefreshTopmost(undefined, 1000)).toBe(true);
-    expect(shouldRefreshTopmost(1000, 1000 + OVERLAY_TOPMOST_REFRESH_MS - 1)).toBe(false);
-    expect(shouldRefreshTopmost(1000, 1000 + OVERLAY_TOPMOST_REFRESH_MS)).toBe(true);
-  });
-
   it("compares window bounds", () => {
     const bounds = { x: 0, y: 0, width: 1280, height: 720 };
     expect(sameBounds(bounds, { ...bounds })).toBe(true);
