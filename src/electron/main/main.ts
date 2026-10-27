@@ -27,6 +27,8 @@ const controller = new DanmakuController(
 
 windowManager.setController(controller);
 let forceQuitTimer: NodeJS.Timeout | undefined;
+let quitFlushStarted = false;
+const QUIT_FLUSH_TIMEOUT_MS = 1000;
 
 function configureDockIcon(): void {
   if (process.platform !== "darwin") {
@@ -90,7 +92,13 @@ function registerIpc(): void {
     return listOpenAICompatibleModels(config);
   });
 
-  ipcMain.handle("logs:get", () => generationLogStore.get());
+  ipcMain.handle("logs:get", async () => {
+    const limit = await configStore.get().then(
+      (config) => config.runtime.generationLogLimit,
+      () => undefined,
+    );
+    return generationLogStore.get(limit);
+  });
   ipcMain.handle("logs:clear", () => generationLogStore.clear());
   ipcMain.handle("system:probeScreenRecording", () => probeScreenCapturePermission());
   ipcMain.handle("system:openScreenRecordingSettings", async () => {
@@ -129,15 +137,34 @@ app.whenReady().then(async () => {
 
 app.on("window-all-closed", () => {});
 
-app.on("before-quit", () => {
+/** Holds the quit once so queued config/log writes can land; bounded by a timeout. */
+function deferQuitForPendingWrites(event: { preventDefault(): void }): void {
+  if (
+    quitFlushStarted ||
+    (!configStore.hasPendingWrites() && !generationLogStore.hasPendingWrites())
+  ) {
+    return;
+  }
+
+  quitFlushStarted = true;
+  event.preventDefault();
+  const timeout = new Promise<void>((resolve) => setTimeout(resolve, QUIT_FLUSH_TIMEOUT_MS));
+  void Promise.race([
+    Promise.all([configStore.flush(), generationLogStore.flush()]),
+    timeout,
+  ]).finally(() => app.quit());
+}
+
+app.on("before-quit", (event) => {
   app.removeAllListeners("window-all-closed");
   controller.shutdown();
   windowManager.prepareForQuit();
 
-  if (process.platform === "win32") {
+  if (process.platform === "win32" && !forceQuitTimer) {
     forceQuitTimer = setTimeout(() => app.exit(0), 1500);
     forceQuitTimer.unref?.();
   }
+  deferQuitForPendingWrites(event);
 });
 
 app.on("will-quit", () => {
