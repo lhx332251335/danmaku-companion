@@ -629,19 +629,20 @@ textarea:focus {
 
 .danmaku-line {
   position: absolute;
-  right: 0;
-  max-width: min(780px, 82vw);
+  top: 0;
+  left: 100%;
+  width: max-content;
   white-space: nowrap;
+  color: #f8fafc;
   opacity: var(--danmaku-opacity);
   font-size: var(--danmaku-font-size);
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.25;
-  transform: translateX(100%);
+  transform: translateX(0);
   animation-name: danmaku-move;
-  animation-duration: var(--danmaku-speed);
   animation-timing-function: linear;
-  animation-fill-mode: both;
+  animation-fill-mode: backwards;
   will-change: transform;
 }
 
@@ -651,9 +652,10 @@ textarea:focus {
     0 0 12px rgba(0, 0, 0, 0.26);
 }
 
+/* Starts just off the right edge; 100% is the line's own width, so the tail fully leaves. */
 @keyframes danmaku-move {
   from {
-    transform: translateX(100%);
+    transform: translateX(0);
   }
   to {
     transform: translateX(calc(-100vw - 100%));
