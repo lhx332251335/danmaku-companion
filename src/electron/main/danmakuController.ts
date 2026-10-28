@@ -241,7 +241,7 @@ export class DanmakuController {
       }
       if (config.model.visionEnabled) {
         try {
-          snapshot = await capturePrimaryScreen(runtime.captureMaxEdgePixels, {
+          snapshot = await capturePrimaryScreen(runtime.captureShortEdgePixels, {
             format: runtime.captureImageFormat,
             jpegQuality: runtime.captureJpegQuality,
           });

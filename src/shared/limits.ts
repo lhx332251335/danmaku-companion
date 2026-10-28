@@ -8,7 +8,8 @@ export const LIMITS = {
   startDelaySeconds: { min: 0, max: 60 },
   itemsPerCycle: { min: 1, max: 12 },
   releaseWindowSeconds: { min: 0, max: 60 },
-  captureMaxEdgePixels: { min: 480, max: 2160 },
+  /** Short edge of the screenshot: 360p to 2160p. */
+  captureShortEdgePixels: { min: 360, max: 2160 },
   captureJpegQuality: { min: 0.5, max: 0.95 },
   historyRounds: { min: 0, max: 50 },
   historyMaxImages: { min: 0, max: 50 },

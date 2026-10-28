@@ -172,7 +172,7 @@ function Hero({ config, status, workingAction }: HeroProps) {
           <li>
             {vision ? (
               <Chip icon={<Image />}>
-                {runtime.captureImageFormat === "png" ? "PNG" : "JPEG"} · {runtime.captureMaxEdgePixels} px
+                {runtime.captureImageFormat === "png" ? "PNG" : "JPEG"} · {runtime.captureShortEdgePixels}p
               </Chip>
             ) : (
               <Chip icon={<ImageOff />}>不发送截图</Chip>

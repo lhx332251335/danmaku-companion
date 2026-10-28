@@ -116,8 +116,8 @@ export function displayNumber(value: number, scale = 1): string {
 export function rangeHint(range: NumericRange, unit = "", scale = 1): string {
   const low = roundForDisplay(range.min * scale);
   const high = roundForDisplay(range.max * scale);
-  if (unit === "%") {
-    return `${low}% – ${high}%`;
+  if (unit === "%" || unit === "p") {
+    return `${low}${unit} – ${high}${unit}`;
   }
   return `${low} – ${high}${unit ? ` ${unit}` : ""}`;
 }
