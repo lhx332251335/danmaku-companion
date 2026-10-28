@@ -381,6 +381,67 @@ export function readCompletion(response: ChatCompletionResponse, maxTokens: numb
   return { text, rawText, comments, finishReason };
 }
 
+export interface SummaryOutput {
+  text: string;
+  rawText: string;
+  finishReason?: string;
+}
+
+/** Strips a ```fence``` and reads {"summary": "..."} if the model answered in JSON anyway. */
+function summaryFromText(text: string): string {
+  const unfenced = text.match(/^```[a-z]*\s*([\s\S]*?)```$/i)?.[1]?.trim() ?? text;
+  if (!unfenced.startsWith("{")) {
+    return unfenced;
+  }
+
+  try {
+    const parsed = JSON.parse(unfenced) as unknown;
+    if (isRecord(parsed) && typeof parsed.summary === "string") {
+      return parsed.summary.trim();
+    }
+    if (isRecord(parsed) && Array.isArray(parsed.comments)) {
+      throw new Error("模型按弹幕格式回复了摘要请求，没有生成摘要。可以在摘要提示词里再强调只输出摘要正文。");
+    }
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return unfenced;
+    }
+    throw error;
+  }
+  return unfenced;
+}
+
+/** Reads a context summary reply: plain text without reasoning, capped at twice maxChars. */
+export function readSummary(response: ChatCompletionResponse, maxTokens: number, maxChars: number): SummaryOutput {
+  const body: ChatCompletionResponse = isRecord(response) ? response : {};
+  const apiError = errorText(body.error);
+  if (apiError) {
+    throw new Error(`模型服务返回了错误：${apiError}`);
+  }
+
+  const choice = body.choices?.[0];
+  if (!choice) {
+    throw new Error("模型响应里没有 choices，无法读取摘要。");
+  }
+
+  const rawText = textFromContent(body.choices);
+  const stripped = stripReasoning(rawText).trim();
+  const finishReason = choice.finish_reason ?? undefined;
+  if (!stripped) {
+    const reasoned = Boolean(choice.message?.reasoning_content || choice.message?.reasoning) || rawText.trim() !== "";
+    throw new Error(
+      emptyCompletionProblem("", finishReason, reasoned, maxTokens)?.replace("弹幕", "摘要") ??
+        "模型返回了空摘要。",
+    );
+  }
+
+  const text = truncateText(summaryFromText(stripped), maxChars * 2);
+  if (!text) {
+    throw new Error("模型返回了空摘要。");
+  }
+  return { text, rawText, finishReason };
+}
+
 export function normalizedMaxCommentLength(config: AppConfig): number {
   const value = config.danmaku.maxCommentLength ?? COMMENT_LENGTH_DEFAULT;
   if (!Number.isFinite(value)) {

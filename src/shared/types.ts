@@ -38,6 +38,8 @@ export interface UserProfile {
 export interface PromptSettings {
   systemTemplate: string;
   userTemplate: string;
+  /** Instruction for the context summary request; supports {{summaryMaxChars}}. */
+  summaryTemplate: string;
 }
 
 export interface DanmakuStyleSettings {
@@ -80,6 +82,12 @@ export interface RuntimeSettings {
   historyMaxImages: number;
   /** Ceiling for the serialized request body in MiB; history screenshots are dropped to stay under it. */
   requestBodyLimitMB: number;
+  /**
+   * Before reset-on-limit starts over or batch-sliding halves the window, summarize the session
+   * in a background request and keep that summary in the system prompt afterwards.
+   */
+  historySummaryEnabled: boolean;
+  historySummaryMaxChars: number;
   persistScreenshots: boolean;
   generationLogLimit: number;
   privacyBlacklist: string[];
@@ -127,6 +135,11 @@ export interface RuntimeStatus {
   historyImages?: number;
   /** When the next timed generation is due (ISO time), while one is scheduled. */
   nextCycleAt?: string;
+  /** Summary of earlier rounds currently carried in the system prompt. */
+  contextSummary?: string;
+  contextSummaryAt?: string;
+  /** A context summary request is running in the background. */
+  summarizing?: boolean;
 }
 
 export interface ConnectionTestResult {
@@ -184,6 +197,8 @@ export interface DanmakuInput {
   character: CharacterProfile;
   history?: DanmakuHistoryRound[];
   maxItems: number;
+  /** Summary of rounds dropped from history, added to the system prompt. */
+  contextSummary?: string;
   /** The provider refuses to send a body larger than this (bytes). */
   maxBodyBytes?: number;
   abortSignal?: AbortSignal;
@@ -203,6 +218,19 @@ export interface DanmakuGenerationResult {
   promptMs?: number;
   /** Size of the request body that was sent. */
   requestBytes?: number;
+}
+
+export interface ContextSummaryResult {
+  /** The summary text, without reasoning. */
+  text: string;
+  rawOutput?: string;
+  finishReason?: string;
+  cachedInputTokens?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  promptMs?: number;
+  requestBytes?: number;
+  historyImagesSent?: number;
 }
 
 export interface DanmakuItem {
@@ -246,7 +274,7 @@ export interface GenerationLogCompaction {
 export interface GenerationLogEntry {
   id: string;
   cycle: number;
-  reason: "manual" | "timer";
+  reason: "manual" | "timer" | "summary";
   status: GenerationLogStatus;
   startedAt: string;
   completedAt: string;
@@ -271,6 +299,8 @@ export interface GenerationLogEntry {
   historyRecovery?: HistoryRecovery;
   screen: GenerationLogScreenInfo;
   comments: string[];
+  /** For reason "summary": the context summary that was written. */
+  summary?: string;
   rawOutput?: string;
   error?: string;
 }

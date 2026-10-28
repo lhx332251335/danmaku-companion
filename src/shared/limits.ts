@@ -12,6 +12,7 @@ export const LIMITS = {
   captureJpegQuality: { min: 0.5, max: 0.95 },
   historyRounds: { min: 0, max: 50 },
   historyMaxImages: { min: 0, max: 50 },
+  historySummaryMaxChars: { min: 100, max: 2000 },
   requestBodyLimitMB: { min: 1, max: 512 },
   generationLogLimit: { min: 10, max: 2000 },
   maxCommentLength: { min: 10, max: 200 },

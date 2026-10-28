@@ -622,6 +622,16 @@ textarea:disabled {
   font-size: 13px;
 }
 
+.summary-text {
+  margin: 0 0 10px;
+  border-left: 3px solid #93c5fd;
+  padding: 4px 0 4px 10px;
+  color: #1e293b;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 .comment-log-list {
   display: flex;
   flex-wrap: wrap;

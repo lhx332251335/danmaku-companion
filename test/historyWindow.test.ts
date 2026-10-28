@@ -24,6 +24,35 @@ describe("HistoryWindow", () => {
     expect(sent).toEqual([0, 1, 2, 3, 0, 1]);
   });
 
+  it("predicts the round that compacts, counts compactions and keeps the summary across them", () => {
+    const window = new HistoryWindow();
+    const settings: HistoryWindowSettings = { historyRounds: 3, historyMode: "reset-on-limit", historyIncludeImages: false };
+    window.setSummary("  earlier  ");
+    const predicted = ["a", "b", "c", "d"].map((text) => {
+      const next = window.willCompactNextRound(settings);
+      cycle(window, settings, text);
+      return next;
+    });
+    // The 4th round sends the full window of 3 and starts over.
+    expect(predicted).toEqual([false, false, false, true]);
+    expect(window.compactions).toBe(1);
+    expect(window.summary).toBe("earlier");
+
+    const halving: HistoryWindowSettings = { historyRounds: 2, historyMode: "batch-sliding", historyIncludeImages: false };
+    const batch = new HistoryWindow();
+    const batchPredicted = ["a", "b", "c"].map((text) => {
+      const next = batch.willCompactNextRound(halving);
+      cycle(batch, halving, text);
+      return next;
+    });
+    expect(batchPredicted).toEqual([false, false, true]);
+    expect(batch.compactions).toBe(1);
+    expect(new HistoryWindow().willCompactNextRound({ ...settings, historyMode: "sliding" })).toBe(false);
+
+    window.reset();
+    expect(window.summary).toBeUndefined();
+  });
+
   it("sliding keeps the most recent rounds", () => {
     const window = new HistoryWindow();
     const settings: HistoryWindowSettings = { historyRounds: 2, historyMode: "sliding", historyIncludeImages: false };

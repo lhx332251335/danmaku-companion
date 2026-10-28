@@ -52,6 +52,19 @@ request, so the app keeps history append-only for as long as it can:
   is not kept, but the compaction is, so later requests start smaller. Failures that would
   repeat (HTTP 400/413/422, such as a context overflow) shrink history before
   the next cycle; timeouts, 429 and 5xx keep it.
+- **上下文摘要 (context summary, off by default).** With `满额重置` or
+  `分批滑动`, the app sends one extra request one round before the window
+  starts over or is halved. That request repeats the same system prompt and
+  history (so it reuses the server's cached prefix) and asks for a short
+  summary: what the user has been doing, memorable moments, running jokes, the
+  gist of comments already sent. The summary is added to the system prompt only
+  when the window actually starts over or halves. That moment already misses
+  the cache, so the summary costs no extra re-prefill. Each summary includes
+  the previous one, so the timeline accumulates. If the summary is still
+  running at the compaction, the next cycle waits up to 20 s for it. The
+  length (`摘要长度上限`, default 400 characters) and the instruction
+  (`上下文摘要提示词`) can be changed. Summary requests show up in the
+  generation log as `摘要`.
 - **Choosing a format.** PNG screenshots are often 10x the bytes of JPEG for
   the same image tokens. With history screenshots on, prefer JPEG; every cycle
   uploads the whole request.

@@ -3,9 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConfigStore } from "../src/electron/main/configStore";
 import { DanmakuController } from "../src/electron/main/danmakuController";
 import { RequestTooLargeError } from "../src/electron/main/providers/errors";
+import { LATEST_COMMENTS_LABEL } from "../src/electron/main/runtime/contextSummarizer";
 import type { GenerationLogStore } from "../src/electron/main/generationLogStore";
 import type {
   AppConfig,
+  ContextSummaryResult,
   DanmakuGenerationResult,
   DanmakuInput,
   DeepPartial,
@@ -17,6 +19,7 @@ import { makeConfig, makeSnapshot } from "./helpers";
 
 const mocks = vi.hoisted(() => ({
   generate: vi.fn<(input: DanmakuInput, config: AppConfig) => Promise<DanmakuGenerationResult>>(),
+  summarize: vi.fn<(input: DanmakuInput, config: AppConfig, maxChars: number) => Promise<ContextSummaryResult>>(),
   capture: vi.fn(),
 }));
 
@@ -29,6 +32,7 @@ vi.mock("../src/electron/main/generationLogStore", () => ({ GenerationLogStore: 
 vi.mock("../src/electron/main/providers/openAiCompatibleProvider", () => ({
   OpenAICompatibleProvider: class {
     generateDanmaku = mocks.generate;
+    generateSummary = mocks.summarize;
   },
 }));
 
@@ -37,6 +41,7 @@ const controllers: DanmakuController[] = [];
 afterEach(() => {
   controllers.splice(0).forEach((controller) => controller.shutdown());
   mocks.generate.mockReset();
+  mocks.summarize.mockReset();
   mocks.capture.mockReset();
   vi.restoreAllMocks();
   vi.useRealTimers();
@@ -349,6 +354,59 @@ describe("DanmakuController", () => {
     expect(mocks.generate).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(5000);
     expect(mocks.generate).toHaveBeenCalledTimes(2);
+  });
+
+  it("summarizes before the window starts over and carries the summary into the next window", async () => {
+    const h = setup({ historyRounds: 2, historyMode: "reset-on-limit", historySummaryEnabled: true });
+    mocks.generate.mockImplementation(async (input) => reply(`r${input.history?.length}`));
+    mocks.summarize.mockResolvedValue({ text: "用户在调试代码", cachedInputTokens: 800, promptTokens: 820 });
+
+    await h.controller.generateOnce("manual");
+    expect(mocks.summarize).not.toHaveBeenCalled();
+    await h.controller.generateOnce("manual");
+    // The next request is the last of this window: the summary runs now, on the same history.
+    await vi.waitFor(() => expect(h.logs.some((entry) => entry.reason === "summary")).toBe(true));
+    expect(mocks.summarize.mock.calls[0][0].history).toHaveLength(2);
+    expect(mocks.summarize.mock.calls[0][2]).toBe(h.config.runtime.historySummaryMaxChars);
+    const summaryLog = h.logs.find((entry) => entry.reason === "summary");
+    expect(summaryLog).toMatchObject({ status: "success", summary: "用户在调试代码", cachedInputTokens: 800 });
+
+    await h.controller.generateOnce("manual"); // last round of the window, summary not used yet
+    expect(mocks.generate.mock.calls[2][0].contextSummary).toBeUndefined();
+    const status = await h.controller.generateOnce("manual"); // the new window
+    expect(mocks.generate.mock.calls[3][0].history).toHaveLength(0);
+    // The round the reset dropped (r2) came after the summary, so its comment is appended.
+    expect(mocks.generate.mock.calls[3][0].contextSummary).toBe(`用户在调试代码\n${LATEST_COMMENTS_LABEL} r2`);
+    expect(status.contextSummary).toBe(mocks.generate.mock.calls[3][0].contextSummary);
+    expect(status.contextSummaryAt).toBeDefined();
+  });
+
+  it("does not summarize when the option is off, and clearing history drops the summary", async () => {
+    const off = setup({ historyRounds: 1, historyMode: "reset-on-limit" });
+    mocks.generate.mockImplementation(async () => reply("x"));
+    await off.controller.generateOnce("manual");
+    await off.controller.generateOnce("manual");
+    expect(mocks.summarize).not.toHaveBeenCalled();
+
+    const h = setup({ historyRounds: 1, historyMode: "reset-on-limit", historySummaryEnabled: true });
+    mocks.summarize.mockResolvedValue({ text: "摘要" });
+    await h.controller.generateOnce("manual");
+    await vi.waitFor(() => expect(h.logs.some((entry) => entry.reason === "summary")).toBe(true));
+    await h.controller.generateOnce("manual");
+    expect(h.controller.getStatus().contextSummary).toContain("摘要");
+    h.controller.clearHistory();
+    expect(h.controller.getStatus().contextSummary).toBeUndefined();
+  });
+
+  it("logs a failed summary and keeps generating", async () => {
+    const h = setup({ historyRounds: 1, historyMode: "reset-on-limit", historySummaryEnabled: true });
+    mocks.generate.mockImplementation(async () => reply("x"));
+    mocks.summarize.mockRejectedValue(providerError(502));
+    await h.controller.generateOnce("manual");
+    await vi.waitFor(() => expect(h.logs.some((entry) => entry.reason === "summary")).toBe(true));
+    expect(h.logs.find((entry) => entry.reason === "summary")).toMatchObject({ status: "error" });
+    expect((await h.controller.generateOnce("manual")).state).toBe("idle");
+    expect(mocks.generate.mock.calls[1][0].contextSummary).toBeUndefined();
   });
 
   it("switches state even when saving the running flag fails", async () => {

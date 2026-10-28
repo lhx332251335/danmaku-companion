@@ -82,6 +82,7 @@ const NUMBER_RULES: Readonly<Partial<Record<SectionPath<number>, NumberRule>>> =
   "runtime.captureJpegQuality": { range: LIMITS.captureJpegQuality },
   "runtime.historyRounds": { range: LIMITS.historyRounds, integer: true },
   "runtime.historyMaxImages": { range: LIMITS.historyMaxImages, integer: true },
+  "runtime.historySummaryMaxChars": { range: LIMITS.historySummaryMaxChars, integer: true },
   "runtime.requestBodyLimitMB": { range: LIMITS.requestBodyLimitMB },
   "runtime.generationLogLimit": { range: LIMITS.generationLogLimit, integer: true },
 };

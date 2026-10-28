@@ -85,6 +85,62 @@ describe("OpenAICompatibleProvider", () => {
   });
 });
 
+describe("OpenAICompatibleProvider.generateSummary", () => {
+  it("returns the summary text with usage", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        choices: [{ finish_reason: "stop", message: { content: "<think>hmm</think>\n用户在打游戏，刚输了一局。" } }],
+        usage: { prompt_tokens: 900, completion_tokens: 30 },
+        timings: { cache_n: 880, prompt_n: 20, prompt_ms: 15 },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await new OpenAICompatibleProvider().generateSummary(input, config, 200);
+    expect(result).toMatchObject({
+      text: "用户在打游戏，刚输了一局。",
+      cachedInputTokens: 880,
+      promptTokens: 900,
+      finishReason: "stop",
+    });
+    expect(result.rawOutput).toContain("<think>");
+  });
+
+  it("reads a JSON summary and rejects a danmaku-shaped reply", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ choices: [{ message: { content: '```json\n{"summary":"在看番"}\n```' } }] })));
+    await expect(new OpenAICompatibleProvider().generateSummary(input, config, 200)).resolves.toMatchObject({
+      text: "在看番",
+    });
+
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ choices: [{ message: { content: '{"comments":["哈哈"]}' } }] })));
+    await expect(new OpenAICompatibleProvider().generateSummary(input, config, 200)).rejects.toThrow("弹幕格式");
+  });
+
+  it("caps an overlong summary at twice the requested length", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ choices: [{ message: { content: "长".repeat(500) } }] })));
+    const result = await new OpenAICompatibleProvider().generateSummary(input, config, 100);
+    expect(result.text.length).toBeLessThanOrEqual(200);
+  });
+
+  it("drops the history screenshots when the summary request would be too large", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) =>
+      Response.json({ choices: [{ message: { content: "摘要" } }] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const history = [{ userText: "", assistantText: '{"comments":["a"]}', snapshot: makeSnapshot(50_000) }];
+    const result = await new OpenAICompatibleProvider().generateSummary(
+      { ...input, history, maxBodyBytes: 20_000 },
+      config,
+      200,
+    );
+    expect(result.text).toBe("摘要");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const sent = String(fetchMock.mock.calls[0][1].body);
+    expect(sent).not.toContain("image_url");
+    expect(result.requestBytes).toBeLessThan(20_000);
+    expect(result.historyImagesSent).toBe(0);
+  });
+});
+
 describe("listOpenAICompatibleModels", () => {
   it("probes LM Studio and the standard list in parallel and merges them in a fixed order", async () => {
     const pending: Array<() => void> = [];

@@ -16,6 +16,8 @@ export interface NormalizedRuntimeSettings {
   historyIncludeImages: boolean;
   historyMaxImages: number;
   requestBodyLimitBytes: number;
+  historySummaryEnabled: boolean;
+  historySummaryMaxChars: number;
   generationLogLimit: number;
 }
 
@@ -23,6 +25,7 @@ const HISTORY_MODES: readonly HistoryMode[] = ["reset-on-limit", "sliding", "bat
 const MIB = 1024 * 1024;
 const DEFAULT_HISTORY_MAX_IMAGES = 24;
 const DEFAULT_START_DELAY_SECONDS = 5;
+const DEFAULT_HISTORY_SUMMARY_MAX_CHARS = 400;
 const DEFAULT_REQUEST_BODY_LIMIT_MB = 48;
 
 export type RandomSource = () => number;
@@ -74,6 +77,10 @@ export function normalizeRuntimeSettings(config: AppConfig): NormalizedRuntimeSe
     historyIncludeImages: Boolean(runtime.historyIncludeImages),
     historyMaxImages: Math.round(
       clampOr(runtime.historyMaxImages, LIMITS.historyMaxImages, DEFAULT_HISTORY_MAX_IMAGES),
+    ),
+    historySummaryEnabled: Boolean(runtime.historySummaryEnabled),
+    historySummaryMaxChars: Math.round(
+      clampOr(runtime.historySummaryMaxChars, LIMITS.historySummaryMaxChars, DEFAULT_HISTORY_SUMMARY_MAX_CHARS),
     ),
     requestBodyLimitBytes: Math.round(
       clampOr(runtime.requestBodyLimitMB, LIMITS.requestBodyLimitMB, DEFAULT_REQUEST_BODY_LIMIT_MB) * MIB,

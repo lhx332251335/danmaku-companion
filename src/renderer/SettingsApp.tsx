@@ -94,6 +94,12 @@ const logStatusLabels: Record<GenerationLogEntry["status"], string> = {
   aborted: "中断",
 };
 
+const reasonLabels: Record<GenerationLogEntry["reason"], string> = {
+  manual: "手动",
+  timer: "自动",
+  summary: "摘要",
+};
+
 const logTimeFormat = new Intl.DateTimeFormat(undefined, {
   month: "2-digit",
   day: "2-digit",
@@ -195,6 +201,7 @@ interface NumberFieldProps {
   range: NumericRange;
   step: number;
   integer?: boolean;
+  disabled?: boolean;
   onCommit: (value: number) => void;
 }
 
@@ -205,6 +212,7 @@ function NumberField({
   range,
   step,
   integer = false,
+  disabled,
   onCommit,
 }: NumberFieldProps) {
   const [text, setText] = useState<string | null>(null);
@@ -226,6 +234,7 @@ function NumberField({
         max={range.max}
         step={step}
         value={text ?? String(value)}
+        disabled={disabled}
         onChange={(event) => handleChange(event.target.value)}
         onBlur={() => setText(null)}
         onKeyDown={(event) => {
@@ -372,7 +381,8 @@ function GenerationLogDetail({ log }: { log: GenerationLogEntry }) {
       </div>
       {log.error ? <div className="log-message-error">{log.error}</div> : null}
       {log.screen.error ? <div className="log-message-error">{log.screen.error}</div> : null}
-      <div className="comment-log-list">
+      {log.summary ? <p className="summary-text">{log.summary}</p> : null}
+      <div className="comment-log-list" hidden={log.reason === "summary"}>
         {log.comments.length === 0 ? (
           <span className="muted-text">没有生成弹幕</span>
         ) : (
@@ -406,8 +416,8 @@ const GenerationLogItem = memo(
           <span>
             {log.generatedCount ?? 0}/{log.requestedCount ?? "-"} 条
           </span>
-          <span>{screenLabel(log)}</span>
-          <span>{log.reason === "manual" ? "手动" : "自动"}</span>
+          <span>{log.reason === "summary" ? "上下文摘要" : screenLabel(log)}</span>
+          <span>{reasonLabels[log.reason] ?? "自动"}</span>
         </summary>
         {open ? <GenerationLogDetail log={log} /> : null}
       </details>
@@ -809,6 +819,11 @@ export function SettingsApp() {
           {status.requestLimitBytes ? ` / ${formatBytes(status.requestLimitBytes)}` : ""}
           {status.historyImages ? ` · ${status.historyImages} 张历史截图` : ""}
         </div>
+        {status.summarizing || status.contextSummary ? (
+          <div title={status.contextSummary}>
+            上下文摘要：{status.summarizing ? "生成中…" : `已带上（${status.contextSummary?.length ?? 0} 字）`}
+          </div>
+        ) : null}
         <div>
           上次生成：
           {status.lastGeneratedAt ? new Date(status.lastGeneratedAt).toLocaleTimeString() : "-"}
@@ -1233,6 +1248,14 @@ export function SettingsApp() {
               />
             </label>
           </div>
+          <label>
+            上下文摘要提示词（开启“上下文摘要”时使用，可用 {"{{summaryMaxChars}}"}）
+            <textarea
+              rows={7}
+              value={draft.prompt.summaryTemplate}
+              onChange={(event) => editSection("prompt", { summaryTemplate: event.target.value })}
+            />
+          </label>
         </form>
 
         <form className="panel" onSubmit={(event) => event.preventDefault()}>
@@ -1333,6 +1356,15 @@ export function SettingsApp() {
               </select>
             </label>
             <NumberField
+              label="摘要长度上限 (字)"
+              value={draft.runtime.historySummaryMaxChars}
+              range={LIMITS.historySummaryMaxChars}
+              step={50}
+              integer
+              disabled={!draft.runtime.historySummaryEnabled}
+              onCommit={(historySummaryMaxChars) => editSection("runtime", { historySummaryMaxChars })}
+            />
+            <NumberField
               label="历史截图上限 (张)"
               value={draft.runtime.historyMaxImages}
               range={LIMITS.historyMaxImages}
@@ -1385,6 +1417,16 @@ export function SettingsApp() {
               }
             />
             保留历史截图
+          </label>
+          <label className="toggle-row">
+            <input
+              type="checkbox"
+              checked={draft.runtime.historySummaryEnabled}
+              onChange={(event) =>
+                editSection("runtime", { historySummaryEnabled: event.target.checked })
+              }
+            />
+            上下文摘要（满额重置 / 分批滑动前额外请求一次，总结之前的内容）
           </label>
           <p className="panel-note">
             保留历史截图时，截图数超过上限或请求体超过上限，会一次性丢弃最早的一半截图（保留它们的文字），
