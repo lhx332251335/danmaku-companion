@@ -7,6 +7,7 @@ import {
   parseListInput,
   parseNumberInput,
   parsePaletteInput,
+  splitPaletteInput,
   rebaseDraft,
   toConfigPatch,
 } from "../src/renderer/settingsModel";
@@ -170,6 +171,17 @@ describe("parsePaletteInput", () => {
   it("never returns an empty palette", () => {
     expect(parsePaletteInput("", isHex)).toBeUndefined();
     expect(parsePaletteInput("nope, #zz", isHex)).toBeUndefined();
+  });
+
+  it("keeps commas inside colour functions", () => {
+    expect(splitPaletteInput("rgb(91, 141, 239), #fff，hsl(1 2% 3%), ,#fff")).toEqual([
+      "rgb(91, 141, 239)",
+      "#fff",
+      "hsl(1 2% 3%)",
+    ]);
+    expect(parsePaletteInput("rgb(1, 2, 3), #zz", (value) => value.startsWith("rgb("))).toEqual([
+      "rgb(1, 2, 3)",
+    ]);
   });
 
   it("caps the palette size", () => {

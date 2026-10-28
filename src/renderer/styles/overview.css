@@ -334,6 +334,9 @@
   gap: 6px;
   padding: 16px;
 }
+.ov-empty.is-compact .empty-desc {
+  text-wrap: balance;
+}
 .ov-empty.is-compact .empty-ico svg {
   width: 24px;
   height: 24px;

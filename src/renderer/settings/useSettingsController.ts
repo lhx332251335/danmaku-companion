@@ -74,7 +74,7 @@ export interface SettingsController {
   modelOptions: ModelOption[];
   /** The list entry matching draft.model.model, if the list has it. */
   selectedModel: ModelOption | undefined;
-  /** "3 个模型 · loaded · 视觉", the error message, or "-" before the first list. */
+  /** "3 个模型 · loaded · 视觉", the error message, or "—" before the first list. */
   modelListNote: string;
   modelListFailed: boolean;
   /** Saves the draft first (the list depends on the base URL and key), then lists models. */
@@ -431,7 +431,7 @@ export function useSettingsController(): SettingsControllerState {
         ? [`${modelList.models.length} 个模型`, selectedModelStatus || undefined]
             .filter(Boolean)
             .join(" · ")
-        : "-";
+        : "—";
 
   const controller: SettingsController = {
     config,

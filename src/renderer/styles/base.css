@@ -204,8 +204,4 @@ input[type="number"]::-webkit-inner-spin-button {
   .spin {
     animation-duration: 2.4s;
   }
-
-  .motion-safe-only {
-    animation: none !important;
-  }
 }

@@ -10,6 +10,11 @@ export interface ListFieldProps extends ControlA11yProps {
   disabled?: boolean;
   mono?: boolean;
   title?: string;
+  /**
+   * Called with the raw text while the user types, and with null when the field shows the
+   * committed list again (on blur). Lets a page flag entries that `parse` dropped.
+   */
+  onTextChange?: (raw: string | null) => void;
 }
 
 /**
@@ -24,6 +29,7 @@ export function ListField({
   disabled,
   mono = false,
   title,
+  onTextChange,
   ...a11y
 }: ListFieldProps) {
   const field = useFieldContext();
@@ -32,6 +38,7 @@ export function ListField({
 
   function handleChange(raw: string) {
     setText(raw);
+    onTextChange?.(raw);
     const parsed = parse(raw);
     if (parsed && parsed.join("\n") !== values.join("\n")) {
       onCommit(parsed);
@@ -48,7 +55,10 @@ export function ListField({
       title={title}
       spellCheck={false}
       onChange={(event) => handleChange(event.target.value)}
-      onBlur={() => setText(null)}
+      onBlur={() => {
+        setText(null);
+        onTextChange?.(null);
+      }}
     />
   );
 }

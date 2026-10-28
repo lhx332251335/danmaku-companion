@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { defaultAppConfig } from "../shared/defaultConfig";
 import type { AppConfig, DanmakuItem } from "../shared/types";
 import { api } from "./api";
+import { createTextMeasurer, danmakuTextClass, type TextMeasurer } from "./danmakuStyle";
 import { createExpiryTimers } from "./overlay/expiryTimers";
 import {
   planDanmaku,
@@ -14,37 +15,32 @@ const MAX_ITEMS = 80;
 /** Fallback removal after the animation should have ended, e.g. while the window is hidden. */
 const REMOVAL_GRACE_MS = 1000;
 
-type TextMeasurer = (text: string, fontSize: number) => number;
-
-function createTextMeasurer(): TextMeasurer {
-  const context = document.createElement("canvas").getContext("2d");
-  const fontFamily = getComputedStyle(document.documentElement).fontFamily;
-  return (text, fontSize) => {
-    if (!context) {
-      return text.length * fontSize;
-    }
-    context.font = `800 ${fontSize}px ${fontFamily}`;
-    return Math.ceil(context.measureText(text).width);
-  };
-}
-
 interface DanmakuLineProps {
   item: PlannedDanmaku;
-  className: string;
+  shadow: boolean;
   onDone: (id: string) => void;
 }
 
-const DanmakuLine = memo(function DanmakuLine({ item, className, onDone }: DanmakuLineProps) {
+/** Name of the scroll keyframes in styles/overlay.css; the fade-in ends earlier. */
+const MOVE_ANIMATION = "danmaku-move";
+
+const DanmakuLine = memo(function DanmakuLine({ item, shadow, onDone }: DanmakuLineProps) {
   return (
     <div
-      className={className}
-      onAnimationEnd={() => onDone(item.id)}
-      style={{
-        top: `${item.top}px`,
-        color: item.color,
-        animationDuration: `${Math.round(item.durationMs)}ms`,
-        animationDelay: `${Math.round(item.delayMs)}ms`,
+      className={`${danmakuTextClass(item.color, shadow)} danmaku-line`}
+      onAnimationEnd={(event) => {
+        if (event.animationName === MOVE_ANIMATION) {
+          onDone(item.id);
+        }
       }}
+      style={
+        {
+          top: `${item.top}px`,
+          color: item.color,
+          "--dur": `${Math.round(item.durationMs)}ms`,
+          "--delay": `${Math.round(item.delayMs)}ms`,
+        } as React.CSSProperties
+      }
     >
       {item.text}
     </div>
@@ -153,12 +149,11 @@ export function OverlayApp() {
     }),
     [fontSize, danmaku.opacity],
   );
-  const lineClass = danmaku.shadow ? "danmaku-line with-shadow" : "danmaku-line";
 
   return (
     <main className="overlay-root" style={style as React.CSSProperties}>
       {items.map((item) => (
-        <DanmakuLine className={lineClass} item={item} key={item.id} onDone={removeItem} />
+        <DanmakuLine item={item} key={item.id} onDone={removeItem} shadow={danmaku.shadow} />
       ))}
     </main>
   );

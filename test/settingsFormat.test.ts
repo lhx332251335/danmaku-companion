@@ -95,10 +95,10 @@ describe("formatCountdown", () => {
 
 describe("number formatting", () => {
   it("keeps the old byte and cache formats", () => {
-    expect(formatBytes(undefined)).toBe("-");
+    expect(formatBytes(undefined)).toBe("—");
     expect(formatBytes(2048)).toBe("2 KB");
     expect(formatBytes(3.1 * 1024 * 1024)).toBe("3.10 MB");
-    expect(formatCacheUsage(undefined, undefined)).toBe("-");
+    expect(formatCacheUsage(undefined, undefined)).toBe("—");
     expect(formatCacheUsage(undefined, 100)).toBe("? / 100");
     expect(formatCacheUsage(5612, 6840)).toBe("5612 / 6840 (82%)");
   });
@@ -107,7 +107,7 @@ describe("number formatting", () => {
     expect(formatMegabytes(3.1 * 1024 * 1024)).toBe("3.1");
     expect(formatMegabytes(48 * 1024 * 1024)).toBe("48");
     expect(formatMegabytes(512.4 * 1024 * 1024)).toBe("512");
-    expect(formatMegabytes(0)).toBe("-");
+    expect(formatMegabytes(0)).toBe("—");
   });
 
   it("computes the cached share only when it is known", () => {
@@ -193,7 +193,7 @@ describe("log helpers", () => {
         }),
       ),
     ).toBe("超出张数丢弃 12 张；失败后丢弃全部历史截图");
-    expect(compactionLabel(log())).toBe("-");
+    expect(compactionLabel(log())).toBe("—");
   });
 
   it("picks the latest comment and compaction entries (logs are newest first)", () => {

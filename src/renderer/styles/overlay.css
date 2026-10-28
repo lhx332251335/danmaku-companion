@@ -11,23 +11,47 @@ body.overlay-view #root {
   background: transparent;
 }
 
-.danmaku-text,
-.danmaku-line {
+/* The danmaku font: CJK + Latin first, colour emoji fonts before the generic fallbacks so
+   emoji in comments render in colour on Windows. OverlayApp measures lane widths with it. */
+:root {
+  --danmaku-font: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei",
+    "PingFang SC", "Hiragino Sans GB", "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji",
+    system-ui, sans-serif;
+  /* Dark edge drawn behind the glyphs (paint-order: stroke fill), so only its outer half shows. */
+  --danmaku-outline: rgba(6, 9, 18, 0.72);
+  --danmaku-outline-faint: rgba(6, 9, 18, 0.42);
+}
+
+/* One rule for the overlay lines and every preview: change it here, both follow. */
+.danmaku-text {
   white-space: nowrap;
   color: #f8fafc;
   opacity: var(--danmaku-opacity, 1);
+  font-family: var(--danmaku-font);
   font-size: var(--danmaku-font-size, 22px);
   font-weight: 800;
+  font-style: normal;
   letter-spacing: 0;
   /* Must match DANMAKU_LINE_HEIGHT in overlay/lanes.ts. */
   line-height: 1.25;
+  font-kerning: normal;
+  paint-order: stroke fill;
+  -webkit-text-stroke: 0 transparent;
 }
 
-.danmaku-text.with-shadow,
-.danmaku-line.with-shadow {
+/* 文字阴影 on: a crisp bilibili-style outline for bright content plus the soft shadow for
+   busy content. The stroke is 0.12em wide, about 0.06em shows outside the glyph. */
+.danmaku-text.with-shadow {
+  -webkit-text-stroke: 0.12em var(--danmaku-outline);
   text-shadow:
     0 2px 4px rgba(0, 0, 0, 0.5),
     0 0 12px rgba(0, 0, 0, 0.26);
+}
+
+/* 文字阴影 off: very light colours (#f8fafc, pale yellow) still get a faint edge, otherwise
+   they disappear on white documents and web pages. */
+.danmaku-text.is-light:not(.with-shadow) {
+  -webkit-text-stroke: 0.08em var(--danmaku-outline-faint);
 }
 
 /* ---------- overlay window ---------- */
@@ -38,27 +62,40 @@ body.overlay-view #root {
   pointer-events: none;
   background: transparent;
   user-select: none;
+  contain: strict;
+  /* Palette colours are the user's choice; keep them in a high-contrast theme too. */
+  forced-color-adjust: none;
 }
 
+/* Positioning and motion only; the look comes from .danmaku-text. --dur / --delay per line. */
 .danmaku-line {
   position: absolute;
   top: 0;
   left: 100%;
   width: max-content;
-  transform: translateX(0);
-  animation-name: danmaku-move;
-  animation-timing-function: linear;
-  animation-fill-mode: backwards;
-  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  /* Linear scroll (the lane planner assumes a constant speed) + a short fade-in. */
+  animation:
+    danmaku-move var(--dur, 10s) linear var(--delay, 0s) backwards,
+    danmaku-fade-in 150ms ease-out var(--delay, 0s) backwards;
+  will-change: transform, opacity;
 }
 
 /* Starts just off the right edge; 100% is the line's own width, so the tail fully leaves. */
 @keyframes danmaku-move {
   from {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
   }
   to {
-    transform: translateX(calc(-100vw - 100%));
+    transform: translate3d(calc(-100vw - 100%), 0, 0);
+  }
+}
+
+/* Fades to the element's own opacity (--danmaku-opacity). */
+@keyframes danmaku-fade-in {
+  from {
+    opacity: 0;
   }
 }
 
@@ -122,14 +159,15 @@ body.overlay-view #root {
   top: var(--top, 10%);
   animation: dm-stage-move var(--dur, 10s) linear var(--delay, 0s) infinite;
   will-change: transform;
+  backface-visibility: hidden;
 }
 
 @keyframes dm-stage-move {
   from {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
   }
   to {
-    transform: translateX(calc(-100cqw - 100%));
+    transform: translate3d(calc(-100cqw - 100%), 0, 0);
   }
 }
 
@@ -184,6 +222,7 @@ body.overlay-view #root {
   text-overflow: ellipsis;
   font-weight: 750;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  -webkit-text-stroke: 0 transparent;
 }
 
 .dm-pill::before {

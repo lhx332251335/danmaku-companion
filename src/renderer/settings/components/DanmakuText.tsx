@@ -1,4 +1,5 @@
 import { useId, type CSSProperties, type ElementType, type ReactNode } from "react";
+import { danmakuTextClass } from "../../danmakuStyle";
 
 export interface DanmakuTextProps {
   text: string;
@@ -23,7 +24,8 @@ export interface DanmakuTextProps {
 
 /**
  * One danmaku comment in exactly the overlay's text style (styles/overlay.css): weight 800,
- * line-height 1.25, palette colour, opacity and the optional shadow.
+ * line-height 1.25, palette colour, opacity, the optional shadow + outline and the faint
+ * outline that keeps very light colours readable (danmakuTextClass, shared with the overlay).
  */
 export function DanmakuText({
   text,
@@ -48,7 +50,7 @@ export function DanmakuText({
 
   return (
     <Tag
-      className={["danmaku-text", shadow ? "with-shadow" : "", fly ? "dm-fly" : "", className]
+      className={[danmakuTextClass(color, shadow), fly ? "dm-fly" : "", className]
         .filter(Boolean)
         .join(" ")}
       style={{ ...vars, color, ...style } as CSSProperties}

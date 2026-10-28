@@ -104,19 +104,6 @@ export function pageFromHash(hash: string): PageId {
   return (PAGE_IDS as readonly string[]).includes(id) ? (id as PageId) : DEFAULT_PAGE;
 }
 
-/** Placeholders the prompt templates understand, in the order the prompt page lists them. */
-export const PROMPT_PLACEHOLDERS = [
-  "{{companion.name}}",
-  "{{companion.persona}}",
-  "{{companion.tone}}",
-  "{{companion.language}}",
-  "{{user.name}}",
-  "{{user.role}}",
-  "{{activeApp}}",
-  "{{requestedCount}}",
-  "{{jsonShape}}",
-] as const;
-
 /** Only the summary template understands this one. */
 export const SUMMARY_PLACEHOLDER = "{{summaryMaxChars}}";
 
@@ -126,10 +113,6 @@ export const UNIMPLEMENTED_HINTS = {
   blacklist: "尚未实现：截图前不会检查前台应用，名单里的应用照样会被截图并发送",
   persistScreenshots: "尚未实现：截图从不写入磁盘",
 } as const;
-
-export const UNIMPLEMENTED_PLACEHOLDERS: Partial<Record<string, string>> = {
-  "{{activeApp}}": UNIMPLEMENTED_HINTS.activeApp,
-};
 
 /** The screen recording permission button only exists on macOS. */
 export const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);

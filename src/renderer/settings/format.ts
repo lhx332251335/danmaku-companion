@@ -79,7 +79,7 @@ const integerFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 
 
 /** 5612 → "5,612". */
 export function formatCount(value: number | undefined): string {
-  return value === undefined || !Number.isFinite(value) ? "-" : integerFormat.format(value);
+  return value === undefined || !Number.isFinite(value) ? "—" : integerFormat.format(value);
 }
 
 /** Trims float noise: 0.92 * 100 → 92, not 92.00000000000001. */
@@ -129,22 +129,20 @@ export function formatSpan(min: number, max: number, unit = "秒"): string {
   return low === high ? `${low} ${unit}` : `${low}–${high} ${unit}`;
 }
 
-export function formatDuration(ms: number): string {
-  if (ms >= 1000) {
-    return `${(ms / 1000).toFixed(1)}s`;
-  }
-
-  return `${ms}ms`;
+/** "412 ms", "2.4 s"; "—" when unknown. */
+export function formatDuration(ms: number | undefined): string {
+  if (ms === undefined || !Number.isFinite(ms)) return "—";
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`;
 }
 
 /** Latency in seconds without the unit: 2410 → "2.41". */
 export function formatSecondsValue(ms: number | undefined, digits = 2): string {
-  return ms === undefined || !Number.isFinite(ms) ? "-" : (ms / 1000).toFixed(digits);
+  return ms === undefined || !Number.isFinite(ms) ? "—" : (ms / 1000).toFixed(digits);
 }
 
 export function formatBytes(bytes: number | undefined): string {
   if (!bytes || bytes <= 0) {
-    return "-";
+    return "—";
   }
 
   if (bytes >= 1024 * 1024) {
@@ -157,7 +155,7 @@ export function formatBytes(bytes: number | undefined): string {
 /** Bytes as MiB without the unit, for "3.1 / 48 MB" readouts. */
 export function formatMegabytes(bytes: number | undefined, digits = 1): string {
   if (!bytes || bytes <= 0) {
-    return "-";
+    return "—";
   }
   const value = bytes / 1024 / 1024;
   const factor = 10 ** (value >= 100 ? 0 : digits);
@@ -166,7 +164,7 @@ export function formatMegabytes(bytes: number | undefined, digits = 1): string {
 
 export function formatCacheUsage(cached: number | undefined, prompt: number | undefined): string {
   if (cached === undefined) {
-    return prompt === undefined ? "-" : `? / ${prompt}`;
+    return prompt === undefined ? "—" : `? / ${prompt}`;
   }
 
   if (!prompt) {
@@ -189,14 +187,6 @@ export function cachePercent(
 
 /* ------------------------------------------------------------------ dates */
 
-const logTimeFormat = new Intl.DateTimeFormat(undefined, {
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
-
 const clockFormat = new Intl.DateTimeFormat("zh-CN", {
   hour: "2-digit",
   minute: "2-digit",
@@ -210,21 +200,16 @@ function validDate(value: string | undefined): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-export function formatLogTime(value: string): string {
-  const date = validDate(value);
-  return date ? logTimeFormat.format(date) : "-";
-}
-
-/** "14:32:08" (24 h), or "-" for a missing or invalid time. */
+/** "14:32:08" (24 h), or "—" for a missing or invalid time. */
 export function formatClock(value: string | undefined): string {
   const date = validDate(value);
-  return date ? clockFormat.format(date) : "-";
+  return date ? clockFormat.format(date) : "—";
 }
 
-/** "10-21" (MM-DD in local time), or "-" for a missing or invalid time. */
+/** "10-21" (MM-DD in local time), or "—" for a missing or invalid time. */
 export function formatMonthDay(value: string | undefined): string {
   const date = validDate(value);
-  if (!date) return "-";
+  if (!date) return "—";
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
@@ -309,7 +294,7 @@ export function screenLabel(log: GenerationLogEntry): string {
     return "截图失败";
   }
 
-  return `${log.screen.width ?? "-"}x${log.screen.height ?? "-"}`;
+  return `${log.screen.width ?? "—"}×${log.screen.height ?? "—"}`;
 }
 
 export function compactionLabel(log: GenerationLogEntry): string {
@@ -322,7 +307,7 @@ export function compactionLabel(log: GenerationLogEntry): string {
     parts.push(historyRecoveryLabels[log.historyRecovery]);
   }
 
-  return parts.length > 0 ? parts.join("；") : "-";
+  return parts.length > 0 ? parts.join("；") : "—";
 }
 
 /** Total screenshots dropped by the compactions of one log entry. */
@@ -445,6 +430,20 @@ export function cacheSeries(logs: GenerationLogEntry[], count = 10): SeriesPoint
   }));
 }
 
+/** Median duration (ms) of the last `count` successful generation rounds; undefined when none. */
+export function medianLatency(logs: GenerationLogEntry[], count = 10): number | undefined {
+  const durations = logs
+    .filter((log) => log.reason !== "summary" && log.status === "success" && log.durationMs > 0)
+    .slice(0, count)
+    .map((log) => log.durationMs)
+    .sort((a, b) => a - b);
+  if (durations.length === 0) return undefined;
+  const middle = Math.floor(durations.length / 2);
+  return durations.length % 2 === 1
+    ? durations[middle]
+    : (durations[middle - 1] + durations[middle]) / 2;
+}
+
 /* ------------------------------------------------------------------ palette */
 
 export function isCssColor(value: string): boolean {
@@ -470,4 +469,10 @@ export function countText(value: string): string {
   const chars = [...value].length;
   const lines = value === "" ? 0 : value.split("\n").length;
   return `${chars} 字 · ${lines} 行`;
+}
+
+/** Trims and cuts to `max` characters (code points), ending in "…" when cut. */
+export function shorten(text: string, max = 8): string {
+  const chars = Array.from(text.trim());
+  return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : chars.join("");
 }

@@ -6,16 +6,6 @@
 .decor {
   display: contents;
 }
-.ico {
-  width: 18px;
-  height: 18px;
-  flex: none;
-}
-.ico-sm {
-  width: 15px;
-  height: 15px;
-  flex: none;
-}
 .ico-xs {
   width: 13px;
   height: 13px;
@@ -1407,31 +1397,9 @@ select.input:disabled {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px 16px;
 }
-.row3 {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px 16px;
-}
 .divider {
   height: 1px;
   margin: 2px 0;
-  background: var(--line);
-}
-/* small uppercase-style section title with a rule */
-.sec-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0 -4px;
-  font-size: var(--fs-sm);
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  color: var(--text-3);
-}
-.sec-title::after {
-  content: "";
-  flex: 1;
-  height: 1px;
   background: var(--line);
 }
 /* inset block for dependent settings */
@@ -1442,26 +1410,6 @@ select.input:disabled {
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--surface-2);
-}
-/* key / value list */
-.kv {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 9px 14px;
-  margin: 0;
-  font-size: var(--fs-label);
-}
-.kv dt {
-  color: var(--text-3);
-}
-.kv dd {
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  text-align: right;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-weight: 550;
 }
 .chips {
   display: flex;

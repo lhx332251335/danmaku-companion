@@ -63,6 +63,7 @@ import {
   placeholderBars,
   rhythmSentence,
   roundCount,
+  shortName,
   stageLayout,
   startDelaySentence,
 } from "../overviewModel";
@@ -157,7 +158,7 @@ function Hero({ config, status, workingAction }: HeroProps) {
         {pill}
         <h2 className="ov-hero-title" id={titleId}>
           <em className="ov-name" title={name}>
-            {name}
+            {shortName(name, 14)}
           </em>
           <span className="ov-hero-suffix">{heroTitleSuffix[mood]}</span>
         </h2>
@@ -302,7 +303,7 @@ function StatTiles({ config, status, logs }: StatTilesProps) {
       rounds,
       latency: rounds > 0 ? latencyBars(logs) : placeholderBars(),
       latencyLabel: latencyBarsLabel(logs),
-      cache: cacheBars(logs),
+      cache: rounds > 0 ? cacheBars(logs) : placeholderBars(),
       cacheLabel: cacheBarsLabel(logs),
       promptMs: latestSuccess?.promptMs,
     };
@@ -377,9 +378,7 @@ function StatTiles({ config, status, logs }: StatTilesProps) {
       <StatTile icon={<Database />} tone="ok" title="缓存命中" sub={cacheSub}>
         <div className="ov-stat-row">
           <StatValue value={cache !== undefined ? String(cache) : undefined} unit="%" />
-          {series.cache.length > 0 ? (
-            <MiniBars bars={series.cache} max={100} height={24} label={series.cacheLabel} className="ov-cache-bars" />
-          ) : null}
+          <MiniBars bars={series.cache} max={100} height={24} label={series.cacheLabel} className="ov-cache-bars" />
         </div>
         <Meter
           value={cache ?? 0}
