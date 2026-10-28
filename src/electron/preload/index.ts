@@ -1,8 +1,11 @@
+// Runs sandboxed: only "electron" (contextBridge, ipcRenderer) may be required at runtime, so
+// everything else must be a type-only import.
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   AppConfig,
   ConfigProfileResult,
   ConfigProfilesSnapshot,
+  ConnectionTestResult,
   DanmakuBridge,
   GenerationLogEntry,
   DanmakuItem,
@@ -27,9 +30,7 @@ const bridge: DanmakuBridge = {
   deleteConfigProfile: (id: string) =>
     ipcRenderer.invoke("config:profile:delete", id) as Promise<ConfigProfileResult>,
   testModelConnection: () =>
-    ipcRenderer.invoke("model:testConnection") as Promise<
-      import("../../shared/types").ConnectionTestResult
-    >,
+    ipcRenderer.invoke("model:testConnection") as Promise<ConnectionTestResult>,
   listModels: () => ipcRenderer.invoke("model:list") as Promise<ModelListResult>,
   getGenerationLogs: () =>
     ipcRenderer.invoke("logs:get") as Promise<GenerationLogEntry[]>,

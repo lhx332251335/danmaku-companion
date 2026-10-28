@@ -198,6 +198,33 @@ h2 {
   font-size: 13px;
 }
 
+.dismissible-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.banner-close {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.banner-close:hover {
+  background: rgba(159, 18, 57, 0.08);
+}
+
+.load-error {
+  max-width: 560px;
+  margin: 0;
+  line-height: 1.6;
+}
+
 .success-banner {
   max-width: 1280px;
   margin: 0 auto 18px;
@@ -364,6 +391,13 @@ label {
   white-space: nowrap;
 }
 
+.panel-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .error-note {
   color: #be123c;
 }
@@ -425,6 +459,32 @@ textarea:focus {
   font-weight: 700;
 }
 
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.todo-tag {
+  display: inline-block;
+  margin-left: 4px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+}
+
+.placeholder-row .placeholder-todo {
+  border-style: dashed;
+  color: #94a3b8;
+  cursor: help;
+}
+
 .toggle-row {
   display: flex;
   grid-template-columns: none;
@@ -464,6 +524,10 @@ textarea:focus {
 .log-list {
   display: grid;
   gap: 10px;
+}
+
+.log-more-button {
+  justify-self: center;
 }
 
 .log-entry {
@@ -622,19 +686,20 @@ textarea:focus {
 
 .danmaku-line {
   position: absolute;
-  right: 0;
-  max-width: min(780px, 82vw);
+  top: 0;
+  left: 100%;
+  width: max-content;
   white-space: nowrap;
+  color: #f8fafc;
   opacity: var(--danmaku-opacity);
   font-size: var(--danmaku-font-size);
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.25;
-  transform: translateX(100%);
+  transform: translateX(0);
   animation-name: danmaku-move;
-  animation-duration: var(--danmaku-speed);
   animation-timing-function: linear;
-  animation-fill-mode: both;
+  animation-fill-mode: backwards;
   will-change: transform;
 }
 
@@ -644,9 +709,10 @@ textarea:focus {
     0 0 12px rgba(0, 0, 0, 0.26);
 }
 
+/* Starts just off the right edge; 100% is the line's own width, so the tail fully leaves. */
 @keyframes danmaku-move {
   from {
-    transform: translateX(100%);
+    transform: translateX(0);
   }
   to {
     transform: translateX(calc(-100vw - 100%));

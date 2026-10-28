@@ -47,6 +47,7 @@ export const defaultAppConfig: AppConfig = {
     zone: "full",
     palette: ["#31c3a2", "#f59e0b", "#ef476f", "#5b8def", "#f8fafc"],
     shadow: true,
+    excludeOverlayFromCapture: true,
   },
   runtime: {
     enabled: false,
@@ -66,6 +67,8 @@ export const defaultAppConfig: AppConfig = {
     historyRounds: 4,
     historyMode: "reset-on-limit",
     historyIncludeImages: false,
+    historyMaxImages: 24,
+    requestBodyLimitMB: 48,
     persistScreenshots: false,
     generationLogLimit: 200,
     privacyBlacklist: [],

@@ -9,203 +9,39 @@ import type {
   ConfigProfilesSnapshot,
   DeepPartial,
 } from "../../shared/types";
-
-interface ConfigProfile {
-  id: string;
-  name: string;
-  config: AppConfig;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ConfigState {
-  activeProfileId: string;
-  profiles: ConfigProfile[];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepMerge<T>(base: T, patch: DeepPartial<T>): T {
-  const output: Record<string, unknown> = { ...(base as Record<string, unknown>) };
-
-  for (const [key, value] of Object.entries(patch as Record<string, unknown>)) {
-    if (value === undefined) {
-      continue;
-    }
-
-    const current = output[key];
-    output[key] =
-      isRecord(current) && isRecord(value)
-        ? deepMerge(current, value as DeepPartial<typeof current>)
-        : value;
-  }
-
-  return output as T;
-}
-
-function cloneConfig(config: AppConfig): AppConfig {
-  return JSON.parse(JSON.stringify(config)) as AppConfig;
-}
-
-function parseJson(raw: string): unknown {
-  return JSON.parse(raw.replace(/^\uFEFF/, ""));
-}
-
-function migrateParsedConfig(config: DeepPartial<AppConfig>): DeepPartial<AppConfig> {
-  const runtime = config.runtime;
-  if (
-    runtime &&
-    runtime.releaseWindowSeconds !== undefined &&
-    runtime.releaseWindowMinSeconds === undefined &&
-    runtime.releaseWindowMaxSeconds === undefined
-  ) {
-    runtime.releaseWindowMinSeconds = runtime.releaseWindowSeconds;
-    runtime.releaseWindowMaxSeconds = runtime.releaseWindowSeconds;
-  }
-
-  return config;
-}
-
-const OLD_DEFAULT_USER_LINES = new Set([
-  "Active app: {{activeApp}}",
-  "Requested comments: {{requestedCount}}",
-  "Recent comments: {{recentComments}}",
-  "Return exactly {{requestedCount}} danmaku comments if possible.",
-  "Return only JSON in this shape: {{jsonShape}}",
-]);
-const JSON_OUTPUT_INSTRUCTION = "Return only JSON in this shape: {{jsonShape}}";
-const REQUESTED_COUNT_INSTRUCTION =
-  "Return exactly {{requestedCount}} comments unless the model is unable to parse the request.";
-
-function normalizeConfig(config: AppConfig): AppConfig {
-  const userLines = config.prompt.userTemplate.split(/\r?\n/);
-  const migratedUserLines = userLines.filter(
-    (line) => !OLD_DEFAULT_USER_LINES.has(line.trim()),
-  );
-  const userTemplateChanged = migratedUserLines.length !== userLines.length;
-  let systemTemplate = config.prompt.systemTemplate;
-  if (
-    userTemplateChanged &&
-    userLines.some((line) => line.trim() === JSON_OUTPUT_INSTRUCTION) &&
-    !systemTemplate.includes(JSON_OUTPUT_INSTRUCTION)
-  ) {
-    systemTemplate = `${systemTemplate.trimEnd()}\n${JSON_OUTPUT_INSTRUCTION}`;
-  }
-  if (
-    !systemTemplate.includes("{{requestedCount}}") &&
-    !systemTemplate.includes("requestedCount")
-  ) {
-    systemTemplate = `${systemTemplate.trimEnd()}\n${REQUESTED_COUNT_INSTRUCTION}`;
-  }
-
-  if (!userTemplateChanged && systemTemplate === config.prompt.systemTemplate) {
-    return config;
-  }
-
-  return {
-    ...config,
-    prompt: {
-      ...config.prompt,
-      systemTemplate,
-      userTemplate: migratedUserLines.join("\n").trim(),
-    },
-  };
-}
-
-function isConfigLike(value: unknown): value is DeepPartial<AppConfig> {
-  return (
-    isRecord(value) &&
-    ("model" in value ||
-      "character" in value ||
-      "user" in value ||
-      "prompt" in value ||
-      "danmaku" in value ||
-      "runtime" in value)
-  );
-}
-
-function normalizeProfileConfig(value: unknown): AppConfig {
-  const patch = isConfigLike(value) ? migrateParsedConfig(value) : {};
-  return normalizeConfig(deepMerge<AppConfig>(defaultAppConfig, patch));
-}
-
-function cleanName(name: unknown, fallback: string): string {
-  const trimmed = typeof name === "string" ? name.trim() : "";
-  return trimmed || fallback;
-}
-
-function timestamp(value: unknown, fallback: string): string {
-  return typeof value === "string" && value.trim() ? value : fallback;
-}
-
-function stateFromConfig(config: AppConfig, name = "默认配置"): ConfigState {
-  const now = new Date().toISOString();
-  const id = randomUUID();
-  return {
-    activeProfileId: id,
-    profiles: [
-      {
-        id,
-        name,
-        config,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ],
-  };
-}
-
-function stateFromParsed(value: unknown): ConfigState {
-  if (isRecord(value) && Array.isArray(value.profiles)) {
-    const now = new Date().toISOString();
-    const profiles = value.profiles
-      .map((entry, index): ConfigProfile | undefined => {
-        if (!isRecord(entry)) {
-          return undefined;
-        }
-
-        const id = cleanName(entry.id, randomUUID());
-        return {
-          id,
-          name: cleanName(entry.name, `配置 ${index + 1}`),
-          config: normalizeProfileConfig(entry.config),
-          createdAt: timestamp(entry.createdAt, now),
-          updatedAt: timestamp(entry.updatedAt, now),
-        };
-      })
-      .filter((profile): profile is ConfigProfile => Boolean(profile));
-
-    if (profiles.length > 0) {
-      const activeProfileId =
-        typeof value.activeProfileId === "string" &&
-        profiles.some((profile) => profile.id === value.activeProfileId)
-          ? value.activeProfileId
-          : profiles[0].id;
-
-      return { activeProfileId, profiles };
-    }
-  }
-
-  return stateFromConfig(normalizeProfileConfig(value));
-}
-
-function serializableState(state: ConfigState): Record<string, unknown> {
-  return {
-    version: 2,
-    activeProfileId: state.activeProfileId,
-    profiles: state.profiles,
-  };
-}
+import {
+  applyConfigPatch,
+  cleanName,
+  cloneConfig,
+  normalizeConfig,
+  normalizeProfileConfig,
+  parseJson,
+  sanitizeConfig,
+  serializeState,
+  stateFromConfig,
+  stateFromText,
+  withRunFlag,
+  type ConfigProfile,
+  type ConfigState,
+} from "./configModel";
+import { WriteQueue, fileTimestamp, readTextIfExists, writeFileAtomic } from "./storage/atomicFile";
 
 export class ConfigStore {
   private filePath: string | undefined;
   private state: ConfigState | undefined;
+  private loading: Promise<ConfigState> | undefined;
+  private readonly writes = new WriteQueue();
+  private lastWrittenText: string | undefined;
+  /** Only a config.json known to be valid may be copied over the backup. */
+  private diskFileIsGood = false;
 
   private getFilePath(): string {
     this.filePath ??= path.join(app.getPath("userData"), "config.json");
     return this.filePath;
+  }
+
+  private getBackupPath(): string {
+    return `${this.getFilePath()}.bak`;
   }
 
   private getLegacyFilePath(): string {
@@ -258,7 +94,9 @@ export class ConfigStore {
       throw new Error("Config profile not found.");
     }
 
+    const enabled = this.activeProfile(state).config.runtime.enabled;
     state.activeProfileId = id;
+    this.carryRunFlag(state, enabled);
     await this.saveState(state);
     return this.result(state);
   }
@@ -274,10 +112,12 @@ export class ConfigStore {
       throw new Error("Config profile not found.");
     }
 
+    const enabled = this.activeProfile(state).config.runtime.enabled;
     state.profiles = nextProfiles;
     if (state.activeProfileId === id) {
       state.activeProfileId = state.profiles[0].id;
     }
+    this.carryRunFlag(state, enabled);
     await this.saveState(state);
     return this.result(state);
   }
@@ -285,7 +125,7 @@ export class ConfigStore {
   async update(patch: DeepPartial<AppConfig>): Promise<AppConfig> {
     const state = await this.getState();
     const profile = this.activeProfile(state);
-    profile.config = normalizeConfig(deepMerge<AppConfig>(profile.config, patch));
+    profile.config = applyConfigPatch(profile.config, patch);
     profile.updatedAt = new Date().toISOString();
     await this.saveState(state);
     return profile.config;
@@ -294,25 +134,82 @@ export class ConfigStore {
   async save(config: AppConfig): Promise<void> {
     const state = await this.getState();
     const profile = this.activeProfile(state);
-    profile.config = normalizeConfig(config);
+    profile.config = normalizeConfig(sanitizeConfig(config, profile.config));
     profile.updatedAt = new Date().toISOString();
     await this.saveState(state);
   }
 
-  private async getState(): Promise<ConfigState> {
+  hasPendingWrites(): boolean {
+    return this.writes.hasPending();
+  }
+
+  /** Resolves once every queued write has settled. */
+  flush(): Promise<void> {
+    return this.writes.flush();
+  }
+
+  private getState(): Promise<ConfigState> {
     if (this.state) {
-      return this.state;
+      return Promise.resolve(this.state);
+    }
+
+    this.loading ??= this.load().finally(() => {
+      this.loading = undefined;
+    });
+    return this.loading;
+  }
+
+  private async load(): Promise<ConfigState> {
+    const filePath = this.getFilePath();
+    const raw = await readTextIfExists(filePath);
+    if (raw === undefined) {
+      return this.adoptLoadedState(stateFromConfig(await this.readLegacyConfig()));
+    }
+
+    const state = stateFromText(raw);
+    if (state) {
+      this.diskFileIsGood = true;
+      return this.adoptLoadedState(state, raw);
+    }
+
+    return this.adoptLoadedState(await this.recoverFromUnreadableFile(filePath));
+  }
+
+  /** Persists a loaded state only when its serialized form differs from what is on disk. */
+  private async adoptLoadedState(state: ConfigState, raw?: string): Promise<ConfigState> {
+    this.state = state;
+    if (raw !== undefined && raw.replace(/^\uFEFF/, "") === serializeState(state)) {
+      this.lastWrittenText = raw;
+      return state;
     }
 
     try {
-      const raw = await fs.readFile(this.getFilePath(), "utf8");
-      this.state = stateFromParsed(parseJson(raw));
-    } catch {
-      this.state = stateFromConfig(await this.readLegacyConfig());
+      await this.saveState(state);
+    } catch (error) {
+      console.warn("Failed to write config.json after loading it.", error);
+    }
+    return state;
+  }
+
+  private async recoverFromUnreadableFile(filePath: string): Promise<ConfigState> {
+    const corruptPath = `${filePath}.corrupt-${fileTimestamp()}`;
+    await fs.copyFile(filePath, corruptPath);
+    console.warn(`config.json is not a valid config; kept a copy at ${corruptPath}.`);
+
+    const backup = await readTextIfExists(this.getBackupPath()).catch(() => undefined);
+    const restored = backup === undefined ? undefined : stateFromText(backup);
+    if (restored) {
+      console.warn(`Restored config from ${this.getBackupPath()}.`);
+      return restored;
     }
 
-    await this.saveState(this.state);
-    return this.state;
+    return stateFromConfig(defaultAppConfig);
+  }
+
+  /** The run flag is global even though it is stored per profile. */
+  private carryRunFlag(state: ConfigState, enabled: boolean): void {
+    const profile = this.activeProfile(state);
+    profile.config = withRunFlag(profile.config, enabled);
   }
 
   private activeProfile(state: ConfigState): ConfigProfile {
@@ -342,15 +239,27 @@ export class ConfigStore {
     };
   }
 
-  private async saveState(state: ConfigState): Promise<void> {
+  /** Queues a write of the latest state; writes run one at a time and identical ones are skipped. */
+  private saveState(state: ConfigState): Promise<void> {
     this.state = state;
-    const filePath = this.getFilePath();
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(
-      filePath,
-      `${JSON.stringify(serializableState(state), null, 2)}\n`,
-      "utf8",
-    );
+    return this.writes.run(() => this.writeLatestState());
+  }
+
+  private async writeLatestState(): Promise<void> {
+    if (!this.state) {
+      return;
+    }
+
+    const text = serializeState(this.state);
+    if (text === this.lastWrittenText) {
+      return;
+    }
+
+    await writeFileAtomic(this.getFilePath(), text, {
+      backupPath: this.diskFileIsGood ? this.getBackupPath() : undefined,
+    });
+    this.lastWrittenText = text;
+    this.diskFileIsGood = true;
   }
 
   private async readLegacyConfig(): Promise<AppConfig> {

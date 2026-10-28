@@ -9,6 +9,8 @@ import type {
   ScreenImageFormat,
   ScreenSnapshot,
 } from "../../../shared/types";
+import { LIMITS, clampOr } from "../../../shared/limits";
+import { desktopThumbnailSize, fitWithinMaxEdge } from "./captureSize";
 
 const DEFAULT_CAPTURE_MAX_EDGE_PIXELS = 960;
 const DEFAULT_CAPTURE_IMAGE_FORMAT: ScreenImageFormat = "jpeg";
@@ -18,19 +20,6 @@ const execFileAsync = promisify(execFile);
 interface CaptureEncodingOptions {
   format?: ScreenImageFormat;
   jpegQuality?: number;
-}
-
-function getThumbnailSize(
-  displaySize: Electron.Size,
-  maxEdgePixels: number,
-): { width: number; height: number } {
-  const longestEdge = Math.max(displaySize.width, displaySize.height);
-  const scale = Math.min(1, maxEdgePixels / longestEdge);
-
-  return {
-    width: Math.max(1, Math.round(displaySize.width * scale)),
-    height: Math.max(1, Math.round(displaySize.height * scale)),
-  };
 }
 
 function getScreenAccessStatus(): ReturnType<typeof systemPreferences.getMediaAccessStatus> {
@@ -52,11 +41,7 @@ function messageFromError(error: unknown): string {
 }
 
 function normalizeJpegQuality(value: number | undefined): number {
-  if (!Number.isFinite(value)) {
-    return DEFAULT_CAPTURE_JPEG_QUALITY;
-  }
-
-  return Math.min(0.95, Math.max(0.5, value ?? DEFAULT_CAPTURE_JPEG_QUALITY));
+  return clampOr(value, LIMITS.captureJpegQuality, DEFAULT_CAPTURE_JPEG_QUALITY);
 }
 
 function encodeImage(
@@ -107,7 +92,7 @@ async function captureWithMacScreencapture(
     }
 
     const imageSize = image.getSize();
-    const thumbnailSize = getThumbnailSize(imageSize, maxEdgePixels);
+    const thumbnailSize = fitWithinMaxEdge(imageSize, maxEdgePixels);
     const thumbnail =
       thumbnailSize.width === imageSize.width && thumbnailSize.height === imageSize.height
         ? image
@@ -134,19 +119,24 @@ async function captureWithDesktopCapturer(
   options: CaptureEncodingOptions,
 ): Promise<ScreenSnapshot> {
   const primary = screen.getPrimaryDisplay();
-  const { width, height } = getThumbnailSize(primary.size, maxEdgePixels);
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
-    thumbnailSize: { width, height },
+    thumbnailSize: desktopThumbnailSize(primary.size, primary.scaleFactor, maxEdgePixels),
   });
 
-  const source =
-    sources.find((item) => item.display_id === String(primary.id)) ?? sources[0];
+  const primarySource = sources.find((item) => item.display_id === String(primary.id));
+  const source = primarySource ?? sources[0];
+  if (!primarySource && sources.length > 1) {
+    console.warn(
+      `No capture source matches primary display ${primary.id}; using "${source.name}".`,
+    );
+  }
 
   if (!source || source.thumbnail.isEmpty()) {
     throw screenPermissionError(getScreenAccessStatus());
   }
 
+  const { width, height } = source.thumbnail.getSize();
   return {
     ...encodeImage(source.thumbnail, options),
     width,
@@ -154,6 +144,46 @@ async function captureWithDesktopCapturer(
     capturedAt: new Date().toISOString(),
     sourceName: source.name,
   };
+}
+
+const SHRINK_MIN_EDGE_PIXELS = 320;
+const SHRINK_SCALE_STEP = 0.75;
+const SHRINK_MAX_JPEG_QUALITY = 0.8;
+
+/**
+ * Re-encode a screenshot as a smaller JPEG until its data URL fits in maxDataUrlBytes. Used when
+ * the current screenshot alone exceeds the request budget (e.g. a large PNG against a server with
+ * a small body limit). Returns undefined if it cannot fit above the minimum size.
+ */
+export function shrinkSnapshotToFit(
+  snapshot: ScreenSnapshot,
+  maxDataUrlBytes: number,
+): ScreenSnapshot | undefined {
+  const original = nativeImage.createFromDataURL(snapshot.dataUrl);
+  if (original.isEmpty()) {
+    return undefined;
+  }
+
+  const originalSize = original.getSize();
+  let scale = 1;
+  let quality = Math.min(snapshot.jpegQuality ?? SHRINK_MAX_JPEG_QUALITY, SHRINK_MAX_JPEG_QUALITY);
+
+  while (Math.max(originalSize.width, originalSize.height) * scale >= SHRINK_MIN_EDGE_PIXELS) {
+    const size = {
+      width: Math.max(1, Math.round(originalSize.width * scale)),
+      height: Math.max(1, Math.round(originalSize.height * scale)),
+    };
+    const image = scale === 1 ? original : original.resize({ ...size, quality: "good" });
+    const encoded = encodeImage(image, { format: "jpeg", jpegQuality: quality });
+    if (encoded.dataUrlBytes <= maxDataUrlBytes) {
+      return { ...snapshot, ...encoded, ...size };
+    }
+
+    scale *= SHRINK_SCALE_STEP;
+    quality = Math.max(LIMITS.captureJpegQuality.min, quality - 0.1);
+  }
+
+  return undefined;
 }
 
 export async function probeScreenCapturePermission(): Promise<ScreenCaptureProbeResult> {

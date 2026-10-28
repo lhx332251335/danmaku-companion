@@ -18,18 +18,34 @@ import {
   SlidersHorizontal,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { LIMITS, type NumericRange } from "../shared/limits";
 import type {
   AppConfig,
   ConfigProfileResult,
   ConfigProfilesSnapshot,
   ConnectionTestResult,
+  DanmakuBridge,
+  GenerationLogCompaction,
   GenerationLogEntry,
+  HistoryRecovery,
   ModelListResult,
   RuntimeStatus,
 } from "../shared/types";
 import { api } from "./api";
+import {
+  describeError,
+  isDraftDirty,
+  parseListInput,
+  parseNumberInput,
+  parsePaletteInput,
+  rebaseDraft,
+  toConfigPatch,
+} from "./settingsModel";
+
+type DraftSection = "model" | "character" | "user" | "prompt" | "danmaku" | "runtime";
 
 const statusLabels: Record<RuntimeStatus["state"], string> = {
   idle: "空闲",
@@ -50,12 +66,26 @@ const promptPlaceholders = [
   "{{jsonShape}}",
 ];
 
-function parsePalette(value: string): string[] {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 8);
+const unimplementedHints = {
+  activeApp: "尚未实现：目前总是填入 unknown",
+  blacklist: "尚未实现：截图前不会检查前台应用，名单里的应用照样会被截图并发送",
+  persistScreenshots: "尚未实现：截图从不写入磁盘",
+};
+
+const unimplementedPlaceholders: Record<string, string> = {
+  "{{activeApp}}": unimplementedHints.activeApp,
+};
+
+const isMac = /Mac/.test(navigator.userAgent);
+
+function isCssColor(value: string): boolean {
+  return typeof CSS === "undefined" || typeof CSS.supports !== "function"
+    ? true
+    : CSS.supports("color", value);
+}
+
+function parsePalette(raw: string): string[] | undefined {
+  return parsePaletteInput(raw, isCssColor);
 }
 
 const logStatusLabels: Record<GenerationLogEntry["status"], string> = {
@@ -64,14 +94,19 @@ const logStatusLabels: Record<GenerationLogEntry["status"], string> = {
   aborted: "中断",
 };
 
+const logTimeFormat = new Intl.DateTimeFormat(undefined, {
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+const LOG_PAGE_SIZE = 100;
+
 function formatLogTime(value: string): string {
-  return new Date(value).toLocaleString([], {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : logTimeFormat.format(date);
 }
 
 function formatDuration(ms: number): string {
@@ -94,6 +129,42 @@ function formatBytes(bytes: number | undefined): string {
   return `${Math.round(bytes / 1024)} KB`;
 }
 
+function formatCacheUsage(cached: number | undefined, prompt: number | undefined): string {
+  if (cached === undefined) {
+    return prompt === undefined ? "-" : `? / ${prompt}`;
+  }
+
+  if (!prompt) {
+    return String(cached);
+  }
+
+  return `${cached} / ${prompt} (${Math.round((cached / prompt) * 100)}%)`;
+}
+
+const compactionTriggerLabels: Record<GenerationLogCompaction["trigger"], string> = {
+  budget: "",
+  "413": "413 后",
+  reset: "连接被重置后",
+};
+
+const historyRecoveryLabels: Record<HistoryRecovery, string> = {
+  images: "失败后丢弃全部历史截图",
+  reset: "失败后清空历史",
+};
+
+function compactionLabel(log: GenerationLogEntry): string {
+  const parts = (log.compaction ?? []).map((entry) => {
+    const trigger =
+      compactionTriggerLabels[entry.trigger] || (entry.reason === "bytes" ? "超出大小" : "超出张数");
+    return `${trigger}丢弃 ${entry.droppedImages} 张`;
+  });
+  if (log.historyRecovery) {
+    parts.push(historyRecoveryLabels[log.historyRecovery]);
+  }
+
+  return parts.length > 0 ? parts.join("；") : "-";
+}
+
 function screenLabel(log: GenerationLogEntry): string {
   if (!log.screen.enabled) {
     return "无截图";
@@ -109,6 +180,271 @@ function screenLabel(log: GenerationLogEntry): string {
 function activeProfileName(profiles: ConfigProfilesSnapshot | null): string {
   return profiles?.profiles.find((profile) => profile.active)?.name ?? "";
 }
+
+function TodoTag({ hint }: { hint: string }) {
+  return (
+    <span className="todo-tag" title={hint}>
+      未实现
+    </span>
+  );
+}
+
+interface NumberFieldProps {
+  label: ReactNode;
+  value: number;
+  range: NumericRange;
+  step: number;
+  integer?: boolean;
+  onCommit: (value: number) => void;
+}
+
+/** Keeps the typed text while editing; only finite, clamped numbers reach the draft. */
+function NumberField({
+  label,
+  value,
+  range,
+  step,
+  integer = false,
+  onCommit,
+}: NumberFieldProps) {
+  const [text, setText] = useState<string | null>(null);
+
+  function handleChange(raw: string) {
+    setText(raw);
+    const parsed = parseNumberInput(raw, range, integer);
+    if (parsed !== undefined && parsed !== value) {
+      onCommit(parsed);
+    }
+  }
+
+  return (
+    <label>
+      <span>{label}</span>
+      <input
+        type="number"
+        min={range.min}
+        max={range.max}
+        step={step}
+        value={text ?? String(value)}
+        onChange={(event) => handleChange(event.target.value)}
+        onBlur={() => setText(null)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            setText(null);
+          }
+        }}
+      />
+    </label>
+  );
+}
+
+interface ListFieldProps {
+  label: ReactNode;
+  values: string[];
+  parse: (raw: string) => string[] | undefined;
+  placeholder?: string;
+  disabled?: boolean;
+  title?: string;
+  onCommit: (values: string[]) => void;
+}
+
+/** Comma-separated list input that keeps the raw text (including a trailing comma) while focused. */
+function ListField({
+  label,
+  values,
+  parse,
+  placeholder,
+  disabled,
+  title,
+  onCommit,
+}: ListFieldProps) {
+  const [text, setText] = useState<string | null>(null);
+
+  function handleChange(raw: string) {
+    setText(raw);
+    const parsed = parse(raw);
+    if (parsed && parsed.join("\n") !== values.join("\n")) {
+      onCommit(parsed);
+    }
+  }
+
+  return (
+    <label title={title}>
+      <span>{label}</span>
+      <input
+        value={text ?? values.join(", ")}
+        placeholder={placeholder}
+        disabled={disabled}
+        onChange={(event) => handleChange(event.target.value)}
+        onBlur={() => setText(null)}
+      />
+    </label>
+  );
+}
+
+function GenerationLogDetail({ log }: { log: GenerationLogEntry }) {
+  return (
+    <div className="log-detail">
+      <div className="log-meta-grid">
+        <div>
+          <b>模型</b>
+          <span>{log.model ?? "-"}</span>
+        </div>
+        <div>
+          <b>投放窗口</b>
+          <span>
+            {log.releaseWindowSeconds !== undefined ? `${log.releaseWindowSeconds}s` : "-"}
+          </span>
+        </div>
+        <div>
+          <b>历史轮数</b>
+          <span>{log.historyRoundsUsed ?? 0}</span>
+        </div>
+        <div>
+          <b>历史模式</b>
+          <span>{log.historyMode ?? "-"}</span>
+        </div>
+        <div>
+          <b>历史截图</b>
+          <span>
+            {log.historyImagesIncluded
+              ? `保留 · 本次 ${log.historyImagesSent ?? 0} 张`
+              : "不保留"}
+          </span>
+        </div>
+        <div>
+          <b>请求体</b>
+          <span>
+            {log.requestBytes !== undefined
+              ? `${formatBytes(log.requestBytes)} / ${formatBytes(log.bodyLimitBytes)}`
+              : "-"}
+          </span>
+        </div>
+        <div>
+          <b>历史压缩</b>
+          <span>{compactionLabel(log)}</span>
+        </div>
+        <div>
+          <b>缓存 / 输入 tokens</b>
+          <span>{formatCacheUsage(log.cachedInputTokens, log.promptTokens)}</span>
+        </div>
+        <div>
+          <b>输出 tokens</b>
+          <span>
+            {log.completionTokens ?? "-"}
+            {log.finishReason === "length" ? "（达到最大输出被截断，可调大最大输出）" : ""}
+          </span>
+        </div>
+        <div>
+          <b>预填充耗时</b>
+          <span>{log.promptMs !== undefined ? formatDuration(Math.round(log.promptMs)) : "-"}</span>
+        </div>
+        <div>
+          <b>截图来源</b>
+          <span>{log.screen.sourceName ?? "-"}</span>
+        </div>
+        <div>
+          <b>截图格式</b>
+          <span>
+            {[
+              log.screen.format?.toUpperCase(),
+              log.screen.jpegQuality !== undefined
+                ? `q${Math.round(log.screen.jpegQuality * 100)}`
+                : undefined,
+            ].filter(Boolean).join(" · ") || "-"}
+          </span>
+        </div>
+        <div>
+          <b>图片大小</b>
+          <span>{formatBytes(log.screen.imageBytes)}</span>
+        </div>
+        <div>
+          <b>传输大小</b>
+          <span>
+            {formatBytes(log.screen.dataUrlBytes)}
+            {log.screen.resizedToFit ? "（已缩小以适应上限）" : ""}
+          </span>
+        </div>
+        <div>
+          <b>开始时间</b>
+          <span>{formatLogTime(log.startedAt)}</span>
+        </div>
+      </div>
+      {log.error ? <div className="log-message-error">{log.error}</div> : null}
+      {log.screen.error ? <div className="log-message-error">{log.screen.error}</div> : null}
+      <div className="comment-log-list">
+        {log.comments.length === 0 ? (
+          <span className="muted-text">没有生成弹幕</span>
+        ) : (
+          log.comments.map((comment, index) => <span key={`${log.id}-${index}`}>{comment}</span>)
+        )}
+      </div>
+      {log.rawOutput?.trim() ? (
+        <details className="raw-output-panel">
+          <summary>原始输出</summary>
+          <pre>{log.rawOutput}</pre>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+/** Log entries never change after they are written, so the id is enough to skip re-rendering. */
+const GenerationLogItem = memo(
+  function GenerationLogItem({ log }: { log: GenerationLogEntry }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+      <details
+        className={`log-entry log-status-${log.status}`}
+        onToggle={(event) => setOpen(event.currentTarget.open)}
+      >
+        <summary>
+          <span className="log-status">{logStatusLabels[log.status]}</span>
+          <span>{formatLogTime(log.completedAt)}</span>
+          <span>{formatDuration(log.durationMs)}</span>
+          <span>
+            {log.generatedCount ?? 0}/{log.requestedCount ?? "-"} 条
+          </span>
+          <span>{screenLabel(log)}</span>
+          <span>{log.reason === "manual" ? "手动" : "自动"}</span>
+        </summary>
+        {open ? <GenerationLogDetail log={log} /> : null}
+      </details>
+    );
+  },
+  (previous, next) => previous.log.id === next.log.id,
+);
+
+const GenerationLogList = memo(function GenerationLogList({
+  logs,
+}: {
+  logs: GenerationLogEntry[];
+}) {
+  const [visibleCount, setVisibleCount] = useState(LOG_PAGE_SIZE);
+
+  if (logs.length === 0) {
+    return <div className="empty-state">还没有生成记录</div>;
+  }
+
+  const hiddenCount = logs.length - visibleCount;
+  return (
+    <div className="log-list">
+      {logs.slice(0, visibleCount).map((log) => (
+        <GenerationLogItem key={log.id} log={log} />
+      ))}
+      {hiddenCount > 0 ? (
+        <button
+          type="button"
+          className="secondary-button log-more-button"
+          onClick={() => setVisibleCount((count) => count + LOG_PAGE_SIZE)}
+        >
+          显示更早的 {Math.min(hiddenCount, LOG_PAGE_SIZE)} 条（还有 {hiddenCount} 条）
+        </button>
+      ) : null}
+    </div>
+  );
+});
 
 export function SettingsApp() {
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -130,64 +466,121 @@ export function SettingsApp() {
   const [generationLogs, setGenerationLogs] = useState<GenerationLogEntry[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const configRef = useRef<AppConfig | null>(null);
 
   useEffect(() => {
-    void Promise.all([
-      api().getConfig(),
-      api().getRuntimeStatus(),
-      api().getConfigProfiles(),
-    ]).then(
+    let bridge: DanmakuBridge;
+    try {
+      bridge = api();
+    } catch (error) {
+      setLoadError(describeError(error));
+      return undefined;
+    }
+
+    let disposed = false;
+    Promise.all([bridge.getConfig(), bridge.getRuntimeStatus(), bridge.getConfigProfiles()]).then(
       ([loadedConfig, loadedStatus, loadedProfiles]) => {
-        setConfig(loadedConfig);
-        setDraft(loadedConfig);
-        setProfiles(loadedProfiles);
-        setProfileName(activeProfileName(loadedProfiles));
+        if (disposed) return;
+        if (!configRef.current) {
+          resetConfig(loadedConfig);
+        }
+        showProfiles(loadedProfiles);
         setStatus(loadedStatus);
-        void loadModelList(false);
-        void loadGenerationLogs(false);
+        runInBackground(loadModelList(false));
+        runInBackground(loadGenerationLogs(false));
+      },
+      (error: unknown) => {
+        if (!disposed) setLoadError(describeError(error));
       },
     );
 
-    return api().onRuntimeStatus((nextStatus) => {
-      setStatus(nextStatus);
-      void loadGenerationLogs(false);
-    });
+    const removeStatus = bridge.onRuntimeStatus(handleStatusBroadcast);
+    const removeConfig = bridge.onConfigUpdated((next) => adoptConfig(next));
+    return () => {
+      disposed = true;
+      removeStatus();
+      removeConfig();
+    };
   }, []);
 
   const dirty = useMemo(
-    () => JSON.stringify(config) !== JSON.stringify(draft),
+    () => Boolean(config && draft && isDraftDirty(config, draft)),
     [config, draft],
   );
 
-  if (!draft) {
-    return <main className="app-shell loading">Loading...</main>;
+  function reportError(error: unknown) {
+    setActionError(describeError(error));
   }
 
-  async function saveDraft(nextDraft = draft) {
-    if (!nextDraft) return config;
+  async function runAction(action: () => Promise<unknown>) {
+    setActionError(null);
+    try {
+      await action();
+    } catch (error) {
+      reportError(error);
+    }
+  }
+
+  function runInBackground(task: Promise<unknown>) {
+    task.catch(reportError);
+  }
+
+  /** Replaces the draft, dropping unsaved edits (profile switches and the first load). */
+  function resetConfig(next: AppConfig) {
+    configRef.current = next;
+    setConfig(next);
+    setDraft(next);
+  }
+
+  /** Takes a newer saved config, keeping the fields the user edited since `previous`. */
+  function adoptConfig(next: AppConfig, previous = configRef.current) {
+    configRef.current = next;
+    setConfig(next);
+    setDraft((current) => (current && previous ? rebaseDraft(previous, next, current) : next));
+  }
+
+  function editSection<K extends DraftSection>(section: K, patch: Partial<AppConfig[K]>) {
+    setDraft((current) =>
+      current ? ({ ...current, [section]: { ...current[section], ...patch } } as AppConfig) : current,
+    );
+  }
+
+  function showProfiles(next: ConfigProfilesSnapshot) {
+    setProfiles(next);
+    setProfileName(activeProfileName(next));
+  }
+
+  /**
+   * Main broadcasts the status after it appends a log entry. A status alone cannot tell whether
+   * an entry was added (an aborted run looks like the pause before it), so always reload.
+   */
+  function handleStatusBroadcast(next: RuntimeStatus) {
+    setStatus(next);
+    runInBackground(loadGenerationLogs(false));
+  }
+
+  async function saveDraft() {
+    if (!draft || !dirty) return;
+
+    const sent = draft;
     setSaving(true);
     try {
-      const updated = await api().updateConfig(nextDraft);
-      const nextProfiles = await api().getConfigProfiles();
-      setConfig(updated);
-      setDraft(updated);
-      setProfiles(nextProfiles);
-      setProfileName(activeProfileName(nextProfiles));
-      return updated;
+      adoptConfig(await api().updateConfig(toConfigPatch(sent)), sent);
+      showProfiles(await api().getConfigProfiles());
     } finally {
       setSaving(false);
     }
   }
 
   function applyProfileResult(result: ConfigProfileResult) {
-    setConfig(result.config);
-    setDraft(result.config);
-    setProfiles(result.profiles);
-    setProfileName(activeProfileName(result.profiles));
+    resetConfig(result.config);
+    showProfiles(result.profiles);
     setConnection(null);
     setModelList(null);
-    void loadModelList(false);
-    void loadGenerationLogs(false);
+    runInBackground(loadModelList(false));
+    runInBackground(loadGenerationLogs(false));
   }
 
   async function createProfile() {
@@ -208,12 +601,7 @@ export function SettingsApp() {
 
     setProfileWorking("rename");
     try {
-      const nextProfiles = await api().renameConfigProfile(
-        activeProfile.id,
-        profileName,
-      );
-      setProfiles(nextProfiles);
-      setProfileName(activeProfileName(nextProfiles));
+      showProfiles(await api().renameConfigProfile(activeProfile.id, profileName));
     } finally {
       setProfileWorking(null);
     }
@@ -248,9 +636,7 @@ export function SettingsApp() {
     setWorkingAction("generate");
     try {
       await saveDraft();
-      const nextStatus = await api().generateOnce();
-      setStatus(nextStatus);
-      await loadGenerationLogs(false);
+      setStatus(await api().generateOnce());
     } finally {
       setWorkingAction(null);
     }
@@ -259,11 +645,12 @@ export function SettingsApp() {
   async function toggleRuntime() {
     setWorkingAction("start");
     try {
-      const nextStatus =
-        status.state === "running"
-          ? await api().stop()
-          : (await saveDraft(), await api().start());
-      setStatus(nextStatus);
+      if (status.state === "running") {
+        setStatus(await api().stop());
+      } else {
+        await saveDraft();
+        setStatus(await api().start());
+      }
     } finally {
       setWorkingAction(null);
     }
@@ -322,16 +709,25 @@ export function SettingsApp() {
     setOverlayVisible(next);
   }
 
-  async function openScreenRecordingSettings() {
-    await api().openScreenRecordingSettings();
+  if (loadError) {
+    return (
+      <main className="app-shell loading">
+        <div className="error-banner load-error" role="alert">
+          {loadError}
+        </div>
+      </main>
+    );
   }
 
-  const paletteText = draft.danmaku.palette.join(", ");
+  if (!draft) {
+    return <main className="app-shell loading">加载中…</main>;
+  }
+
   const modelOptions = modelList?.models ?? [];
   const selectedModel = modelOptions.find((model) => model.id === draft.model.model);
   const selectedModelValue = selectedModel ? selectedModel.id : "";
   const selectedModelStatus = selectedModel
-    ? [selectedModel.state, selectedModel.vision ? "vision" : undefined]
+    ? [selectedModel.state, selectedModel.vision ? "视觉" : undefined]
         .filter(Boolean)
         .join(" · ")
     : "";
@@ -340,40 +736,55 @@ export function SettingsApp() {
       ? modelList.message
       : modelList
         ? [
-            `${modelList.models.length} models`,
+            `${modelList.models.length} 个模型`,
             selectedModelStatus || undefined,
           ].filter(Boolean).join(" · ")
         : "-";
   const activeProfile = profiles?.profiles.find((profile) => profile.active);
   const profileBusy = saving || profileWorking !== null;
+  const overlayToggleLabel = overlayVisible ? "隐藏弹幕层" : "显示弹幕层";
 
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <div className="eyebrow">Local-first Danmaku Engine</div>
+          <div className="eyebrow">本地优先的屏幕弹幕</div>
           <h1>Danmaku Companion</h1>
         </div>
         <div className="topbar-actions">
-          <button className="icon-button" title="Toggle overlay" onClick={toggleOverlay}>
+          <button
+            type="button"
+            className="icon-button"
+            title={overlayToggleLabel}
+            aria-label="显示弹幕层"
+            aria-pressed={overlayVisible}
+            onClick={() => void runAction(toggleOverlay)}
+          >
             {overlayVisible ? <Eye size={18} /> : <EyeOff size={18} />}
           </button>
-          <button className="secondary-button" disabled={!dirty || saving} onClick={() => void saveDraft()}>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={!dirty || saving}
+            onClick={() => void runAction(saveDraft)}
+          >
             <Save size={17} />
             {dirty ? "保存" : "已保存"}
           </button>
           <button
+            type="button"
             className="secondary-button"
             disabled={workingAction !== null}
-            onClick={() => void generateOnce()}
+            onClick={() => void runAction(generateOnce)}
           >
             <Sparkles size={17} />
             {workingAction === "generate" ? "生成中" : "生成一次"}
           </button>
           <button
+            type="button"
             className="primary-button"
             disabled={workingAction !== null}
-            onClick={toggleRuntime}
+            onClick={() => void runAction(toggleRuntime)}
           >
             {status.state === "running" ? <Pause size={17} /> : <Play size={17} />}
             {workingAction === "start"
@@ -390,16 +801,38 @@ export function SettingsApp() {
           <Activity size={16} />
           {statusLabels[status.state]}
         </div>
-        <div>Cycles: {status.cycles}</div>
-        <div>Latency: {status.providerLatencyMs ? `${status.providerLatencyMs} ms` : "-"}</div>
-        <div>Cached: {status.cachedInputTokens ?? "-"}</div>
-        <div>Last: {status.lastGeneratedAt ? new Date(status.lastGeneratedAt).toLocaleTimeString() : "-"}</div>
+        <div>轮次：{status.cycles}</div>
+        <div>耗时：{status.providerLatencyMs ? `${status.providerLatencyMs} ms` : "-"}</div>
+        <div>缓存命中：{formatCacheUsage(status.cachedInputTokens, status.promptTokens)}</div>
+        <div>
+          请求体：{formatBytes(status.requestBytes)}
+          {status.requestLimitBytes ? ` / ${formatBytes(status.requestLimitBytes)}` : ""}
+          {status.historyImages ? ` · ${status.historyImages} 张历史截图` : ""}
+        </div>
+        <div>
+          上次生成：
+          {status.lastGeneratedAt ? new Date(status.lastGeneratedAt).toLocaleTimeString() : "-"}
+        </div>
       </section>
 
+      {actionError ? (
+        <div className="error-banner dismissible-banner" role="alert">
+          <span>{actionError}</span>
+          <button
+            type="button"
+            className="banner-close"
+            title="关闭"
+            aria-label="关闭"
+            onClick={() => setActionError(null)}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      ) : null}
       {status.lastError ? <div className="error-banner">{status.lastError}</div> : null}
       {connection ? (
         <div className={connection.ok ? "success-banner" : "error-banner"}>
-          {connection.message} Endpoint: {connection.endpoint}
+          {connection.message} 接口：{connection.endpoint}
         </div>
       ) : null}
 
@@ -417,7 +850,10 @@ export function SettingsApp() {
             <select
               value={profiles?.activeProfileId ?? ""}
               disabled={!profiles || profileBusy}
-              onChange={(event) => void switchProfile(event.target.value)}
+              onChange={(event) => {
+                const id = event.target.value;
+                void runAction(() => switchProfile(id));
+              }}
             >
               {(profiles?.profiles ?? []).map((profile) => (
                 <option key={profile.id} value={profile.id}>
@@ -435,6 +871,7 @@ export function SettingsApp() {
             />
           </label>
           <button
+            type="button"
             className="secondary-button"
             disabled={
               !activeProfile ||
@@ -442,7 +879,7 @@ export function SettingsApp() {
               !profileName.trim() ||
               profileName.trim() === activeProfile.name
             }
-            onClick={() => void renameProfile()}
+            onClick={() => void runAction(renameProfile)}
           >
             <Pencil size={17} />
             重命名
@@ -457,17 +894,19 @@ export function SettingsApp() {
             />
           </label>
           <button
+            type="button"
             className="secondary-button"
             disabled={profileBusy}
-            onClick={() => void createProfile()}
+            onClick={() => void runAction(createProfile)}
           >
             <CopyPlus size={17} />
             复制新建
           </button>
           <button
+            type="button"
             className="secondary-button danger-button"
             disabled={profileBusy || (profiles?.profiles.length ?? 0) <= 1}
-            onClick={() => void deleteProfile()}
+            onClick={() => void runAction(deleteProfile)}
           >
             <Trash2 size={17} />
             删除
@@ -482,34 +921,31 @@ export function SettingsApp() {
             <h2>模型接口</h2>
           </div>
           <label>
-            Base URL
+            接口地址 (Base URL)
             <input
               value={draft.model.baseUrl}
-              onChange={(event) =>
-                setDraft({ ...draft, model: { ...draft.model, baseUrl: event.target.value } })
-              }
+              onChange={(event) => editSection("model", { baseUrl: event.target.value })}
             />
           </label>
           <div className="two-column">
             <label>
-              API Key
+              API 密钥
               <input
                 type="password"
                 value={draft.model.apiKey}
-                onChange={(event) =>
-                  setDraft({ ...draft, model: { ...draft.model, apiKey: event.target.value } })
-                }
+                onChange={(event) => editSection("model", { apiKey: event.target.value })}
               />
             </label>
             <div className="field-block">
               <div className="field-heading">
-                <span>Model</span>
+                <span>模型</span>
                 <button
                   type="button"
                   className="mini-icon-button"
-                  title="Refresh models"
+                  title="刷新模型列表"
+                  aria-label="刷新模型列表"
                   disabled={modelListLoading}
-                  onClick={() => void loadModelList()}
+                  onClick={() => void runAction(loadModelList)}
                 >
                   {modelListLoading ? (
                     <LoaderCircle className="spin" size={15} />
@@ -524,21 +960,18 @@ export function SettingsApp() {
                   value={selectedModelValue}
                   onChange={(event) => {
                     if (event.target.value) {
-                      setDraft({
-                        ...draft,
-                        model: { ...draft.model, model: event.target.value },
-                      });
+                      editSection("model", { model: event.target.value });
                     }
                   }}
                 >
-                  <option value="">Select from {modelOptions.length} models...</option>
+                  <option value="">从 {modelOptions.length} 个模型中选择…</option>
                   {modelOptions.map((model) => (
                     <option key={model.id} value={model.id}>
                       {[
                         model.id,
                         model.name && model.name !== model.id ? model.name : undefined,
                         model.state,
-                        model.vision ? "vision" : undefined,
+                        model.vision ? "视觉" : undefined,
                       ].filter(Boolean).join(" · ")}
                     </option>
                   ))}
@@ -546,9 +979,7 @@ export function SettingsApp() {
               ) : (
                 <input
                   value={draft.model.model}
-                  onChange={(event) =>
-                    setDraft({ ...draft, model: { ...draft.model, model: event.target.value } })
-                  }
+                  onChange={(event) => editSection("model", { model: event.target.value })}
                 />
               )}
               <div className={modelList?.ok === false ? "field-note error-note" : "field-note"}>
@@ -557,84 +988,52 @@ export function SettingsApp() {
             </div>
           </div>
           <div className="three-column">
-            <label>
-              Temperature
-              <input
-                type="number"
-                min="0"
-                max="2"
-                step="0.1"
-                value={draft.model.temperature}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    model: { ...draft.model, temperature: Number(event.target.value) },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Max Tokens
-              <input
-                type="number"
-                min="80"
-                max="1200"
-                value={draft.model.maxTokens}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    model: { ...draft.model, maxTokens: Number(event.target.value) },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Timeout
-              <input
-                type="number"
-                min="5000"
-                step="1000"
-                value={draft.model.timeoutMs}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    model: { ...draft.model, timeoutMs: Number(event.target.value) },
-                  })
-                }
-              />
-            </label>
+            <NumberField
+              label="温度"
+              value={draft.model.temperature}
+              range={LIMITS.temperature}
+              step={0.1}
+              onCommit={(temperature) => editSection("model", { temperature })}
+            />
+            <NumberField
+              label="最大输出 (tokens)"
+              value={draft.model.maxTokens}
+              range={LIMITS.maxTokens}
+              step={1}
+              integer
+              onCommit={(maxTokens) => editSection("model", { maxTokens })}
+            />
+            <NumberField
+              label="超时 (ms)"
+              value={draft.model.timeoutMs}
+              range={LIMITS.timeoutMs}
+              step={1000}
+              integer
+              onCommit={(timeoutMs) => editSection("model", { timeoutMs })}
+            />
           </div>
           <label className="toggle-row">
             <input
               type="checkbox"
               checked={draft.model.sendTemperature}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  model: { ...draft.model, sendTemperature: event.target.checked },
-                })
-              }
+              onChange={(event) => editSection("model", { sendTemperature: event.target.checked })}
             />
-            Send temperature
+            发送温度参数
           </label>
           <label className="toggle-row">
             <input
               type="checkbox"
               checked={draft.model.visionEnabled}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  model: { ...draft.model, visionEnabled: event.target.checked },
-                })
-              }
+              onChange={(event) => editSection("model", { visionEnabled: event.target.checked })}
             />
-            Vision payload
+            发送截图 (视觉输入)
           </label>
           <div className="button-row">
             <button
+              type="button"
               className="secondary-button"
               disabled={workingAction !== null}
-              onClick={() => void testConnection()}
+              onClick={() => void runAction(testConnection)}
             >
               {workingAction === "test" ? (
                 <LoaderCircle className="spin" size={17} />
@@ -652,138 +1051,93 @@ export function SettingsApp() {
             <h2>弹幕表现</h2>
           </div>
           <div className="three-column">
-            <label>
-              Font
-              <input
-                type="number"
-                min="14"
-                max="48"
-                value={draft.danmaku.fontSize}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    danmaku: { ...draft.danmaku, fontSize: Number(event.target.value) },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Opacity
-              <input
-                type="number"
-                min="0.2"
-                max="1"
-                step="0.05"
-                value={draft.danmaku.opacity}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    danmaku: { ...draft.danmaku, opacity: Number(event.target.value) },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Speed
-              <input
-                type="number"
-                min="4"
-                max="30"
-                value={draft.danmaku.speedSeconds}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    danmaku: { ...draft.danmaku, speedSeconds: Number(event.target.value) },
-                  })
-                }
-              />
-            </label>
+            <NumberField
+              label="字号 (px)"
+              value={draft.danmaku.fontSize}
+              range={LIMITS.fontSize}
+              step={1}
+              onCommit={(fontSize) => editSection("danmaku", { fontSize })}
+            />
+            <NumberField
+              label="不透明度 (0.2–1)"
+              value={draft.danmaku.opacity}
+              range={LIMITS.opacity}
+              step={0.05}
+              onCommit={(opacity) => editSection("danmaku", { opacity })}
+            />
+            <NumberField
+              label="滚动时长 (秒，越大越慢)"
+              value={draft.danmaku.speedSeconds}
+              range={LIMITS.speedSeconds}
+              step={1}
+              onCommit={(speedSeconds) => editSection("danmaku", { speedSeconds })}
+            />
           </div>
           <div className="three-column">
             <label>
-              Zone
+              显示区域
               <select
                 value={draft.danmaku.zone}
                 onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    danmaku: {
-                      ...draft.danmaku,
-                      zone: event.target.value as AppConfig["danmaku"]["zone"],
-                    },
+                  editSection("danmaku", {
+                    zone: event.target.value as AppConfig["danmaku"]["zone"],
                   })
                 }
               >
-                <option value="full">Full</option>
-                <option value="top">Top</option>
-                <option value="middle">Middle</option>
-                <option value="bottom">Bottom</option>
+                <option value="full">全屏</option>
+                <option value="top">上部</option>
+                <option value="middle">中部</option>
+                <option value="bottom">下部</option>
               </select>
             </label>
-            <label>
-              Max chars
-              <input
-                type="number"
-                min="10"
-                max="200"
-                value={draft.danmaku.maxCommentLength}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    danmaku: {
-                      ...draft.danmaku,
-                      maxCommentLength: Number(event.target.value),
-                    },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Density
-              <input
-                type="number"
-                min="0.1"
-                max="1"
-                step="0.1"
-                value={draft.danmaku.density}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    danmaku: { ...draft.danmaku, density: Number(event.target.value) },
-                  })
-                }
-              />
-            </label>
-          </div>
-          <label>
-            Palette
-            <input
-              value={paletteText}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  danmaku: { ...draft.danmaku, palette: parsePalette(event.target.value) },
-                })
-              }
+            <NumberField
+              label="单条最多字数"
+              value={draft.danmaku.maxCommentLength}
+              range={LIMITS.maxCommentLength}
+              step={1}
+              integer
+              onCommit={(maxCommentLength) => editSection("danmaku", { maxCommentLength })}
             />
-          </label>
+            <NumberField
+              label="密度 (0.1–1)"
+              value={draft.danmaku.density}
+              range={LIMITS.density}
+              step={0.1}
+              onCommit={(density) => editSection("danmaku", { density })}
+            />
+          </div>
+          <ListField
+            label="配色 (逗号分隔的 CSS 颜色)"
+            values={draft.danmaku.palette}
+            parse={parsePalette}
+            placeholder="#31c3a2, #f59e0b"
+            onCommit={(palette) => editSection("danmaku", { palette })}
+          />
           <div className="swatches">
-            {draft.danmaku.palette.map((color) => (
-              <span key={color} className="swatch" style={{ background: color }} />
+            {draft.danmaku.palette.map((color, index) => (
+              <span key={index} className="swatch" title={color} style={{ background: color }} />
             ))}
           </div>
           <label className="toggle-row">
             <input
               type="checkbox"
               checked={draft.danmaku.shadow}
+              onChange={(event) => editSection("danmaku", { shadow: event.target.checked })}
+            />
+            文字阴影
+          </label>
+          <label
+            className="toggle-row"
+            title="截图里不包含弹幕层，模型不会看到并评论自己的弹幕。Windows 需要 10 2004 及以上；开启后 OBS 等录屏软件也录不到弹幕。"
+          >
+            <input
+              type="checkbox"
+              checked={draft.danmaku.excludeOverlayFromCapture}
               onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  danmaku: { ...draft.danmaku, shadow: event.target.checked },
-                })
+                editSection("danmaku", { excludeOverlayFromCapture: event.target.checked })
               }
             />
-            Text shadow
+            截图时排除弹幕层（录屏也看不到弹幕）
           </label>
         </form>
 
@@ -794,79 +1148,49 @@ export function SettingsApp() {
           </div>
           <div className="two-column">
             <label>
-              Companion name
+              角色名
               <input
                 value={draft.character.name}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    character: { ...draft.character, name: event.target.value },
-                  })
-                }
+                onChange={(event) => editSection("character", { name: event.target.value })}
               />
             </label>
             <label>
-              Language
+              语言
               <input
                 value={draft.character.language}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    character: { ...draft.character, language: event.target.value },
-                  })
-                }
+                onChange={(event) => editSection("character", { language: event.target.value })}
               />
             </label>
           </div>
           <div className="two-column">
             <label>
-              User name
+              用户称呼
               <input
                 value={draft.user.name}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    user: { ...draft.user, name: event.target.value },
-                  })
-                }
+                onChange={(event) => editSection("user", { name: event.target.value })}
               />
             </label>
             <label>
-              User role
+              用户身份
               <input
                 value={draft.user.role}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    user: { ...draft.user, role: event.target.value },
-                  })
-                }
+                onChange={(event) => editSection("user", { role: event.target.value })}
               />
             </label>
           </div>
           <label>
-            Persona
+            人设
             <textarea
               rows={4}
               value={draft.character.persona}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  character: { ...draft.character, persona: event.target.value },
-                })
-              }
+              onChange={(event) => editSection("character", { persona: event.target.value })}
             />
           </label>
           <label>
-            Tone
+            语气
             <input
               value={draft.character.tone}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  character: { ...draft.character, tone: event.target.value },
-                })
-              }
+              onChange={(event) => editSection("character", { tone: event.target.value })}
             />
           </label>
         </form>
@@ -877,35 +1201,35 @@ export function SettingsApp() {
             <h2>Prompt 模板</h2>
           </div>
           <div className="placeholder-row">
-            {promptPlaceholders.map((placeholder) => (
-              <code key={placeholder}>{placeholder}</code>
-            ))}
+            {promptPlaceholders.map((placeholder) => {
+              const todo = unimplementedPlaceholders[placeholder];
+              return (
+                <code
+                  key={placeholder}
+                  className={todo ? "placeholder-todo" : undefined}
+                  title={todo}
+                >
+                  {placeholder}
+                  {todo ? "（未实现）" : null}
+                </code>
+              );
+            })}
           </div>
           <div className="two-column">
             <label>
-              System prompt
+              系统提示词
               <textarea
                 rows={9}
                 value={draft.prompt.systemTemplate}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    prompt: { ...draft.prompt, systemTemplate: event.target.value },
-                  })
-                }
+                onChange={(event) => editSection("prompt", { systemTemplate: event.target.value })}
               />
             </label>
             <label>
-              User prompt
+              用户提示词
               <textarea
                 rows={9}
                 value={draft.prompt.userTemplate}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    prompt: { ...draft.prompt, userTemplate: event.target.value },
-                  })
-                }
+                onChange={(event) => editSection("prompt", { userTemplate: event.target.value })}
               />
             </label>
           </div>
@@ -917,107 +1241,53 @@ export function SettingsApp() {
             <h2>运行与隐私</h2>
           </div>
           <div className="three-column">
+            <NumberField
+              label="最短间隔 (秒)"
+              value={draft.runtime.intervalMinSeconds}
+              range={LIMITS.intervalSeconds}
+              step={1}
+              onCommit={(intervalMinSeconds) => editSection("runtime", { intervalMinSeconds })}
+            />
+            <NumberField
+              label="最长间隔 (秒)"
+              value={draft.runtime.intervalMaxSeconds}
+              range={LIMITS.intervalSeconds}
+              step={1}
+              onCommit={(intervalMaxSeconds) => editSection("runtime", { intervalMaxSeconds })}
+            />
+            <NumberField
+              label="投放窗口最短 (秒)"
+              value={draft.runtime.releaseWindowMinSeconds}
+              range={LIMITS.releaseWindowSeconds}
+              step={1}
+              onCommit={(releaseWindowMinSeconds) =>
+                editSection("runtime", { releaseWindowMinSeconds })
+              }
+            />
+            <NumberField
+              label="投放窗口最长 (秒)"
+              value={draft.runtime.releaseWindowMaxSeconds}
+              range={LIMITS.releaseWindowSeconds}
+              step={1}
+              onCommit={(releaseWindowMaxSeconds) =>
+                editSection("runtime", { releaseWindowMaxSeconds })
+              }
+            />
+            <NumberField
+              label="截图最长边 (px)"
+              value={draft.runtime.captureMaxEdgePixels}
+              range={LIMITS.captureMaxEdgePixels}
+              step={10}
+              integer
+              onCommit={(captureMaxEdgePixels) => editSection("runtime", { captureMaxEdgePixels })}
+            />
             <label>
-              Min interval
-              <input
-                type="number"
-                min="5"
-                max="1800"
-                value={draft.runtime.intervalMinSeconds}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      intervalMinSeconds: Number(event.target.value),
-                    },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Max interval
-              <input
-                type="number"
-                min="5"
-                max="1800"
-                value={draft.runtime.intervalMaxSeconds}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      intervalMaxSeconds: Number(event.target.value),
-                    },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Release min
-              <input
-                type="number"
-                min="0"
-                max="60"
-                value={draft.runtime.releaseWindowMinSeconds}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      releaseWindowMinSeconds: Number(event.target.value),
-                    },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Release max
-              <input
-                type="number"
-                min="0"
-                max="60"
-                value={draft.runtime.releaseWindowMaxSeconds}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      releaseWindowMaxSeconds: Number(event.target.value),
-                    },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Screenshot max
-              <input
-                type="number"
-                min="480"
-                max="2160"
-                value={draft.runtime.captureMaxEdgePixels}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      captureMaxEdgePixels: Number(event.target.value),
-                    },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Screenshot format
+              截图格式
               <select
                 value={draft.runtime.captureImageFormat}
                 onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      captureImageFormat: event.target.value as AppConfig["runtime"]["captureImageFormat"],
-                    },
+                  editSection("runtime", {
+                    captureImageFormat: event.target.value as AppConfig["runtime"]["captureImageFormat"],
                   })
                 }
               >
@@ -1025,152 +1295,134 @@ export function SettingsApp() {
                 <option value="png">PNG</option>
               </select>
             </label>
+            <NumberField
+              label="JPEG 质量 (0.5–0.95)"
+              value={draft.runtime.captureJpegQuality}
+              range={LIMITS.captureJpegQuality}
+              step={0.01}
+              onCommit={(captureJpegQuality) => editSection("runtime", { captureJpegQuality })}
+            />
+            <NumberField
+              label="历史轮数"
+              value={draft.runtime.historyRounds}
+              range={LIMITS.historyRounds}
+              step={1}
+              integer
+              onCommit={(historyRounds) => editSection("runtime", { historyRounds })}
+            />
             <label>
-              JPEG quality
-              <input
-                type="number"
-                min="0.5"
-                max="0.95"
-                step="0.01"
-                value={draft.runtime.captureJpegQuality}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      captureJpegQuality: Number(event.target.value),
-                    },
-                  })
-                }
-              />
-            </label>
-            <label>
-              History rounds
-              <input
-                type="number"
-                min="0"
-                max="50"
-                value={draft.runtime.historyRounds}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: { ...draft.runtime, historyRounds: Number(event.target.value) },
-                  })
-                }
-              />
-            </label>
-            <label>
-              History mode
+              历史模式
               <select
                 value={draft.runtime.historyMode}
                 onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      historyMode: event.target.value as AppConfig["runtime"]["historyMode"],
-                    },
+                  editSection("runtime", {
+                    historyMode: event.target.value as AppConfig["runtime"]["historyMode"],
                   })
                 }
               >
-                <option value="reset-on-limit">Reset at limit</option>
-                <option value="sliding">Sliding</option>
+                <option value="reset-on-limit">满额重置</option>
+                <option value="batch-sliding">分批滑动（缓存友好）</option>
+                <option value="sliding">逐轮滑动（每轮失去缓存）</option>
               </select>
             </label>
-            <label>
-              Items per cycle
-              <input
-                type="number"
-                min="1"
-                max="12"
-                value={draft.runtime.itemsPerCycle}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: { ...draft.runtime, itemsPerCycle: Number(event.target.value) },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Log entries
-              <input
-                type="number"
-                min="10"
-                max="2000"
-                value={draft.runtime.generationLogLimit}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      generationLogLimit: Number(event.target.value),
-                    },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Blacklist
-              <input
-                value={draft.runtime.privacyBlacklist.join(", ")}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    runtime: {
-                      ...draft.runtime,
-                      privacyBlacklist: event.target.value
-                        .split(",")
-                        .map((item) => item.trim())
-                        .filter(Boolean),
-                    },
-                  })
-                }
-              />
-            </label>
+            <NumberField
+              label="历史截图上限 (张)"
+              value={draft.runtime.historyMaxImages}
+              range={LIMITS.historyMaxImages}
+              step={1}
+              integer
+              onCommit={(historyMaxImages) => editSection("runtime", { historyMaxImages })}
+            />
+            <NumberField
+              label="请求体上限 (MB)"
+              value={draft.runtime.requestBodyLimitMB}
+              range={LIMITS.requestBodyLimitMB}
+              step={1}
+              onCommit={(requestBodyLimitMB) => editSection("runtime", { requestBodyLimitMB })}
+            />
+            <NumberField
+              label="每轮弹幕 (条)"
+              value={draft.runtime.itemsPerCycle}
+              range={LIMITS.itemsPerCycle}
+              step={1}
+              integer
+              onCommit={(itemsPerCycle) => editSection("runtime", { itemsPerCycle })}
+            />
+            <NumberField
+              label="日志保留 (条)"
+              value={draft.runtime.generationLogLimit}
+              range={LIMITS.generationLogLimit}
+              step={10}
+              integer
+              onCommit={(generationLogLimit) => editSection("runtime", { generationLogLimit })}
+            />
+            <ListField
+              label={
+                <>
+                  隐私黑名单 <TodoTag hint={unimplementedHints.blacklist} />
+                </>
+              }
+              title={unimplementedHints.blacklist}
+              values={draft.runtime.privacyBlacklist}
+              parse={parseListInput}
+              disabled
+              onCommit={(privacyBlacklist) => editSection("runtime", { privacyBlacklist })}
+            />
           </div>
           <label className="toggle-row">
             <input
               type="checkbox"
               checked={draft.runtime.historyIncludeImages}
               onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  runtime: { ...draft.runtime, historyIncludeImages: event.target.checked },
-                })
+                editSection("runtime", { historyIncludeImages: event.target.checked })
               }
             />
-            History images
+            保留历史截图
           </label>
-          <label className="toggle-row">
+          <p className="panel-note">
+            保留历史截图时，截图数超过上限或请求体超过上限，会一次性丢弃最早的一半截图（保留它们的文字），
+            只有这一轮需要重新预填充，其余轮次都能命中服务端的前缀缓存。逐轮滑动每轮都会改变请求开头，缓存基本失效。
+            服务器返回 413 时会按它报告的上限自动压缩并重试一次。每一轮都会上传完整请求，上限越大越占上行带宽。
+            {draft.runtime.historyIncludeImages && draft.runtime.captureImageFormat === "png"
+              ? " PNG 截图体积通常是 JPEG 的 10 倍以上，而模型看到的 token 数相同，保留历史截图时建议改用 JPEG。"
+              : ""}
+          </p>
+          <label className="toggle-row" title={unimplementedHints.persistScreenshots}>
             <input
               type="checkbox"
               checked={draft.runtime.persistScreenshots}
+              disabled
               onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  runtime: { ...draft.runtime, persistScreenshots: event.target.checked },
-                })
+                editSection("runtime", { persistScreenshots: event.target.checked })
               }
             />
-            Persist screenshots
+            保存截图到磁盘
+            <TodoTag hint={unimplementedHints.persistScreenshots} />
           </label>
           <div className="button-row">
+            {isMac ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void runAction(() => api().openScreenRecordingSettings())}
+              >
+                <Shield size={17} />
+                录屏权限
+              </button>
+            ) : null}
             <button
+              type="button"
               className="secondary-button"
-              onClick={() => void openScreenRecordingSettings()}
+              onClick={() => void runAction(() => api().clearOverlay())}
             >
-              <Shield size={17} />
-              录屏权限
-            </button>
-            <button className="secondary-button" onClick={() => void api().clearOverlay()}>
               <RefreshCw size={17} />
               清空弹幕
             </button>
             <button
+              type="button"
               className="primary-button"
               disabled={!dirty || saving}
-              onClick={() => void saveDraft()}
+              onClick={() => void runAction(saveDraft)}
             >
               <Save size={17} />
               {saving ? "保存中" : dirty ? "保存" : "已保存"}
@@ -1186,9 +1438,10 @@ export function SettingsApp() {
             </div>
             <div className="button-row">
               <button
+                type="button"
                 className="secondary-button"
                 disabled={logsLoading}
-                onClick={() => void loadGenerationLogs()}
+                onClick={() => void runAction(loadGenerationLogs)}
               >
                 {logsLoading ? (
                   <LoaderCircle className="spin" size={17} />
@@ -1198,9 +1451,10 @@ export function SettingsApp() {
                 刷新
               </button>
               <button
+                type="button"
                 className="secondary-button"
                 disabled={logsLoading || generationLogs.length === 0}
-                onClick={() => void clearGenerationLogs()}
+                onClick={() => void runAction(clearGenerationLogs)}
               >
                 <Trash2 size={17} />
                 清空日志
@@ -1208,104 +1462,7 @@ export function SettingsApp() {
             </div>
           </div>
 
-          {generationLogs.length === 0 ? (
-            <div className="empty-state">还没有生成记录</div>
-          ) : (
-            <div className="log-list">
-              {generationLogs.map((log) => (
-                <details key={log.id} className={`log-entry log-status-${log.status}`}>
-                  <summary>
-                    <span className="log-status">{logStatusLabels[log.status]}</span>
-                    <span>{formatLogTime(log.completedAt)}</span>
-                    <span>{formatDuration(log.durationMs)}</span>
-                    <span>
-                      {log.generatedCount ?? 0}/{log.requestedCount ?? "-"} 条
-                    </span>
-                    <span>{screenLabel(log)}</span>
-                    <span>{log.reason === "manual" ? "手动" : "自动"}</span>
-                  </summary>
-                  <div className="log-detail">
-                    <div className="log-meta-grid">
-                      <div>
-                        <b>模型</b>
-                        <span>{log.model ?? "-"}</span>
-                      </div>
-                      <div>
-                        <b>投放窗口</b>
-                        <span>
-                          {log.releaseWindowSeconds !== undefined
-                            ? `${log.releaseWindowSeconds}s`
-                            : "-"}
-                        </span>
-                      </div>
-                      <div>
-                        <b>历史轮数</b>
-                        <span>{log.historyRoundsUsed ?? 0}</span>
-                      </div>
-                      <div>
-                        <b>历史模式</b>
-                        <span>{log.historyMode ?? "-"}</span>
-                      </div>
-                      <div>
-                        <b>历史图片</b>
-                        <span>{log.historyImagesIncluded ? "保留" : "不保留"}</span>
-                      </div>
-                      <div>
-                        <b>缓存 tokens</b>
-                        <span>{log.cachedInputTokens ?? "-"}</span>
-                      </div>
-                      <div>
-                        <b>截图来源</b>
-                        <span>{log.screen.sourceName ?? "-"}</span>
-                      </div>
-                      <div>
-                        <b>截图格式</b>
-                        <span>
-                          {[
-                            log.screen.format?.toUpperCase(),
-                            log.screen.jpegQuality !== undefined
-                              ? `q${Math.round(log.screen.jpegQuality * 100)}`
-                              : undefined,
-                          ].filter(Boolean).join(" · ") || "-"}
-                        </span>
-                      </div>
-                      <div>
-                        <b>图片大小</b>
-                        <span>{formatBytes(log.screen.imageBytes)}</span>
-                      </div>
-                      <div>
-                        <b>传输大小</b>
-                        <span>{formatBytes(log.screen.dataUrlBytes)}</span>
-                      </div>
-                      <div>
-                        <b>开始时间</b>
-                        <span>{formatLogTime(log.startedAt)}</span>
-                      </div>
-                    </div>
-                    {log.error ? <div className="log-message-error">{log.error}</div> : null}
-                    {log.screen.error ? (
-                      <div className="log-message-error">{log.screen.error}</div>
-                    ) : null}
-                    <div className="comment-log-list">
-                      {log.comments.length === 0 ? (
-                        <span className="muted-text">没有生成弹幕</span>
-                      ) : (
-                        log.comments.map((comment, index) => (
-                          <span key={`${log.id}-${index}`}>{comment}</span>
-                        ))
-                      )}
-                    </div>
-                    {log.rawOutput?.trim() ? (
-                      <details className="raw-output-panel">
-                        <summary>原始输出</summary>
-                        <pre>{log.rawOutput}</pre>
-                      </details>
-                    ) : null}
-                  </div>
-                </details>
-              ))}
-            </div>
-          )}
+          <GenerationLogList logs={generationLogs} />
         </section>
       </section>
     </main>
