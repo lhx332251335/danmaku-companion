@@ -1256,6 +1256,13 @@ export function SettingsApp() {
               onCommit={(intervalMaxSeconds) => editSection("runtime", { intervalMaxSeconds })}
             />
             <NumberField
+              label="启动延迟 (秒)"
+              value={draft.runtime.startDelaySeconds}
+              range={LIMITS.startDelaySeconds}
+              step={1}
+              onCommit={(startDelaySeconds) => editSection("runtime", { startDelaySeconds })}
+            />
+            <NumberField
               label="投放窗口最短 (秒)"
               value={draft.runtime.releaseWindowMinSeconds}
               range={LIMITS.releaseWindowSeconds}

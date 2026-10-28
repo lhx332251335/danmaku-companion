@@ -17,6 +17,9 @@ comments from a vision-capable, OpenAI-compatible model provider.
   payload.
 - Supports randomized generation intervals, randomized release windows, fixed
   comments per cycle, and local generation logs.
+- Waits a few seconds after Start (`启动延迟`, default 5 s) before the first
+  capture, so the first screenshot shows your content rather than the app's
+  own settings window.
 - Keeps conversation history (optionally with screenshots) while staying under
   the server's request size limit and reusing its prompt cache.
 - Stores configuration locally and does not include telemetry.

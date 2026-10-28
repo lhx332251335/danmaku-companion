@@ -73,6 +73,7 @@ function setup(runtime: Partial<RuntimeSettings> = {}) {
     runtime: {
       intervalMinSeconds: 1800,
       intervalMaxSeconds: 1800,
+      startDelaySeconds: 0,
       releaseWindowMinSeconds: 0,
       releaseWindowMaxSeconds: 0,
       historyRounds: 4,
@@ -303,6 +304,51 @@ describe("DanmakuController", () => {
 
     expect(h.controller.getStatus()).toMatchObject({ requestBytes: undefined, requestLimitBytes: 1_900_000 });
     expect(h.logs.at(-1)).toMatchObject({ status: "error", requestBytes: 3_000_000 });
+  });
+
+  it("waits the start delay before the first capture and shows when it is due", async () => {
+    vi.useFakeTimers();
+    const h = setup({ startDelaySeconds: 5 });
+    mocks.generate.mockResolvedValue(reply("hello"));
+
+    await h.controller.start();
+    expect(mocks.generate).not.toHaveBeenCalled();
+    expect(mocks.capture).not.toHaveBeenCalled();
+    const due = Date.parse(h.controller.getStatus().nextCycleAt ?? "");
+    expect(due - Date.now()).toBe(5000);
+    expect(h.statuses.at(-1)?.nextCycleAt).toBeDefined();
+
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(mocks.generate).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(mocks.generate).toHaveBeenCalledTimes(1);
+  });
+
+  it("stop() during the start delay cancels the first capture", async () => {
+    vi.useFakeTimers();
+    const h = setup({ startDelaySeconds: 5 });
+    await h.controller.start();
+    await h.controller.stop();
+    expect(h.controller.getStatus().nextCycleAt).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(mocks.generate).not.toHaveBeenCalled();
+  });
+
+  it("keeps the start delay when start() resumes while a stopped request winds down", async () => {
+    vi.useFakeTimers();
+    const h = setup({ startDelaySeconds: 5 });
+    pendingRequest();
+    await h.controller.start();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mocks.generate).toHaveBeenCalledTimes(1);
+
+    await h.controller.stop();
+    mocks.generate.mockResolvedValue(reply("again"));
+    await h.controller.start();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mocks.generate).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mocks.generate).toHaveBeenCalledTimes(2);
   });
 
   it("switches state even when saving the running flag fails", async () => {

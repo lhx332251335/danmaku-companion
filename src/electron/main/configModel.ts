@@ -70,6 +70,7 @@ const NUMBER_RULES: Readonly<Partial<Record<SectionPath<number>, NumberRule>>> =
   "runtime.intervalMinSeconds": { range: LIMITS.intervalSeconds },
   "runtime.intervalMaxSeconds": { range: LIMITS.intervalSeconds },
   "runtime.intervalSeconds": { range: LIMITS.intervalSeconds },
+  "runtime.startDelaySeconds": { range: LIMITS.startDelaySeconds },
   "runtime.itemsPerCycle": { range: LIMITS.itemsPerCycle, integer: true },
   "runtime.itemsMinPerCycle": { range: LIMITS.itemsPerCycle, integer: true },
   "runtime.itemsMaxPerCycle": { range: LIMITS.itemsPerCycle, integer: true },

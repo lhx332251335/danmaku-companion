@@ -75,7 +75,9 @@ function screenLogInfo(
 }
 
 export class DanmakuController {
-  private cycleTimer: { handle: NodeJS.Timeout; armed: ArmedCycle } | undefined;
+  private cycleTimer:
+    | { handle: NodeJS.Timeout; armed: ArmedCycle; firstAfterStart: boolean }
+    | undefined;
   private readonly releaseTimers = new Set<NodeJS.Timeout>();
   private readonly history = new HistoryWindow();
   /** Body limits learned from HTTP 413 responses, per chat-completions endpoint. */
@@ -116,10 +118,29 @@ export class DanmakuController {
     this.stopped = false;
     this.status = { ...this.status, state: "running", lastError: undefined };
     this.broadcastStatus(this.status);
-    void this.generateOnce("timer");
+    await this.armFirstCycle();
     await this.persistEnabled(true);
 
     return this.status;
+  }
+
+  /**
+   * The first cycle waits runtime.startDelaySeconds: Start is usually pressed in this app's own
+   * window, so an immediate screenshot would show the settings page instead of the content.
+   */
+  private async armFirstCycle(): Promise<void> {
+    let interval: NormalizedRuntimeSettings;
+    try {
+      interval = normalizeRuntimeSettings(await this.configStore.get());
+    } catch (error) {
+      console.warn("Failed to read the config before the first cycle.", errorMessage(error));
+      return;
+    }
+
+    if (this.running && !this.shuttingDown) {
+      this.armCycleTimer(interval, Math.round(interval.startDelaySeconds * 1000), true);
+      this.broadcastStatus(this.status);
+    }
   }
 
   shutdown(): void {
@@ -158,7 +179,8 @@ export class DanmakuController {
     const interval = normalizeRuntimeSettings(config);
     const delayMs = rescheduledDelayMs(this.cycleTimer.armed, interval, Date.now());
     if (delayMs !== undefined) {
-      this.armCycleTimer(interval, delayMs);
+      this.armCycleTimer(interval, delayMs, this.cycleTimer.firstAfterStart);
+      this.broadcastStatus(this.status);
     }
   }
 
@@ -352,10 +374,15 @@ export class DanmakuController {
       if (this.activeGeneration?.abort === generationAbort) {
         this.activeGeneration = undefined;
       }
-      if (reason === "timer" && this.running && !this.shuttingDown) {
+      if (
+        reason === "timer" &&
+        this.running &&
+        !this.shuttingDown &&
+        !this.cycleTimer?.firstAfterStart
+      ) {
         // Re-read: the interval may have been changed while the request ran. A run that stop()
-        // aborted only gets here if start() resumed the loop meanwhile, and that start's own
-        // first cycle was skipped as busy, so run it now instead of a whole interval later.
+        // aborted only gets here if start() resumed the loop meanwhile; unless start()'s delayed
+        // first cycle is still pending, that cycle was skipped as busy, so run it now.
         this.scheduleNextCycle(await this.configStore.get(), generationAbort.signal.aborted);
       }
       if (!this.shuttingDown) {
@@ -451,7 +478,7 @@ export class DanmakuController {
     this.armCycleTimer(interval, immediately ? 0 : cycleDelayMs(interval));
   }
 
-  private armCycleTimer(interval: CycleInterval, delayMs: number): void {
+  private armCycleTimer(interval: CycleInterval, delayMs: number, firstAfterStart = false): void {
     this.clearCycleTimer();
     if (!this.running) {
       return;
@@ -459,16 +486,20 @@ export class DanmakuController {
 
     const handle = setTimeout(() => {
       this.cycleTimer = undefined;
+      this.status = { ...this.status, nextCycleAt: undefined };
       void this.generateOnce("timer");
     }, delayMs);
+    const dueAt = Date.now() + delayMs;
     this.cycleTimer = {
       handle,
       armed: {
         intervalMinSeconds: interval.intervalMinSeconds,
         intervalMaxSeconds: interval.intervalMaxSeconds,
-        dueAt: Date.now() + delayMs,
+        dueAt,
       },
+      firstAfterStart,
     };
+    this.status = { ...this.status, nextCycleAt: new Date(dueAt).toISOString() };
   }
 
   private clearCycleTimer(): void {
@@ -476,6 +507,7 @@ export class DanmakuController {
       clearTimeout(this.cycleTimer.handle);
       this.cycleTimer = undefined;
     }
+    this.status = { ...this.status, nextCycleAt: undefined };
   }
 
   private scheduleItems(items: DanmakuItem[], releaseWindowSeconds: number): void {

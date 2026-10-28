@@ -61,6 +61,8 @@ export interface RuntimeSettings {
   intervalMinSeconds: number;
   intervalMaxSeconds: number;
   intervalSeconds: number;
+  /** Wait before the first capture after starting, so it is not a shot of this app's window. */
+  startDelaySeconds: number;
   itemsPerCycle: number;
   itemsMinPerCycle: number;
   itemsMaxPerCycle: number;
@@ -123,6 +125,8 @@ export interface RuntimeStatus {
   /** Effective body limit: the configured one, or lower when learned from a 413. */
   requestLimitBytes?: number;
   historyImages?: number;
+  /** When the next timed generation is due (ISO time), while one is scheduled. */
+  nextCycleAt?: string;
 }
 
 export interface ConnectionTestResult {

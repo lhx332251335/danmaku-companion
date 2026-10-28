@@ -54,6 +54,7 @@ export const defaultAppConfig: AppConfig = {
     intervalMinSeconds: 14,
     intervalMaxSeconds: 28,
     intervalSeconds: 18,
+    startDelaySeconds: 5,
     itemsPerCycle: 3,
     itemsMinPerCycle: 1,
     itemsMaxPerCycle: 3,

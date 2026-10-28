@@ -5,6 +5,7 @@ export interface NumericRange {
 
 export const LIMITS = {
   intervalSeconds: { min: 5, max: 1800 },
+  startDelaySeconds: { min: 0, max: 60 },
   itemsPerCycle: { min: 1, max: 12 },
   releaseWindowSeconds: { min: 0, max: 60 },
   captureMaxEdgePixels: { min: 480, max: 2160 },

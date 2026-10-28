@@ -149,6 +149,7 @@ describe("sanitizeConfig", () => {
     ["danmaku", "density", 0, 0.1],
     ["danmaku", "maxCommentLength", 1000, 200],
     ["runtime", "intervalMinSeconds", 1, 5],
+    ["runtime", "startDelaySeconds", 99, 60],
     ["runtime", "itemsPerCycle", 2.4, 2],
     ["runtime", "captureJpegQuality", 2, 0.95],
     ["runtime", "generationLogLimit", 1e6, 2000],
