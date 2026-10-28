@@ -44,6 +44,10 @@ function useNumberText({ value, range, integer, scale, onCommit }: NumberTextOpt
     onBlur() {
       setText(null);
     },
+    /** Show the stored value again, e.g. after a step changed it. */
+    reset() {
+      setText(null);
+    },
     onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
       if (event.key === "Enter") {
         setText(null);
@@ -261,6 +265,7 @@ export function Stepper({
   const isDisabled = disabled ?? field?.disabled ?? false;
 
   function stepBy(delta: number) {
+    number.reset();
     const next = Math.min(range.max, Math.max(range.min, Math.round(value + delta)));
     if (next !== value) onCommit(next);
   }
