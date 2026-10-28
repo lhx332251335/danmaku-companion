@@ -1,0 +1,174 @@
+/* ============================================================
+   运行节奏 (#rhythm)
+   ============================================================ */
+
+.rhythm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.rhythm-grid .card-body {
+  gap: 10px;
+}
+.rhythm-single {
+  max-width: 160px;
+}
+
+/* ---------- timeline 一轮是怎样进行的 ---------- */
+.tl {
+  margin: 0;
+  padding: 18px 18px 20px;
+  overflow: hidden;
+}
+.tl-grid {
+  --tl-cols: 30px minmax(0, 5fr) 30px minmax(0, 3fr) 30px minmax(0, 16fr) 30px;
+  --tl-top: 60px;
+}
+.tl-grid.no-delay {
+  --tl-cols: 30px minmax(0, 2.5fr) 30px minmax(0, 3fr) 30px minmax(0, 16fr) 30px;
+}
+.tl-grid.is-tall {
+  --tl-top: 84px;
+}
+.tl-row,
+.tl-labels {
+  display: grid;
+  grid-template-columns: var(--tl-cols);
+}
+.tl-row {
+  align-items: center;
+  margin-top: var(--tl-top);
+}
+.tl-node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text-2);
+}
+.tl-node svg {
+  width: 15px;
+  height: 15px;
+}
+.tl-node.tone-accent {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.tl-node.tone-coral {
+  border-color: var(--coral);
+  background: var(--coral-soft);
+  color: var(--coral-text);
+}
+.tl-bar {
+  position: relative;
+  height: 8px;
+  margin: 0 -2px;
+  border-radius: 999px;
+}
+/* start delay: coral stripes, like the dock's 首次截图 track */
+.tl-bar.is-delay {
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--coral) 80%, transparent) 0 5px,
+    color-mix(in srgb, var(--coral) 38%, transparent) 5px 10px
+  );
+}
+.no-delay .tl-bar.is-delay {
+  height: 2px;
+  background: var(--line-strong);
+}
+.tl-bar.is-gen {
+  background: var(--line-strong);
+}
+.tl-bar.is-wait {
+  background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 11px);
+}
+
+/* release window: band over the first part of the wait, sample comments above it */
+.tl-release {
+  position: absolute;
+  left: 2px;
+  bottom: 0;
+  width: var(--band, 40%);
+  height: 8px;
+}
+.tl-band {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 40%, transparent)
+  );
+}
+.tl-pill {
+  position: absolute;
+  left: max(calc(var(--x, 0) * 100%), var(--min-x, 0px));
+  bottom: calc(18px + var(--level, 0) * 26px);
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--text);
+}
+.tl-pill.tone-ok {
+  color: var(--ok);
+}
+.tl-pill.tone-warn {
+  color: var(--warn);
+}
+.tl-pill.tone-accent {
+  color: var(--accent-text);
+}
+
+.tl-labels {
+  margin-top: 10px;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--text-3);
+}
+.tl-labels > div {
+  min-width: 0;
+  padding: 0 4px;
+  text-align: center;
+}
+.tl-labels b {
+  display: block;
+  font-size: var(--fs-label);
+  font-weight: 650;
+  color: var(--text);
+}
+.tl-labels .edge {
+  padding: 0;
+  margin: 0 -14px;
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .tl-node,
+  .tl-pill {
+    border-color: CanvasText;
+  }
+  .tl-bar,
+  .tl-band {
+    background: CanvasText;
+    forced-color-adjust: none;
+  }
+  .tl-bar.is-wait {
+    background: repeating-linear-gradient(90deg, CanvasText 0 6px, transparent 6px 11px);
+  }
+}

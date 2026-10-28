@@ -15,6 +15,7 @@ import { endpoint } from "./providers/endpoints";
 import { RequestTooLargeError } from "./providers/errors";
 import { OpenAICompatibleProvider } from "./providers/openAiCompatibleProvider";
 import { createBudgetTrace, runBudgetedRequest, type BudgetTrace } from "./runtime/budgetedRequest";
+import { ContextSummarizer, type SummaryRequest, type SummaryRun } from "./runtime/contextSummarizer";
 import { isRepeatingRequestError } from "./runtime/failurePolicy";
 import { HistoryWindow } from "./runtime/historyWindow";
 import {
@@ -74,8 +75,16 @@ function screenLogInfo(
   };
 }
 
+const noCycleScheduled = {
+  nextCycleAt: undefined,
+  nextCycleArmedAt: undefined,
+  nextCycleIsFirst: undefined,
+} satisfies Partial<RuntimeStatus>;
+
 export class DanmakuController {
-  private cycleTimer: { handle: NodeJS.Timeout; armed: ArmedCycle } | undefined;
+  private cycleTimer:
+    | { handle: NodeJS.Timeout; armed: ArmedCycle; firstAfterStart: boolean }
+    | undefined;
   private readonly releaseTimers = new Set<NodeJS.Timeout>();
   private readonly history = new HistoryWindow();
   /** Body limits learned from HTTP 413 responses, per chat-completions endpoint. */
@@ -93,6 +102,12 @@ export class DanmakuController {
   private shuttingDown = false;
   private status: RuntimeStatus = statusIdle;
   private readonly provider = new OpenAICompatibleProvider();
+  private readonly summarizer = new ContextSummarizer(this.history, {
+    summarize: (request) =>
+      this.provider.generateSummary(request.input, request.config, request.maxChars),
+    onSettled: (run) => void this.onSummarySettled(run),
+  });
+  private shownSummary: { text?: string; at?: string } = {};
 
   constructor(
     private readonly configStore: ConfigStore,
@@ -116,10 +131,29 @@ export class DanmakuController {
     this.stopped = false;
     this.status = { ...this.status, state: "running", lastError: undefined };
     this.broadcastStatus(this.status);
-    void this.generateOnce("timer");
+    await this.armFirstCycle();
     await this.persistEnabled(true);
 
     return this.status;
+  }
+
+  /**
+   * The first cycle waits runtime.startDelaySeconds: Start is usually pressed in this app's own
+   * window, so an immediate screenshot would show the settings page instead of the content.
+   */
+  private async armFirstCycle(): Promise<void> {
+    let interval: NormalizedRuntimeSettings;
+    try {
+      interval = normalizeRuntimeSettings(await this.configStore.get());
+    } catch (error) {
+      console.warn("Failed to read the config before the first cycle.", errorMessage(error));
+      return;
+    }
+
+    if (this.running && !this.shuttingDown) {
+      this.armCycleTimer(interval, Math.round(interval.startDelaySeconds * 1000), true);
+      this.broadcastStatus(this.status);
+    }
   }
 
   shutdown(): void {
@@ -128,6 +162,7 @@ export class DanmakuController {
     this.running = false;
     this.shuttingDown = true;
     this.activeGeneration?.abort.abort();
+    this.summarizer.cancel();
   }
 
   async stop(): Promise<RuntimeStatus> {
@@ -139,8 +174,10 @@ export class DanmakuController {
     if (this.activeGeneration?.reason === "timer") {
       this.activeGeneration.abort.abort();
     }
+    // Pausing stops requests to the server; a summary that already finished is kept.
+    this.summarizer.cancel(true);
 
-    this.status = { ...this.status, state: "paused" };
+    this.status = { ...this.status, state: "paused", ...this.summaryStatus() };
     this.broadcastStatus(this.status);
     await this.persistEnabled(false);
     return this.status;
@@ -158,7 +195,8 @@ export class DanmakuController {
     const interval = normalizeRuntimeSettings(config);
     const delayMs = rescheduledDelayMs(this.cycleTimer.armed, interval, Date.now());
     if (delayMs !== undefined) {
-      this.armCycleTimer(interval, delayMs);
+      this.armCycleTimer(interval, delayMs, this.cycleTimer.firstAfterStart);
+      this.broadcastStatus(this.status);
     }
   }
 
@@ -196,6 +234,11 @@ export class DanmakuController {
         // as long as their rounds stay in the window.
         this.history.dropAllImages();
       }
+      if (runtime.historySummaryEnabled) {
+        // Right after the window started over, give its summary a moment to land: adding it now
+        // keeps the new prefix stable, adding it later would cost another cache miss.
+        await this.summarizer.beforeRequest(generationAbort.signal);
+      }
       if (config.model.visionEnabled) {
         try {
           snapshot = await capturePrimaryScreen(runtime.captureMaxEdgePixels, {
@@ -223,6 +266,7 @@ export class DanmakuController {
           input: {
             character: activeConfig.character,
             maxItems: requestedCount,
+            contextSummary: runtime.historySummaryEnabled ? this.history.summary : undefined,
             abortSignal: generationAbort.signal,
           },
           snapshot,
@@ -246,7 +290,16 @@ export class DanmakuController {
 
       generationAbort.signal.throwIfAborted();
       if (historyEpoch === this.historyEpoch) {
+        const compactionsBefore = this.history.compactions;
         this.history.remember(result, sentSnapshot, runtime, trace.requestHistoryLength);
+        const settings = runtime;
+        this.summarizer.afterRound({
+          enabled: settings.historySummaryEnabled,
+          settings,
+          compacted: this.history.compactions !== compactionsBefore,
+          comments: result.items.map((item) => item.text),
+          request: () => this.summaryRequest(activeConfig, settings, endpointKey),
+        });
       }
       if (overlayEpoch === this.overlayEpoch) {
         this.scheduleItems(result.items, releaseWindowSeconds);
@@ -295,6 +348,7 @@ export class DanmakuController {
         requestBytes: result.requestBytes,
         requestLimitBytes: trace.bodyLimitBytes,
         historyImages: trace.historyImagesSent,
+        ...this.summaryStatus(),
       };
     } catch (error) {
       const aborted = generationAbort.signal.aborted || this.shuttingDown;
@@ -352,10 +406,15 @@ export class DanmakuController {
       if (this.activeGeneration?.abort === generationAbort) {
         this.activeGeneration = undefined;
       }
-      if (reason === "timer" && this.running && !this.shuttingDown) {
+      if (
+        reason === "timer" &&
+        this.running &&
+        !this.shuttingDown &&
+        !this.cycleTimer?.firstAfterStart
+      ) {
         // Re-read: the interval may have been changed while the request ran. A run that stop()
-        // aborted only gets here if start() resumed the loop meanwhile, and that start's own
-        // first cycle was skipped as busy, so run it now instead of a whole interval later.
+        // aborted only gets here if start() resumed the loop meanwhile; unless start()'s delayed
+        // first cycle is still pending, that cycle was skipped as busy, so run it now.
         this.scheduleNextCycle(await this.configStore.get(), generationAbort.signal.aborted);
       }
       if (!this.shuttingDown) {
@@ -373,13 +432,83 @@ export class DanmakuController {
 
   clearHistory(): void {
     this.historyEpoch += 1;
+    this.summarizer.cancel();
     this.history.reset();
     this.status = {
       ...this.status,
       cachedInputTokens: undefined,
       promptTokens: undefined,
       historyImages: undefined,
+      ...this.summaryStatus(),
     };
+    this.broadcastStatus(this.status);
+  }
+
+  /** The summary request continues the current window: same prefix, then the instruction. */
+  private summaryRequest(
+    config: AppConfig,
+    runtime: NormalizedRuntimeSettings,
+    endpointKey: string,
+  ): SummaryRequest {
+    return {
+      config,
+      maxChars: runtime.historySummaryMaxChars,
+      input: {
+        character: config.character,
+        maxItems: runtime.itemsPerCycle,
+        history: this.history.forRequest(runtime.historyRounds),
+        contextSummary: this.history.summary,
+        maxBodyBytes: Math.min(
+          runtime.requestBodyLimitBytes,
+          this.learnedBodyLimits.get(endpointKey) ?? Infinity,
+        ),
+      },
+    };
+  }
+
+  /** Status fields for the context summary; notes when the summary in use last changed. */
+  private summaryStatus(): Pick<RuntimeStatus, "contextSummary" | "contextSummaryAt" | "summarizing"> {
+    const text = this.history.summary;
+    if (text !== this.shownSummary.text) {
+      this.shownSummary = { text, at: text ? new Date().toISOString() : undefined };
+    }
+    return { contextSummary: text, contextSummaryAt: this.shownSummary.at, summarizing: this.summarizer.running };
+  }
+
+  private async onSummarySettled(run: SummaryRun): Promise<void> {
+    const { request, result, error, aborted } = run;
+    const history = request.input.history ?? [];
+    const entry: GenerationLogEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      cycle: this.attempts,
+      reason: "summary",
+      status: result ? "success" : aborted ? "aborted" : "error",
+      startedAt: run.startedAt,
+      completedAt: new Date().toISOString(),
+      durationMs: run.durationMs,
+      model: request.config.model.model,
+      historyRoundsUsed: history.length,
+      historyImagesSent: result?.historyImagesSent,
+      cachedInputTokens: result?.cachedInputTokens,
+      promptTokens: result?.promptTokens,
+      completionTokens: result?.completionTokens,
+      promptMs: result?.promptMs,
+      finishReason: result?.finishReason,
+      requestBytes:
+        result?.requestBytes ?? (error instanceof RequestTooLargeError ? error.requestBytes : undefined),
+      bodyLimitBytes: request.input.maxBodyBytes,
+      screen: { enabled: false, captured: false },
+      comments: [],
+      summary: result?.text,
+      rawOutput: result?.rawOutput,
+      error: result || aborted ? undefined : errorMessage(error),
+    };
+    if (this.shuttingDown) {
+      return;
+    }
+
+    await this.appendGenerationLog(entry, request.config);
+    this.status = { ...this.status, ...this.summaryStatus() };
     this.broadcastStatus(this.status);
   }
 
@@ -451,7 +580,7 @@ export class DanmakuController {
     this.armCycleTimer(interval, immediately ? 0 : cycleDelayMs(interval));
   }
 
-  private armCycleTimer(interval: CycleInterval, delayMs: number): void {
+  private armCycleTimer(interval: CycleInterval, delayMs: number, firstAfterStart = false): void {
     this.clearCycleTimer();
     if (!this.running) {
       return;
@@ -459,15 +588,24 @@ export class DanmakuController {
 
     const handle = setTimeout(() => {
       this.cycleTimer = undefined;
+      this.status = { ...this.status, ...noCycleScheduled };
       void this.generateOnce("timer");
     }, delayMs);
+    const dueAt = Date.now() + delayMs;
     this.cycleTimer = {
       handle,
       armed: {
         intervalMinSeconds: interval.intervalMinSeconds,
         intervalMaxSeconds: interval.intervalMaxSeconds,
-        dueAt: Date.now() + delayMs,
+        dueAt,
       },
+      firstAfterStart,
+    };
+    this.status = {
+      ...this.status,
+      nextCycleAt: new Date(dueAt).toISOString(),
+      nextCycleArmedAt: new Date(dueAt - delayMs).toISOString(),
+      nextCycleIsFirst: firstAfterStart || undefined,
     };
   }
 
@@ -476,6 +614,7 @@ export class DanmakuController {
       clearTimeout(this.cycleTimer.handle);
       this.cycleTimer = undefined;
     }
+    this.status = { ...this.status, ...noCycleScheduled };
   }
 
   private scheduleItems(items: DanmakuItem[], releaseWindowSeconds: number): void {

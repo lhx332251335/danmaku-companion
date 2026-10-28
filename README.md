@@ -17,9 +17,35 @@ comments from a vision-capable, OpenAI-compatible model provider.
   payload.
 - Supports randomized generation intervals, randomized release windows, fixed
   comments per cycle, and local generation logs.
+- Waits a few seconds after Start (`启动延迟`, default 5 s) before the first
+  capture, so the first screenshot shows your content rather than the app's
+  own settings window.
 - Keeps conversation history (optionally with screenshots) while staying under
   the server's request size limit and reusing its prompt cache.
 - Stores configuration locally and does not include telemetry.
+
+## Settings Window
+
+The settings window has a sidebar with the profile switcher (switch, rename,
+copy or delete profiles; switching or copying saves pending edits first) and
+eight pages:
+
+- **总览 (overview)**: countdown to the next capture (the start delay shows as
+  `首次截图`), latency, prompt-cache hits per round, request size against the
+  effective limit, history screenshots, the last round's danmaku and the
+  context summary.
+- **生成日志 (generation log)**: every request with its comments, usage,
+  flags (cache %, truncated output, compaction, shrunk screenshot, history
+  cleared after a failure) and the raw output; filter by failures or
+  summaries.
+- **模型接口, 弹幕外观, 角色与称呼, 提示词模板, 运行节奏, 截图与历史**: the
+  settings, each with a short description and a live preview where it helps
+  (danmaku style, filled-in system prompt, a diagram of one round).
+
+The dark bar at the bottom starts and pauses the loop, shows the countdown and
+the last round's numbers, and has `生成一次`, show/hide danmaku and clear.
+Edits are kept as a draft until `保存` (or Ctrl+S); `还原` discards them. The
+window follows the system light or dark theme.
 
 ## History Screenshots, Prompt Cache and Request Size
 
@@ -49,14 +75,27 @@ request, so the app keeps history append-only for as long as it can:
   is not kept, but the compaction is, so later requests start smaller. Failures that would
   repeat (HTTP 400/413/422, such as a context overflow) shrink history before
   the next cycle; timeouts, 429 and 5xx keep it.
+- **上下文摘要 (context summary, off by default).** With `满额重置` or
+  `分批滑动`, the app sends one extra request one round before the window
+  starts over or is halved. That request repeats the same system prompt and
+  history (so it reuses the server's cached prefix) and asks for a short
+  summary: what the user has been doing, memorable moments, running jokes, the
+  gist of comments already sent. The summary is added to the system prompt only
+  when the window actually starts over or halves. That moment already misses
+  the cache, so the summary costs no extra re-prefill. Each summary includes
+  the previous one, so the timeline accumulates. If the summary is still
+  running at the compaction, the next cycle waits up to 20 s for it. The
+  length (`摘要长度上限`, default 400 characters) and the instruction
+  (`上下文摘要提示词`) can be changed. Summary requests show up in the
+  generation log as `摘要`.
 - **Choosing a format.** PNG screenshots are often 10x the bytes of JPEG for
   the same image tokens. With history screenshots on, prefer JPEG; every cycle
   uploads the whole request.
 
-The status bar and generation log show the request size against the effective
-limit, the history screenshots sent, compactions, and cached / prompt tokens
-(read from `usage` or llama.cpp `timings`), so the effect of these settings on
-the cache is visible.
+The overview, the bottom bar and the generation log show the request size
+against the effective limit, the history screenshots sent, compactions, and
+cached / prompt tokens (read from `usage` or llama.cpp `timings`), so the effect
+of these settings on the cache is visible.
 
 ## Privacy Notes
 
@@ -79,6 +118,10 @@ npm run typecheck   # renderer, main process and tests
 npm test            # vitest unit tests (npm run test:watch to iterate)
 npm run dev
 ```
+
+`npm run dev:renderer` alone serves the settings UI in a normal browser with a
+mock bridge; add `?demo=running` (or `delay`, `paused`, `idle`, `error`) to the
+URL for sample data.
 
 Pure logic (prompt building, response parsing, request budgeting, history,
 config sanitizing, overlay lanes) lives in modules without Electron imports and

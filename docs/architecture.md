@@ -43,6 +43,9 @@ Logic that does not need Electron lives in plain modules with unit tests in
 - `src/electron/main/configModel.ts` and `storage/`: config migration and
   sanitizing, atomic file writes, the JSON Lines generation log.
 - `src/renderer/overlay/`: lane allocation and expiry timers for the overlay.
+- `src/renderer/settingsModel.ts` and `src/renderer/settings/format.ts`,
+  `overviewModel.ts`, `promptPreview.ts`, `dirty.ts`: input parsing, draft and
+  dirty tracking, and the formatting behind the settings pages.
 
 `danmakuController.ts`, `configStore.ts`, `windowManager.ts` and the capture
 code stay thin wrappers around Electron APIs.
@@ -61,9 +64,21 @@ learned from HTTP 413 responses are kept per endpoint for the session.
   Only one instance runs at a time.
 - Preload exposes a narrow IPC bridge; both windows are sandboxed and cannot
   navigate away from the app or open new windows.
-- Renderer has two views:
-  - settings: model, capture, style, and character controls
-  - overlay: transparent danmaku surface
+- Renderer has two views, chosen in `App.tsx` by the `view` query parameter:
+  - settings (`src/renderer/settings/`): `SettingsApp.tsx` is the shell (sidebar
+    with profile switcher and navigation, page header with save state, error
+    banners, bottom dock) with hash routing (`#overview`, `#logs`, `#model`,
+    `#danmaku`, `#character`, `#prompt`, `#rhythm`, `#capture`).
+    `useSettingsController.ts` holds the saved config, the draft, runtime status,
+    logs and every action; `pages/` has one component per page, `components/`
+    the shared controls and `shell/` the frame. Styles live in
+    `src/renderer/styles/` (`tokens.css` for the light and dark theme, `base.css`,
+    `shell.css`, `components.css` and one file per page).
+  - overlay (`OverlayApp.tsx`): transparent danmaku surface. It and the settings
+    previews share one text style (`styles/overlay.css`, `danmakuStyle.ts`).
+- `src/renderer/api.ts` wraps the preload bridge; outside Electron it serves a
+  mock bridge with sample data (`previewData.ts`) so the UI can be developed in
+  a browser.
 
 ## Provider Roadmap
 

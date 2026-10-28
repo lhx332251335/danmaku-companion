@@ -21,13 +21,44 @@ export interface HistoryWindowSettings {
  * which changes the prefix (and misses the server's prompt cache) on every round from then on.
  * "batch-sliding" drops the oldest half in one go once the window is full: one cache miss per
  * half window, while always keeping at least half a window of context.
+ *
+ * A context summary of the dropped rounds can be carried in the system prompt. It is only
+ * replaced when the window starts over or is halved, since that already changes the prefix.
  */
 export class HistoryWindow {
   private readonly rounds: DanmakuHistoryRound[] = [];
   private windowRounds = 0;
+  private contextSummary: string | undefined;
+  private compactionCount = 0;
 
   get length(): number {
     return this.rounds.length;
+  }
+
+  /** Summary of earlier rounds, for the system prompt. */
+  get summary(): string | undefined {
+    return this.contextSummary;
+  }
+
+  setSummary(text: string | undefined): void {
+    this.contextSummary = text?.trim() || undefined;
+  }
+
+  /** Times remember() started the window over (reset-on-limit) or halved it (batch-sliding). */
+  get compactions(): number {
+    return this.compactionCount;
+  }
+
+  /** True when the next stored round will make remember() start over or halve the window. */
+  willCompactNextRound(settings: HistoryWindowSettings): boolean {
+    if (settings.historyRounds <= 0) {
+      return false;
+    }
+    if (settings.historyMode === "reset-on-limit") {
+      const nextRequestLength = Math.min(this.rounds.length, settings.historyRounds);
+      return Math.max(this.windowRounds, nextRequestLength) >= settings.historyRounds;
+    }
+    return settings.historyMode === "batch-sliding" && this.rounds.length >= settings.historyRounds;
   }
 
   forRequest(historyRounds: number): DanmakuHistoryRound[] {
@@ -45,7 +76,7 @@ export class HistoryWindow {
     requestHistoryLength: number,
   ): void {
     if (settings.historyRounds <= 0) {
-      this.reset();
+      this.startOver();
       return;
     }
 
@@ -54,7 +85,8 @@ export class HistoryWindow {
       settings.historyMode === "reset-on-limit" &&
       countedHistoryRounds >= settings.historyRounds
     ) {
-      this.reset();
+      this.startOver();
+      this.compactionCount += 1;
       return;
     }
 
@@ -65,7 +97,8 @@ export class HistoryWindow {
         settings.historyMode === "reset-on-limit" &&
         this.windowRounds >= settings.historyRounds
       ) {
-        this.reset();
+        this.startOver();
+        this.compactionCount += 1;
       }
       return;
     }
@@ -84,6 +117,7 @@ export class HistoryWindow {
         const keep = Math.max(1, Math.ceil(settings.historyRounds * LOW_WATER_RATIO));
         this.rounds.splice(0, this.rounds.length - keep);
         this.windowRounds = this.rounds.length;
+        this.compactionCount += 1;
       }
     }
   }
@@ -122,13 +156,20 @@ export class HistoryWindow {
       return "images";
     }
     if (this.rounds.length > 0) {
-      this.reset();
+      this.startOver();
       return "reset";
     }
     return undefined;
   }
 
+  /** Forget everything, including the context summary (e.g. the user cleared the overlay). */
   reset(): void {
+    this.startOver();
+    this.contextSummary = undefined;
+  }
+
+  /** Start a new window; the context summary stays. */
+  private startOver(): void {
     this.rounds.splice(0);
     this.windowRounds = 0;
   }

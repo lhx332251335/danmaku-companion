@@ -5,6 +5,7 @@ import {
   app,
   globalShortcut,
   nativeImage,
+  nativeTheme,
   screen,
 } from "electron";
 import fs from "node:fs";
@@ -26,6 +27,12 @@ import {
 const APP_NAME = "Danmaku Companion";
 /** Give the overlay renderer time to load before showing a startup notice on it. */
 const SHORTCUT_NOTICE_DELAY_MS = 3000;
+/** The settings page background (--bg in styles/tokens.css), so resizing never flashes white. */
+const SETTINGS_BACKGROUND = { light: "#f3f5f8", dark: "#0f1319" } as const;
+
+function settingsBackground(): string {
+  return nativeTheme.shouldUseDarkColors ? SETTINGS_BACKGROUND.dark : SETTINGS_BACKGROUND.light;
+}
 
 const trayIconSvg = Buffer.from(`
 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
@@ -255,21 +262,37 @@ export class WindowManager {
   }
 
   private createSettingsWindow(): void {
-    this.settingsWindow = new BrowserWindow({
+    const window = new BrowserWindow({
       width: 1120,
       height: 760,
       minWidth: 940,
       minHeight: 660,
       title: APP_NAME,
-      backgroundColor: "#f6f8fb",
+      // The default File/Edit/View bar does not belong to this app; Alt still shows it, and the
+      // Edit menu keeps the clipboard shortcuts on macOS.
+      autoHideMenuBar: true,
+      backgroundColor: settingsBackground(),
       webPreferences: secureWebPreferences(),
     });
+    this.settingsWindow = window;
 
-    guardNavigation(this.settingsWindow.webContents);
-    void this.loadView(this.settingsWindow, "settings");
+    // Follow the system theme while the window exists, like the page does via
+    // prefers-color-scheme.
+    const followTheme = (): void => {
+      if (!window.isDestroyed()) {
+        window.setBackgroundColor(settingsBackground());
+      }
+    };
+    nativeTheme.on("updated", followTheme);
 
-    this.settingsWindow.on("closed", () => {
-      this.settingsWindow = undefined;
+    guardNavigation(window.webContents);
+    void this.loadView(window, "settings");
+
+    window.on("closed", () => {
+      nativeTheme.off("updated", followTheme);
+      if (this.settingsWindow === window) {
+        this.settingsWindow = undefined;
+      }
     });
   }
 

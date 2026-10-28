@@ -1,0 +1,185 @@
+/* ============================================================
+   弹幕伴侣 · design tokens ("Danmaku native", recoloured to the app icon:
+   a cyan/teal speech bubble with a coral star on deep navy).
+
+   Colour roles
+   - accent (teal/cyan): filled buttons, switch on, slider fill, current nav item, focus ring.
+   - coral: decoration and secondary highlights (live dot, character name, drift lines,
+     the 「弹」 toggle, the start-delay stripes). Use --coral-text for coral text.
+   - ok / warn / bad / violet: semantic states (violet = context summary).
+   Every text pair below is at least 4.5:1 (checked with WCAG relative luminance).
+   ============================================================ */
+:root {
+  color-scheme: light;
+
+  --font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI",
+    "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, "Microsoft YaHei UI",
+    monospace;
+
+  /* neutrals (slightly navy, like the icon background) */
+  --bg: #f3f5f8;
+  --side: #f9fafc;
+  --surface: #ffffff;
+  --surface-2: #f6f8fa; /* sunken: log detail, disabled input, sub blocks */
+  --surface-3: #ebeff3; /* hover, track background, segmented background */
+  --line: #e0e5eb;
+  --line-strong: #cdd4dd; /* button and chip outlines */
+  --line-hover: #a9b3bf;
+  --field-border: #858f9c; /* input/select/stepper edge: 3.3:1 on white (WCAG 1.4.11) */
+  --text: #15202b; /* 16.5:1 on surface */
+  --text-2: #4b5869; /* 7.2:1 on surface, 6.3:1 on surface-3 */
+  --text-3: #5d6979; /* 5.6:1 on surface, 5.1:1 on bg, 4.8:1 on surface-3 */
+
+  /* accent: teal/cyan */
+  --accent: #0b7480; /* white text 5.5:1 */
+  --accent-hover: #095f69;
+  --on-accent: #ffffff;
+  --accent-text: #0a6c77; /* 6.1:1 on surface, 5.0:1 on accent-soft-2 */
+  --accent-soft: #e7f6f7;
+  --accent-soft-2: #cfeef0;
+  --accent-ring: rgba(11, 116, 128, 0.24);
+  --focus: var(--accent);
+
+  /* brand decoration (shapes only, never text) */
+  --cyan: #22c3cc;
+  --cyan-bright: #2fd3d9;
+  --coral: #ff7a59;
+  --coral-text: #b5452a; /* 5.5:1 on surface, 4.9:1 on coral-soft */
+  --coral-soft: #fff0eb;
+
+  /* semantic */
+  --ok: #18743a;
+  --ok-soft: #e7f5ea;
+  --warn: #9a5b00;
+  --warn-soft: #fff4df;
+  --bad: #c0262d;
+  --bad-soft: #fdecec;
+  --violet: #6d4fcb;
+  --violet-soft: #f1edff;
+
+  --switch-off: #858f9c;
+  --knob: #ffffff;
+
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 1px rgba(16, 24, 40, 0.03);
+  --shadow-2: 0 12px 32px rgba(16, 24, 40, 0.14), 0 2px 8px rgba(16, 24, 40, 0.08);
+
+  /* the player dock is a dark navy "screen" strip in both themes */
+  --dock: #111925;
+  --dock-2: #1b2431; /* buttons */
+  --dock-3: #273243; /* track, borders, hover */
+  --dock-line: #222c3a;
+  --dock-text: #f1f4f8;
+  --dock-text-2: #a3aebf; /* 7.9:1 on dock, 5.8:1 on dock-3 */
+  --dock-coral: #ffb39c; /* coral text on the dock */
+  --dock-cyan: #7ee3e8;
+
+  /* radii */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 10px; /* inputs, buttons, nav items */
+  --r-lg: 14px; /* log rows, popover */
+  --r-xl: 18px;
+  --r-card: 16px;
+  --r-stage: 12px;
+  --r-callout: 12px;
+  --r-pill: 999px;
+
+  /* spacing (4-pt base) */
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 6px;
+  --sp-4: 8px;
+  --sp-5: 10px;
+  --sp-6: 12px;
+  --sp-7: 14px;
+  --sp-8: 16px;
+  --sp-9: 18px;
+  --sp-10: 20px;
+  --sp-11: 22px;
+  --sp-12: 24px;
+  --sp-14: 28px;
+
+  /* type scale */
+  --fs-2xs: 11px;
+  --fs-xs: 11.5px; /* badges, meta */
+  --fs-sm: 12px;
+  --fs-help: 12.5px; /* hints, help, sub */
+  --fs-label: 13px;
+  --fs-body: 13.5px; /* buttons, inputs */
+  --fs-base: 14px;
+  --fs-title: 15px; /* card titles, brand */
+  --fs-h1: 20px;
+  --fs-hero: 21px;
+  --fs-stat: 24px;
+  --fs-ring: 32px;
+
+  /* sizes */
+  --side-w: 212px;
+  --dock-h: 72px;
+  --pad-x: 28px;
+  --ctl-h: 36px;
+  --ctl-h-sm: 32px;
+
+  /* motion */
+  --dur-fast: 120ms;
+  --dur: 150ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (max-width: 1060px) {
+  :root {
+    --side-w: 196px;
+    --pad-x: 22px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0f1319;
+    --side: #12171e;
+    --surface: #18202a;
+    --surface-2: #1c242f;
+    --surface-3: #243040;
+    --line: #283240;
+    --line-strong: #374354;
+    --line-hover: #4f5c6e;
+    --field-border: #66748a; /* 3.5:1 on surface */
+    --text: #e8edf3;
+    --text-2: #b0bccb;
+    --text-3: #8f9cad; /* 5.9:1 on surface, 4.8:1 on surface-3 */
+
+    --accent: #3ccfd6; /* dark text 8.4:1 */
+    --accent-hover: #62dce1;
+    --on-accent: #04262b;
+    --accent-text: #5ad6dc;
+    --accent-soft: rgba(60, 207, 214, 0.12);
+    --accent-soft-2: rgba(60, 207, 214, 0.22);
+    --accent-ring: rgba(60, 207, 214, 0.3);
+
+    --coral: #ff8a66;
+    --coral-text: #ff9a7a;
+    --coral-soft: rgba(255, 138, 102, 0.14);
+
+    --ok: #5fd17a;
+    --ok-soft: rgba(95, 209, 122, 0.13);
+    --warn: #f2b450;
+    --warn-soft: rgba(242, 180, 80, 0.13);
+    --bad: #ff7b7b;
+    --bad-soft: rgba(255, 123, 123, 0.13);
+    --violet: #b79bff;
+    --violet-soft: rgba(183, 155, 255, 0.14);
+
+    --switch-off: #5b687c;
+    --knob: #ffffff;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 16px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
+
+    --dock: #0a0e14;
+    --dock-2: #151b25;
+    --dock-3: #202936;
+    --dock-line: #1b2230;
+  }
+}

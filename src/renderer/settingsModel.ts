@@ -99,12 +99,34 @@ export function parseListInput(raw: string, maxItems = Number.POSITIVE_INFINITY)
 
 export const PALETTE_MAX_COLORS = 8;
 
+/**
+ * Splits a palette list on commas outside parentheses, so `rgb(91, 141, 239)` stays one
+ * entry. Trims, drops empty entries and duplicates.
+ */
+export function splitPaletteInput(raw: string): string[] {
+  const items: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of raw) {
+    if (char === "(") depth += 1;
+    if (char === ")") depth = Math.max(0, depth - 1);
+    if ((char === "," || char === "，") && depth === 0) {
+      items.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  items.push(current);
+  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+}
+
 /** Keeps the valid colours; undefined when none are left, so the palette is never emptied. */
 export function parsePaletteInput(
   raw: string,
   isColor: (value: string) => boolean,
 ): string[] | undefined {
-  const colors = parseListInput(raw)
+  const colors = splitPaletteInput(raw)
     .filter((color) => isColor(color))
     .slice(0, PALETTE_MAX_COLORS);
   return colors.length > 0 ? colors : undefined;

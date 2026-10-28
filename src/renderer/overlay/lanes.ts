@@ -14,7 +14,7 @@ export const MAX_LANE_WAIT_MS = 4000;
 export const BATCH_STAGGER_MS = 350;
 
 /** Vertical band of each zone as fractions of the viewport height. */
-const ZONE_BANDS: Record<DanmakuZone, readonly [number, number]> = {
+export const ZONE_BANDS: Record<DanmakuZone, readonly [number, number]> = {
   full: [0.06, 0.92],
   top: [0.06, 0.36],
   middle: [0.34, 0.66],

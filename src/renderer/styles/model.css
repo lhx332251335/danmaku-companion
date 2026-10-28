@@ -1,0 +1,67 @@
+/* ============================================================
+   模型接口 (#model)
+   ============================================================ */
+
+/* select (or free-text id) + refresh icon button */
+.model-picker {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.model-picker > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* state / 视觉 chips on the label row */
+.model-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.model-chips .chip.is-sm {
+  height: 20px;
+}
+
+.model-note code {
+  font-family: var(--mono);
+  font-size: 0.95em;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.model-note.is-error {
+  color: var(--bad);
+  overflow-wrap: anywhere;
+}
+.model-note-tail {
+  color: var(--text-3);
+  margin-left: 4px;
+}
+
+/* connection test aside */
+.model-page .connection-body {
+  gap: 12px;
+}
+.connection-result .callout-body p + p {
+  margin-top: 4px;
+}
+.connection-result .connection-endpoint {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-3);
+  overflow-wrap: anywhere;
+}
+.connection-result .callout-body {
+  overflow-wrap: anywhere;
+}
+.connection-result.tone-bad .connection-message {
+  color: var(--text);
+}
+.model-page .connection-body .help code {
+  font-family: var(--mono);
+}
+
+.model-tip .model-tip-link {
+  margin: 4px 0 -6px -4px;
+}

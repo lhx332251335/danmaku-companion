@@ -1,0 +1,161 @@
+/* ============================================================
+   截图与历史 (#capture)
+   ============================================================ */
+
+/* label + help on the left, a narrow number box on the right */
+.capture-page .field.is-inline {
+  grid-template-columns: minmax(0, 1fr) 140px;
+  column-gap: 16px;
+  row-gap: 2px;
+  align-items: center;
+}
+.capture-page .field.is-inline > .field-label {
+  grid-column: 1;
+  grid-row: 1;
+}
+.capture-page .field.is-inline > .help {
+  grid-column: 1;
+  grid-row: 2;
+}
+.capture-page .field.is-inline > :not(.field-label):not(.help) {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.capture-page .field.is-inline .link-btn {
+  min-height: 0;
+  padding: 0 2px;
+  font-size: inherit;
+  vertical-align: baseline;
+}
+.capture-page .field.is-inline .link-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* a switch and the settings that belong to it */
+.capture-group {
+  display: grid;
+  gap: 12px;
+}
+
+/* 录屏权限 row (macOS) */
+.capture-perm {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.capture-perm-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.capture-perm-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: var(--fs-body);
+}
+
+/* history mode diagrams: kept / dropped / new rounds */
+.hm-blocks {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.hm-blocks > i {
+  width: 9px;
+  height: 16px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--text-3) 55%, transparent);
+}
+.hm-blocks > i.is-drop {
+  background: transparent;
+  border: 1.5px dashed color-mix(in srgb, var(--text-3) 70%, transparent);
+}
+.hm-blocks > i.is-new {
+  background: var(--coral);
+}
+.hm-arrow {
+  margin: 0 2px;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+/* ---------- aside 实时用量 ---------- */
+.card-body.usage {
+  gap: 14px;
+}
+.usage-k {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: 7px;
+  font-size: var(--fs-help);
+  color: var(--text-2);
+}
+.usage-k b {
+  margin-left: auto;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+.usage-k b em {
+  font-style: normal;
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.usage-k .chip {
+  height: 20px;
+  padding: 0 7px;
+}
+.usage-n {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.usage-compaction {
+  display: flex;
+  gap: 10px;
+  font-size: var(--fs-help);
+  color: var(--text-2);
+}
+.usage-compaction > svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: var(--accent-text);
+}
+.usage-compaction > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.usage-compaction b {
+  color: var(--text);
+  font-weight: 650;
+}
+.usage-link {
+  justify-self: start;
+  margin: -6px 0 -4px -4px;
+}
+
+@media (forced-colors: active) {
+  .hm-blocks > i,
+  .hm-blocks > i.is-new {
+    background: CanvasText;
+    forced-color-adjust: none;
+  }
+  .hm-blocks > i.is-drop {
+    background: transparent;
+    border-color: CanvasText;
+  }
+}
