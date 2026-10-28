@@ -1,5 +1,5 @@
 import { OverlayApp } from "./OverlayApp";
-import { SettingsApp } from "./SettingsApp";
+import { SettingsApp } from "./settings/SettingsApp";
 
 export function App() {
   const view = new URLSearchParams(window.location.search).get("view");

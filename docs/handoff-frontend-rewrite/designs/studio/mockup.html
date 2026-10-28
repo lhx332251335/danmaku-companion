@@ -1,0 +1,1589 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>弹幕伴侣 · 设置</title>
+<style>
+/* ============ Tokens ============ */
+:root {
+  color-scheme: light;
+  --font: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+  --mono: "Cascadia Mono", Consolas, "JetBrains Mono", ui-monospace, Menlo, "Microsoft YaHei UI", monospace;
+
+  --bg: #f3f4f7;
+  --surface: #ffffff;
+  --surface-2: #f8f9fb;
+  --surface-3: #eef0f4;
+  --hover: #f1f3f6;
+  --active: #e8ebf0;
+  --nav-hover: #e8eaef;
+  --border: #e2e5eb;
+  --border-soft: #eceef2;
+  --ctl-bg: #ffffff;
+  --ctl-hover: #fafbfc;
+  --ctl-border: #d3d7de;
+  --ctl-strong: #838b99;
+  --switch-off: #f3f4f7;
+
+  --ink: #16181d;
+  --ink-2: #454b57;
+  --ink-3: #5d6472;
+
+  --accent: #4b5ce0;
+  --accent-solid: #3f50d2;
+  --accent-solid-hover: #3443bd;
+  --accent-ink: #3343c0;
+  --accent-soft: #eef0fd;
+  --accent-border: #c5cbf6;
+  --accent-track: #e0e4fa;
+  --focus: #3f50d2;
+  --chart-bar: #9aa4ee;
+  --chart-grid: #e9ebf0;
+
+  --ok: #16a34a;
+  --ok-ink: #157538;
+  --ok-soft: #e6f5eb;
+  --ok-border: #b9e2c6;
+  --warn: #d97706;
+  --warn-ink: #8f4705;
+  --warn-soft: #fdf3e2;
+  --warn-border: #f2d6a6;
+  --danger: #dc2626;
+  --danger-ink: #b42020;
+  --danger-soft: #fdecec;
+  --danger-border: #f3c1c1;
+  --idle: #8a909b;
+  --ring-track: #e6e8ee;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-pop: 0 16px 40px rgba(16, 24, 40, 0.16), 0 2px 6px rgba(16, 24, 40, 0.08);
+
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
+
+  --stage-bg: linear-gradient(160deg, #1d2333 0%, #222a3d 55%, #2c2438 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface-2: #1b1f27;
+    --surface-3: #222732;
+    --hover: #1f232c;
+    --active: #262b36;
+    --nav-hover: #1b1f27;
+    --border: #282d38;
+    --border-soft: #21252f;
+    --ctl-bg: #12151b;
+    --ctl-hover: #151820;
+    --ctl-border: #343a47;
+    --ctl-strong: #79818f;
+    --switch-off: #12151b;
+
+    --ink: #e9ebf0;
+    --ink-2: #b6bcc8;
+    --ink-3: #8f96a4;
+
+    --accent: #7383f5;
+    --accent-solid: #5465e4;
+    --accent-solid-hover: #6273ee;
+    --accent-ink: #a4afff;
+    --accent-soft: #1f2545;
+    --accent-border: #3a4482;
+    --accent-track: #272e55;
+    --focus: #8c99ff;
+    --chart-bar: #5b67b8;
+    --chart-grid: #232833;
+
+    --ok: #22c55e;
+    --ok-ink: #5fdc8c;
+    --ok-soft: #10261a;
+    --ok-border: #1f4d31;
+    --warn: #f59e0b;
+    --warn-ink: #f7c060;
+    --warn-soft: #2a2010;
+    --warn-border: #574018;
+    --danger: #ef4444;
+    --danger-ink: #fb8a8a;
+    --danger-soft: #2c1517;
+    --danger-border: #5c2629;
+    --idle: #7b8290;
+    --ring-track: #262b36;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-pop: 0 18px 44px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --stage-bg: linear-gradient(160deg, #0b0e15 0%, #121726 55%, #1a1424 100%);
+  }
+}
+
+/* ============ Base ============ */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font: 13px/1.5 var(--font);
+  color: var(--ink);
+  background: var(--bg);
+  overflow: hidden;
+  min-width: 940px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3, h4, p, dl, dd, ol, ul { margin: 0; padding: 0; }
+ol, ul { list-style: none; }
+a { color: var(--accent-ink); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ic-sm { width: 14px; height: 14px; }
+.ic-xs { width: 12px; height: 12px; }
+.spacer { flex: 1; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-3); }
+.mono { font-family: var(--mono); font-size: 12.5px; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.app { height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 52px auto auto minmax(0, 1fr); }
+.app > * { min-width: 0; }
+
+/* ============ Buttons ============ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--ctl-border); background: var(--surface); color: var(--ink);
+  font-weight: 500; white-space: nowrap; cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.btn:hover { background: var(--hover); }
+.btn:active { background: var(--active); }
+.btn[disabled] { cursor: default; color: var(--ink-3); background: transparent; border-color: var(--border); }
+.btn-primary { background: var(--accent-solid); border-color: var(--accent-solid); color: #fff; }
+.btn-primary:hover { background: var(--accent-solid-hover); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--hover); }
+.btn-icon { width: 32px; padding: 0; }
+.btn-danger { color: var(--danger-ink); }
+.btn-danger:hover { background: var(--danger-soft); border-color: var(--danger-border); }
+.btn-toggle[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent-ink); }
+.btn .kbd { font-size: 11px; color: var(--ink-3); font-weight: 400; margin-left: 2px; }
+.save-btn.is-dirty { border-color: var(--accent-border); color: var(--accent-ink); }
+.save-btn .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.link-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 4px; border: 0; background: none; color: var(--accent-ink); cursor: pointer; font-weight: 500; border-radius: var(--r-xs); }
+.link-btn:hover { text-decoration: underline; }
+
+/* ============ Top bar ============ */
+.topbar {
+  display: flex; align-items: center; gap: 8px; padding: 0 12px 0 16px;
+  background: var(--surface); border-bottom: 1px solid var(--border-soft); position: relative; z-index: 20;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.logo { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #6474f2, #3a49c9); display: grid; align-content: center; gap: 3px; padding: 0 6px; flex: none; }
+.logo i { display: block; height: 3px; border-radius: 2px; background: #fff; }
+.logo i:nth-child(1) { width: 62%; margin-left: 38%; }
+.logo i:nth-child(2) { width: 100%; opacity: 0.7; }
+.logo i:nth-child(3) { width: 50%; margin-left: 14%; opacity: 0.9; }
+.vsep { width: 1px; height: 20px; background: var(--border); margin: 0 6px; flex: none; }
+.profile-switch { position: relative; }
+.profile-btn { gap: 8px; padding: 0 8px 0 10px; max-width: 260px; }
+.profile-btn .pb-label { color: var(--ink-3); font-weight: 400; }
+.profile-btn .pb-name { overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.profile-btn .ic { color: var(--ink-3); }
+.tb-actions { display: flex; align-items: center; gap: 8px; }
+
+/* Profile popover */
+.popover {
+  position: absolute; top: calc(100% + 6px); left: 0; width: 340px; z-index: 30;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-pop); padding: 6px; display: none;
+}
+body.show-profiles .popover { display: block; }
+body.show-profiles .profile-btn { background: var(--hover); }
+.pop-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 6px; font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.pop-list li { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 10px; border-radius: var(--r-sm); cursor: pointer; }
+.pop-list li:hover { background: var(--hover); }
+.pop-list li .ic { color: var(--accent-ink); visibility: hidden; }
+.pop-list li[aria-selected="true"] { background: var(--accent-soft); font-weight: 600; }
+.pop-list li[aria-selected="true"] .ic { visibility: visible; }
+.pop-list li .when { margin-left: auto; font-size: 11.5px; color: var(--ink-3); font-weight: 400; }
+.pop-note { padding: 4px 10px 8px; font-size: 11.5px; color: var(--ink-3); }
+.pop-sec { border-top: 1px solid var(--border-soft); padding: 10px 10px 4px; display: grid; gap: 6px; }
+.pop-sec label { font-size: 12px; color: var(--ink-2); font-weight: 500; }
+.pop-sec .inline { display: flex; gap: 6px; }
+.pop-foot { border-top: 1px solid var(--border-soft); margin-top: 8px; padding: 6px 4px 2px; }
+
+/* ============ Hero / live deck ============ */
+.hero { background: var(--surface); border-bottom: 1px solid var(--border); }
+.hero-metrics { display: grid; grid-template-columns: minmax(272px, 1.15fr) repeat(3, minmax(0, 1fr)); }
+.hm { padding: 12px 18px; display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; border-left: 1px solid var(--border-soft); }
+.hm:first-child { border-left: 0; padding-left: 16px; }
+.hm-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.hm-label .ic { color: var(--ink-3); }
+.hm-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.hm-value { font-size: 22px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; white-space: nowrap; }
+.hm-value small { font-size: 12.5px; font-weight: 500; color: var(--ink-3); margin-left: 3px; letter-spacing: 0; }
+.hm-cap { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm .tag { margin-left: auto; }
+
+.meter { position: relative; height: 6px; border-radius: 3px; background: var(--accent-track); margin: 5px 0 3px; }
+.meter > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); min-width: 6px; }
+.meter > .mark { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ink-3); opacity: 0.55; }
+.meter.warn > i { background: var(--warn); }
+.meter.danger > i { background: var(--danger); }
+
+.hm-state { flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; }
+.ring { position: relative; width: 60px; height: 60px; flex: none; }
+.ring > svg { width: 60px; height: 60px; transform: rotate(-90deg); display: block; }
+.ring .track { fill: none; stroke: var(--ring-track); stroke-width: 5; }
+.ring .fill { fill: none; stroke: var(--ok); stroke-width: 5; stroke-linecap: round; }
+.ring-c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.ring-c b { font-size: 19px; font-weight: 600; }
+.ring-c small { font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
+.state-text { min-width: 0; display: grid; gap: 1px; }
+.state-title { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; line-height: 1.3; }
+.state-line { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.state-line.sub { color: var(--ink-3); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px var(--ok-soft); } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+.spark { width: 72px; height: 26px; flex: none; overflow: visible; }
+.spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.spark circle { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+
+.ticker { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px 0 16px; border-top: 1px solid var(--border-soft); background: var(--surface-2); }
+.ticker-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); white-space: nowrap; font-weight: 500; }
+.ticker-label .ic { color: var(--accent-ink); }
+.ticker-chips { flex: 1; min-width: 0; display: flex; gap: 6px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent); }
+.ticker-meta { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+
+.chip { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px 0 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); white-space: nowrap; font-size: 12.5px; color: var(--ink); flex: none; }
+.chip .sw { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18); }
+
+/* State variants (mockup only) */
+body:not(.state-error) .only-error { display: none !important; }
+body.state-error .only-running { display: none !important; }
+body.state-error .ring .fill { stroke: var(--danger); }
+body.state-error .hm-state .ring-c { color: var(--danger-ink); }
+
+/* Banners */
+.banner-slot:empty { display: none; }
+.status-banner { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 12px 6px 16px; background: var(--danger-soft); border-bottom: 1px solid var(--danger-border); color: var(--ink); font-size: 12.5px; }
+.status-banner .ic { color: var(--danger-ink); }
+.status-banner b { color: var(--danger-ink); font-weight: 600; white-space: nowrap; }
+.status-banner .msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); flex: 1; }
+.toast { position: fixed; right: 20px; bottom: 20px; z-index: 40; display: flex; align-items: center; gap: 10px; max-width: 420px; padding: 6px 6px 6px 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--danger-border); box-shadow: var(--shadow-pop); font-size: 12.5px; }
+.toast > .ic { color: var(--danger-ink); }
+
+/* ============ Main / sidebar ============ */
+.main { display: grid; grid-template-columns: clamp(176px, 18vw, 212px) minmax(0, 1fr); min-height: 0; }
+.sidebar { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px 10px; border-right: 1px solid var(--border); overflow: auto; background: var(--bg); }
+.nav-group { font-size: 11.5px; color: var(--ink-3); padding: 10px 10px 4px; font-weight: 600; letter-spacing: 0.02em; }
+.nav-group:first-child { padding-top: 4px; }
+.nav-item { display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 10px; border-radius: var(--r-sm); color: var(--ink-2); position: relative; white-space: nowrap; }
+.nav-item:hover { background: var(--nav-hover); color: var(--ink); text-decoration: none; }
+.nav-item .ic { color: var(--ink-3); }
+.nav-item[aria-current="page"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--border); }
+.nav-item[aria-current="page"] .ic { color: var(--accent-ink); }
+.nav-item[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 0 2px 2px 0; background: var(--accent); }
+.nav-item .badge { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--ink-3); background: var(--surface-3); border-radius: 999px; padding: 0 7px; line-height: 18px; }
+.nav-item .dirty-dot { margin-left: auto; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: none; }
+body.is-dirty .nav-item .dirty-dot.on { display: block; }
+.side-foot { margin-top: auto; padding: 10px 10px 4px; display: grid; gap: 2px; font-size: 11.5px; color: var(--ink-3); }
+.side-foot .row { display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side-foot .row span { overflow: hidden; text-overflow: ellipsis; }
+.dot-ok { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+
+.content { overflow: auto; padding: 16px 24px 32px; min-width: 0; }
+.page { display: none; max-width: 1100px; }
+.page.is-active { display: block; }
+.page-head { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; min-height: 40px; }
+.page-head h1 { font-size: 18px; font-weight: 600; line-height: 1.3; }
+.page-head p { font-size: 12.5px; color: var(--ink-3); margin-top: 1px; }
+.page-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; flex: none; }
+
+/* ============ Cards ============ */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); min-width: 0; }
+.card-head { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px 6px 16px; border-bottom: 1px solid var(--border-soft); }
+.card-head h2 { font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+.card-head > .ic { color: var(--ink-3); }
+.card-sub { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-body { padding: 14px 16px 16px; }
+.card-foot { border-top: 1px solid var(--border-soft); padding: 4px 12px; display: flex; align-items: center; }
+.stack { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.cols-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.mt { margin-top: 12px; }
+
+/* ============ Form controls ============ */
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 12px; }
+.fields.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fields.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; position: relative; }
+.field.full { grid-column: 1 / -1; }
+.field-label, .field > label { font-size: 12.5px; color: var(--ink-2); font-weight: 500; display: flex; align-items: center; gap: 6px; min-height: 18px; white-space: nowrap; }
+.field-label .aside, .field > label .aside { margin-left: auto; font-weight: 400; color: var(--ink-3); font-size: 11.5px; }
+.hint { font-size: 11.5px; color: var(--ink-3); line-height: 1.45; }
+.hint.ok { color: var(--ok-ink); }
+.hint.err { color: var(--danger-ink); }
+.field.is-modified > label::before, .field.is-modified > .field-label::before { content: ""; width: 3px; height: 12px; border-radius: 2px; background: var(--accent); margin-left: -9px; margin-right: 0; }
+
+.input {
+  height: 32px; width: 100%; min-width: 0; padding: 0 10px;
+  border: 1px solid var(--ctl-border); border-bottom-color: var(--ctl-strong); border-radius: var(--r-sm);
+  background: var(--ctl-bg); color: var(--ink); font-size: 13px;
+}
+.input:hover { background: var(--ctl-hover); }
+.input:focus { outline: none; border-color: var(--accent-border); border-bottom-color: var(--accent); box-shadow: inset 0 -1px 0 var(--accent), 0 0 0 3px var(--accent-soft); }
+.input:disabled { background: var(--surface-2); color: var(--ink-3); border-color: var(--border); cursor: not-allowed; }
+.input::placeholder { color: var(--ink-3); opacity: 0.85; }
+textarea.input { height: auto; padding: 8px 10px; line-height: 1.6; resize: vertical; }
+input[type="number"].input { font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.input-wrap { position: relative; display: flex; min-width: 0; }
+.input-wrap .unit { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--ink-3); pointer-events: none; }
+.input-wrap .input { padding-right: 38px; }
+.input-wrap.has-btn .input { padding-right: 40px; }
+.input-wrap .in-btn { position: absolute; right: 0; top: 0; width: 32px; height: 32px; display: grid; place-items: center; border: 0; background: none; color: var(--ink-3); border-radius: var(--r-sm); cursor: pointer; }
+.input-wrap .in-btn:hover { color: var(--ink); background: var(--hover); }
+.select-wrap { position: relative; display: flex; min-width: 0; flex: 1; }
+.select-wrap select.input { appearance: none; -webkit-appearance: none; padding-right: 32px; cursor: pointer; }
+.select-wrap .chev { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
+.with-action { display: flex; gap: 6px; min-width: 0; }
+
+.switch { appearance: none; -webkit-appearance: none; width: 40px; height: 22px; border-radius: 999px; background: var(--switch-off); border: 1px solid var(--ctl-strong); position: relative; cursor: pointer; margin: 0; flex: none; transition: background 0.15s, border-color 0.15s; }
+.switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink-2); transition: transform 0.15s; }
+.switch:checked { background: var(--accent-solid); border-color: var(--accent-solid); }
+.switch:checked::after { transform: translateX(18px); background: #fff; }
+.switch:disabled { opacity: 0.45; cursor: not-allowed; }
+.switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.sw-row { display: flex; align-items: flex-start; gap: 14px; padding: 11px 0; border-top: 1px solid var(--border-soft); cursor: pointer; }
+.sw-row:first-child { border-top: 0; padding-top: 2px; }
+.sw-row:last-child { padding-bottom: 0; }
+.sw-row .switch { margin-top: 1px; }
+.sw-text { flex: 1; min-width: 0; }
+.sw-title { font-weight: 500; display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.sw-desc { font-size: 12px; color: var(--ink-3); margin-top: 2px; line-height: 1.5; }
+.sw-row.is-disabled { cursor: not-allowed; }
+.sw-row.is-disabled .sw-title { color: var(--ink-3); }
+
+.seg { display: inline-flex; padding: 2px; border-radius: var(--r-md); background: var(--surface-3); border: 1px solid var(--border); gap: 2px; max-width: 100%; }
+.seg.block { display: flex; }
+.seg.block label { flex: 1; }
+.seg label { position: relative; min-width: 0; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: flex; align-items: center; justify-content: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 500; white-space: nowrap; pointer-events: none; }
+.seg input:checked + span { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 1px var(--border); }
+.seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 1px; }
+.seg label:hover input:not(:checked) + span { color: var(--ink); }
+
+.range-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.range-row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent-solid); height: 32px; margin: 0; cursor: pointer; }
+.range-row .input-wrap { width: 88px; flex: none; }
+.range-row.is-off input[type="range"] { opacity: 0.45; }
+
+.tag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11.5px; font-weight: 500; background: var(--surface-3); color: var(--ink-2); white-space: nowrap; line-height: 1; flex: none; }
+.tag-todo { background: var(--warn-soft); color: var(--warn-ink); }
+.tag-ok { background: var(--ok-soft); color: var(--ok-ink); }
+.tag-accent { background: var(--accent-soft); color: var(--accent-ink); }
+.tag-danger { background: var(--danger-soft); color: var(--danger-ink); }
+.tag-warn { background: var(--warn-soft); color: var(--warn-ink); }
+.tag .ic { width: 12px; height: 12px; }
+
+.callout { display: flex; gap: 10px; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border); font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
+.callout > .ic { margin-top: 2px; color: var(--ink-3); }
+.callout.info { background: var(--accent-soft); border-color: var(--accent-border); }
+.callout.info > .ic { color: var(--accent-ink); }
+.callout.warn { background: var(--warn-soft); border-color: var(--warn-border); }
+.callout.warn > .ic { color: var(--warn-ink); }
+.callout.ok { background: var(--ok-soft); border-color: var(--ok-border); }
+.callout.ok > .ic { color: var(--ok-ink); }
+.callout ul { display: grid; gap: 4px; }
+.callout li { padding-left: 12px; position: relative; }
+.callout li::before { content: ""; position: absolute; left: 0; top: 9px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+.callout b { color: var(--ink); font-weight: 600; }
+
+/* ============ Overview ============ */
+.ov-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(250px, 1fr); gap: 12px; align-items: start; }
+.mini-chart + .mini-chart { margin-top: 10px; }
+.mc-title { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--ink-2); margin-bottom: 4px; font-weight: 500; }
+.mc-title .mc-val { color: var(--ink-3); font-weight: 400; }
+.mc-plot { display: grid; grid-template-columns: 36px minmax(0, 1fr); }
+.mc-y { display: flex; flex-direction: column; justify-content: space-between; font-size: 10.5px; color: var(--ink-3); text-align: right; padding-right: 8px; height: 64px; line-height: 1; margin-top: -4px; font-variant-numeric: tabular-nums; }
+.mc-y span:last-child { margin-bottom: -5px; }
+.mc-area { position: relative; height: 64px; border-bottom: 1px solid var(--ctl-border); background: linear-gradient(var(--chart-grid), var(--chart-grid)) 0 0 / 100% 1px no-repeat, linear-gradient(var(--chart-grid), var(--chart-grid)) 0 50% / 100% 1px no-repeat; }
+.mc-cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); align-items: end; }
+.col { position: relative; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.col > i { display: block; width: min(12px, 60%); border-radius: 3px 3px 0 0; background: var(--chart-bar); }
+.col.is-latest > i { background: var(--accent-solid); }
+.col.is-dip > i { background: var(--accent-solid); }
+.col-err { align-items: flex-end; color: var(--danger-ink); padding-bottom: 2px; }
+.col-abort > i { height: 2px; width: 10px; background: var(--idle); border-radius: 1px; margin-bottom: 1px; }
+.col-none > i { height: 2px; width: 10px; background: var(--ctl-border); border-radius: 1px; }
+.col:hover > i { filter: brightness(0.9); }
+.col[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--surface); font-size: 11.5px; padding: 3px 8px; border-radius: var(--r-xs); white-space: nowrap; z-index: 3; pointer-events: none; }
+.mc-x { display: grid; grid-template-columns: 36px repeat(24, minmax(0, 1fr)); font-size: 10.5px; color: var(--ink-3); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.mc-x span { text-align: center; white-space: nowrap; overflow: visible; }
+.mc-x span:first-child { grid-column: 2; }
+.mc-note { font-size: 11.5px; color: var(--ink-3); font-weight: 400; display: inline-flex; align-items: center; gap: 6px; }
+.mc-note::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--accent-solid); }
+.annot { position: absolute; right: calc(100% / 24 * 2.5 + 4px); top: 26px; font-size: 11px; color: var(--ink-2); white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.annot::after { content: ""; width: 16px; height: 1px; background: var(--ink-3); }
+.legend-status { display: flex; align-items: center; gap: 12px; font-size: 11.5px; color: var(--ink-3); }
+.legend-status span { display: inline-flex; align-items: center; gap: 4px; }
+.legend-status .x { color: var(--danger-ink); }
+.legend-status .dash { width: 10px; height: 2px; background: var(--idle); border-radius: 1px; }
+
+.recent li { display: grid; grid-template-columns: 18px 58px minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; min-height: 38px; padding: 0 16px; border-top: 1px solid var(--border-soft); font-size: 12.5px; cursor: pointer; }
+.recent li:first-child { border-top: 0; }
+.recent li:hover { background: var(--surface-2); }
+.recent .st { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; }
+.st-ok { background: var(--ok-soft); color: var(--ok-ink); }
+.st-err { background: var(--danger-soft); color: var(--danger-ink); }
+.st-abort { background: var(--surface-3); color: var(--ink-3); }
+.st-warn { background: var(--warn-soft); color: var(--warn-ink); }
+.recent .st .ic { width: 11px; height: 11px; stroke-width: 3; }
+.recent .t { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.recent .pv { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent .pv.err { color: var(--danger-ink); }
+.recent .m { color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+
+.kv { display: grid; }
+.kv-row { color: var(--ink); text-decoration: none !important; display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 8px 0 16px; border-top: 1px solid var(--border-soft); font-size: 12.5px; cursor: pointer; }
+.kv-row:first-child { border-top: 0; }
+.kv-row:hover { background: var(--surface-2); }
+.kv-row dt { color: var(--ink-3); white-space: nowrap; width: 84px; flex: none; }
+.kv-row dd { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kv-row .go { color: var(--ink-3); opacity: 0; }
+.kv-row:hover .go { opacity: 1; }
+
+.model-id { font-size: 15px; font-weight: 600; word-break: break-all; line-height: 1.35; }
+.model-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+.endpoint { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--r-sm); padding: 5px 8px; min-width: 0; }
+.endpoint span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 10px; border: 1px solid var(--border-soft); border-radius: var(--r-md); }
+.mini-stats div { padding: 6px 10px; border-left: 1px solid var(--border-soft); min-width: 0; }
+.mini-stats div:first-child { border-left: 0; }
+.mini-stats dt { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+.mini-stats dd { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.test-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.test-ok { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ok-ink); }
+
+/* ============ Logs timeline ============ */
+.log-toolbar { display: flex; align-items: center; gap: 8px; }
+.timeline { position: relative; }
+.timeline::before { content: ""; position: absolute; left: 15px; top: 10px; bottom: 10px; width: 2px; background: var(--border); border-radius: 1px; }
+.tl-day { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 0 8px 42px; min-height: 26px; font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.tl-day::before { content: ""; position: absolute; left: 11px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 2px var(--ctl-strong); }
+.tl-entry { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 10px; margin-bottom: 6px; }
+.tl-entry > .tl-node { grid-column: 1; grid-row: 1; margin: 8px 0 0 3px; }
+.tl-card { grid-column: 2; min-width: 0; }
+.tl-row { display: grid; grid-template-columns: 62px 34px minmax(0, 1fr) auto 50px 50px 76px 38px 16px; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 0 12px 0 14px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); text-align: left; color: var(--ink); cursor: pointer; box-shadow: var(--shadow-sm); font-size: 12.5px; }
+.tl-row:hover { border-color: var(--ctl-border); }
+.tl-node { position: relative; z-index: 1; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 0 0 4px var(--bg); }
+.tl-node .ic { width: 13px; height: 13px; stroke-width: 2.6; }
+.tl-time { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }
+.tl-cycle { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tl-preview { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.tl-preview.err { color: var(--danger-ink); }
+.tl-flags { display: flex; gap: 4px; }
+@media (max-width: 1060px) { .tl-row { grid-template-columns: 62px 34px minmax(0, 1fr) auto 50px 50px 38px 16px; } .tl-row .tl-res { display: none; } }
+.tl-m { color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.tl-chev { color: var(--ink-3); transition: transform 0.15s; }
+.tl-entry.is-open .tl-row { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-color: var(--ctl-border); background: var(--surface-2); }
+.tl-entry.is-open .tl-chev { transform: rotate(90deg); }
+.tl-detail { display: none; border: 1px solid var(--ctl-border); border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); background: var(--surface); padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.tl-entry.is-open .tl-detail { display: grid; gap: 12px; }
+.tl-sec-title { font-size: 11.5px; font-weight: 600; color: var(--ink-3); margin-bottom: 6px; letter-spacing: 0.02em; }
+.tl-comments { display: flex; flex-wrap: wrap; gap: 6px; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: var(--border-soft); border: 1px solid var(--border-soft); border-radius: var(--r-md); overflow: hidden; }
+.detail-grid > section { padding: 10px 12px; background: var(--surface); min-width: 0; }
+.detail-grid dl > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; padding: 3px 0; font-size: 12.5px; align-items: start; }
+.detail-grid dt { color: var(--ink-3); white-space: nowrap; }
+.detail-grid dd { min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.detail-grid dd .meter { margin: 4px 0 0; height: 4px; }
+.detail-grid dd .warn-text { color: var(--warn-ink); }
+.raw { border: 1px solid var(--border-soft); border-radius: var(--r-md); }
+.raw summary { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 6px 0 12px; cursor: pointer; font-size: 12.5px; font-weight: 500; list-style: none; }
+.raw summary::-webkit-details-marker { display: none; }
+.raw summary .ic { color: var(--ink-3); transition: transform 0.15s; }
+.raw[open] summary .ic:first-child { transform: rotate(90deg); }
+.raw pre { margin: 0; padding: 10px 12px; border-top: 1px solid var(--border-soft); font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--ink-2); background: var(--surface-2); white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow: auto; border-radius: 0 0 var(--r-md) var(--r-md); }
+.tl-foot { display: flex; align-items: center; gap: 12px; font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.more-btn { margin: 4px 0 0 42px; }
+
+/* ============ Danmaku page ============ */
+.stage { position: relative; height: 196px; border-radius: var(--r-md); background: var(--stage-bg); overflow: hidden; }
+.stage .win { position: absolute; border-radius: 6px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.07); }
+.stage .win::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.stage .dm { position: absolute; white-space: nowrap; font-weight: 800; font-size: 22px; line-height: 1.25; opacity: 0.92; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.26); font-family: var(--font); }
+.stage .zone { position: absolute; left: 0; right: 0; border: 1px dashed rgba(255, 255, 255, 0.28); border-left: 0; border-right: 0; background: rgba(255, 255, 255, 0.03); }
+.stage-cap { position: absolute; left: 10px; bottom: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.78); background: rgba(0, 0, 0, 0.35); padding: 2px 8px; border-radius: 999px; }
+.zone-ic { width: 16px; height: 12px; border: 1.5px solid currentColor; border-radius: 2px; position: relative; flex: none; opacity: 0.85; }
+.zone-ic::after { content: ""; position: absolute; left: 1.5px; right: 1.5px; background: currentColor; border-radius: 1px; }
+.zone-full::after { top: 1.5px; bottom: 1.5px; opacity: 0.55; }
+.zone-top::after { top: 1.5px; height: 3px; }
+.zone-mid::after { top: 3px; height: 3px; }
+.zone-bot::after { bottom: 1.5px; height: 3px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px 0 5px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.swatch i { width: 22px; height: 22px; border-radius: 4px; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+
+/* ============ Prompt page ============ */
+.prompt-grid { display: grid; grid-template-columns: minmax(0, 1fr) 272px; gap: 12px; align-items: start; }
+.ph-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ph { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface-2); font-family: var(--mono); font-size: 12px; color: var(--ink); cursor: pointer; }
+.ph:hover { border-color: var(--accent-border); background: var(--accent-soft); }
+.ph .ic { color: var(--ink-3); width: 12px; height: 12px; }
+.ph.todo { border-style: dashed; color: var(--ink-3); background: transparent; }
+.editor { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; min-height: 268px; }
+.editor-foot { display: flex; align-items: center; gap: 12px; font-size: 11.5px; color: var(--ink-3); margin-top: 6px; }
+.ph-table li { display: grid; gap: 1px; padding: 7px 14px; border-top: 1px solid var(--border-soft); }
+.ph-table li:first-child { border-top: 0; }
+.ph-table code { font-family: var(--mono); font-size: 11.5px; color: var(--accent-ink); }
+.ph-table span { font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-table li.todo code { color: var(--ink-3); }
+
+/* ============ Cadence ============ */
+.flow { position: relative; padding: 4px 0 0; }
+.flow-track { display: grid; grid-template-columns: 70px 92px 54px 92px minmax(0, 1fr) 54px; align-items: center; gap: 0; }
+.flow-lbl { font-size: 11.5px; color: var(--ink-3); }
+.seg-box { height: 30px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 500; border-radius: var(--r-sm); white-space: nowrap; overflow: hidden; margin-right: 3px; }
+.sb-delay { background: repeating-linear-gradient(135deg, var(--surface-3) 0 6px, var(--surface-2) 6px 12px); color: var(--ink-2); border: 1px dashed var(--ctl-border); }
+.sb-cap { background: var(--accent-solid); color: #fff; }
+.sb-gen { background: var(--accent-soft); color: var(--accent-ink); border: 1px solid var(--accent-border); }
+.sb-wait { background: var(--surface-3); color: var(--ink-2); border: 1px solid var(--border); }
+.flow-sub { display: grid; grid-template-columns: 70px 92px 54px 92px minmax(0, 1fr) 54px; margin-top: 6px; }
+.sb-release { grid-column: 5; width: 46%; height: 26px; position: relative; border-radius: var(--r-sm); background: var(--ok-soft); border: 1px solid var(--ok-border); color: var(--ok-ink); font-size: 12px; font-weight: 500; display: flex; align-items: center; padding-left: 10px; }
+.sb-release i { position: absolute; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 2px var(--surface); }
+.flow-scale { display: grid; grid-template-columns: 70px 92px 54px 92px minmax(0, 1fr) 54px; margin-top: 8px; font-size: 11.5px; color: var(--ink-3); }
+.flow-scale span { padding-left: 2px; }
+
+/* ============ Capture page ============ */
+.budget { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
+.budget > div { padding: 2px 20px; border-left: 1px solid var(--border-soft); min-width: 0; }
+.budget > div:first-child { padding-left: 0; border-left: 0; }
+.budget .bv { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.budget .bv small { font-size: 12.5px; color: var(--ink-3); font-weight: 500; margin-left: 3px; }
+.budget .meter { height: 8px; border-radius: 4px; margin: 8px 0 6px; }
+.budget .meter > i { border-radius: 4px; }
+.budget .meter-lbls { position: relative; height: 16px; font-size: 11px; color: var(--ink-3); }
+.budget .meter-lbls span { position: absolute; white-space: nowrap; }
+.mode-cards { display: grid; gap: 8px; }
+.mode-card { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); cursor: pointer; background: var(--surface); }
+.mode-card:hover { border-color: var(--ctl-border); }
+.mode-card input { margin: 2px 0 0; width: 16px; height: 16px; accent-color: var(--accent-solid); cursor: pointer; }
+.mode-card:has(input:checked) { border-color: var(--accent-border); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-border); }
+.mode-card .mc-h { display: flex; align-items: center; gap: 8px; font-weight: 600; flex-wrap: wrap; }
+.mode-card p { font-size: 12px; color: var(--ink-2); margin-top: 2px; line-height: 1.55; }
+.rounds-viz { display: flex; gap: 2px; margin-top: 7px; }
+.rounds-viz i { width: 10px; height: 8px; border-radius: 2px; background: var(--chart-bar); }
+.rounds-viz i.drop { background: transparent; box-shadow: inset 0 0 0 1px var(--ctl-border); }
+.rounds-viz i.new { background: var(--accent-solid); }
+.rounds-viz .lbl { font-size: 11px; color: var(--ink-3); margin-left: 8px; line-height: 8px; }
+
+/* ============ Privacy ============ */
+.flowline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.node-box { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-2); font-size: 12.5px; white-space: nowrap; }
+.node-box .ic { color: var(--ink-3); }
+.arrow { color: var(--ink-3); }
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+<symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
+<symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol>
+<symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></symbol>
+<symbol id="i-eraser" viewBox="0 0 24 24"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></symbol>
+<symbol id="i-cpu" viewBox="0 0 24 24"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></symbol>
+<symbol id="i-sliders-horizontal" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol>
+<symbol id="i-palette" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></symbol>
+<symbol id="i-bot" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></symbol>
+<symbol id="i-user-round" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+<symbol id="i-message-square-text" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+<symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></symbol>
+<symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+<symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+<symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol>
+<symbol id="i-copy-plus" viewBox="0 0 24 24"><line x1="15" x2="15" y1="12" y2="18"/><line x1="12" x2="18" y1="15" y2="15"/><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol>
+<symbol id="i-cable" viewBox="0 0 24 24"><path d="M17 21v-2a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1"/><path d="M19 15V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V9"/><path d="M21 21v-2h-4"/><path d="M3 5h4V3"/><path d="M7 5a1 1 0 0 1 1 1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1V3"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+<symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+<symbol id="i-timer" viewBox="0 0 24 24"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+<symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="i-key-round" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+<symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+<symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+<symbol id="i-loader-circle" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol>
+<symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
+<symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></symbol>
+<symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+<symbol id="i-external-link" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol>
+<symbol id="i-chevrons-up-down" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol>
+<symbol id="i-braces" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+<symbol id="i-type" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></symbol>
+<symbol id="i-droplet" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></symbol>
+<symbol id="i-move-horizontal" viewBox="0 0 24 24"><path d="m18 8 4 4-4 4"/><path d="M2 12h20"/><path d="m6 8-4 4 4 4"/></symbol>
+<symbol id="i-rows-3" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M21 9H3"/><path d="M21 15H3"/></symbol>
+<symbol id="i-hash" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></symbol>
+<symbol id="i-layout-dashboard" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+<symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+<symbol id="i-server" viewBox="0 0 24 24"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></symbol>
+<symbol id="i-hard-drive-upload" viewBox="0 0 24 24"><path d="m16 6-4-4-4 4"/><path d="M12 2v8"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 18h.01"/><path d="M10 18h.01"/></symbol>
+<symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+<symbol id="i-timer-reset" viewBox="0 0 24 24"><path d="M10 2h4"/><path d="M12 14v-4"/><path d="M4 13a8 8 0 0 1 8-7 8 8 0 1 1-5.3 14L4 17.6"/><path d="M9 17H4v5"/></symbol>
+<symbol id="i-monitor-off" viewBox="0 0 24 24"><path d="M17 17H4a2 2 0 0 1-2-2V5c0-1.5 1-2 1-2"/><path d="M22 15V5a2 2 0 0 0-2-2H9"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="m2 2 20 20"/></symbol>
+<symbol id="i-radio" viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></symbol>
+</svg>
+<div class="app">
+
+  <!-- ================= TOP BAR ================= -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>弹幕伴侣</span>
+    </div>
+    <span class="vsep" aria-hidden="true"></span>
+    <div class="profile-switch">
+      <button class="btn btn-ghost profile-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="profile-pop">
+        <svg class="ic"><use href="#i-layers"/></svg>
+        <span class="pb-label">配置</span>
+        <span class="pb-name">默认配置</span>
+        <svg class="ic ic-sm"><use href="#i-chevrons-up-down"/></svg>
+      </button>
+      <div class="popover" id="profile-pop" role="dialog" aria-label="配置方案">
+        <div class="pop-head"><span>配置方案</span><span>3 套</span></div>
+        <ul class="pop-list" role="listbox" aria-label="切换配置">
+          <li role="option" aria-selected="true"><svg class="ic ic-sm"><use href="#i-check"/></svg>默认配置<span class="when">当前</span></li>
+          <li role="option" aria-selected="false"><svg class="ic ic-sm"><use href="#i-check"/></svg>直播用 · 低频<span class="when">10-26 修改</span></li>
+          <li role="option" aria-selected="false"><svg class="ic ic-sm"><use href="#i-check"/></svg>云端 GPT-4o<span class="when">10-19 修改</span></li>
+        </ul>
+        <p class="pop-note">切换前会自动保存当前未保存的修改。</p>
+        <div class="pop-sec">
+          <label for="pf-name">当前配置名称</label>
+          <div class="inline"><input class="input" id="pf-name" value="默认配置"><button class="btn" type="button" disabled><svg class="ic"><use href="#i-pencil"/></svg>重命名</button></div>
+        </div>
+        <div class="pop-sec">
+          <label for="pf-new">复制当前配置为新配置</label>
+          <div class="inline"><input class="input" id="pf-new" placeholder="新配置名称"><button class="btn" type="button"><svg class="ic"><use href="#i-copy-plus"/></svg>复制新建</button></div>
+        </div>
+        <div class="pop-foot"><button class="btn btn-ghost btn-danger" type="button"><svg class="ic"><use href="#i-trash-2"/></svg>删除“默认配置”…</button></div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="tb-actions">
+      <button class="btn btn-toggle" type="button" aria-pressed="true" title="隐藏屏幕上的弹幕层">
+        <svg class="ic"><use href="#i-eye"/></svg>弹幕层
+      </button>
+      <button class="btn btn-icon" type="button" aria-label="清空屏幕上的弹幕" title="清空屏幕上的弹幕">
+        <svg class="ic"><use href="#i-eraser"/></svg>
+      </button>
+      <span class="vsep" aria-hidden="true"></span>
+      <button class="btn save-btn is-clean" type="button" disabled title="没有未保存的修改">
+        <svg class="ic"><use href="#i-check"/></svg>已保存
+      </button>
+      <button class="btn save-btn is-dirty" type="button" title="保存 (Ctrl+S)" hidden>
+        <span class="dot" aria-hidden="true"></span>保存<span class="kbd">Ctrl+S</span>
+      </button>
+      <button class="btn" type="button" title="立即截图并生成一轮（不影响循环计时）">
+        <svg class="ic"><use href="#i-sparkles"/></svg>生成一次
+      </button>
+      <button class="btn btn-primary only-running" type="button">
+        <svg class="ic"><use href="#i-pause"/></svg>暂停
+      </button>
+      <button class="btn btn-primary only-error" type="button">
+        <svg class="ic"><use href="#i-play"/></svg>启动
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= LIVE DECK ================= -->
+  <section class="hero" aria-label="运行状态">
+    <div class="hero-metrics">
+      <div class="hm hm-state">
+        <div class="ring" role="timer" aria-label="距离下次截图 12 秒">
+          <svg viewBox="0 0 60 60" aria-hidden="true">
+            <circle class="track" cx="30" cy="30" r="25"/>
+            <circle class="fill only-running" cx="30" cy="30" r="25" pathLength="100" stroke-dasharray="54.5 100"/>
+            <circle class="fill only-error" cx="30" cy="30" r="25" pathLength="100" stroke-dasharray="100 100"/>
+          </svg>
+          <div class="ring-c only-running"><b class="num">12</b><small>秒</small></div>
+          <div class="ring-c only-error"><svg class="ic" style="width:22px;height:22px"><use href="#i-circle-alert"/></svg></div>
+        </div>
+        <div class="state-text">
+          <div class="state-title only-running"><span class="live-dot" aria-hidden="true"></span>运行中</div>
+          <div class="state-title only-error" style="color:var(--danger-ink)">错误</div>
+          <div class="state-line only-running">下次截图 <span class="num">14:32:20</span></div>
+          <div class="state-line only-error">手动生成失败 · 循环未运行</div>
+          <div class="state-line sub">第 <span class="num">37</span> 轮 · 上次生成 <span class="num">14:31:58</span></div>
+        </div>
+      </div>
+
+      <div class="hm">
+        <div class="hm-label"><svg class="ic ic-sm"><use href="#i-database"/></svg>缓存命中</div>
+        <div class="hm-value">82<small>%</small></div>
+        <div class="meter" role="meter" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="缓存命中率"><i style="width:82%"></i></div>
+        <div class="hm-cap num">6,144 / 7,480 tokens</div>
+      </div>
+
+      <div class="hm">
+        <div class="hm-label"><svg class="ic ic-sm"><use href="#i-upload"/></svg>请求体</div>
+        <div class="hm-value">3.1 MB<small>/ 48 MB</small></div>
+        <div class="meter" role="meter" aria-valuenow="3.1" aria-valuemin="0" aria-valuemax="48" aria-label="请求体大小"><i style="width:6.5%"></i><span class="mark" style="left:50%" title="超过上限后压缩回这里"></span></div>
+        <div class="hm-cap">历史截图 14 张 · 上限 24 张</div>
+      </div>
+
+      <div class="hm">
+        <div class="hm-label"><svg class="ic ic-sm"><use href="#i-timer"/></svg>耗时</div>
+        <div class="hm-row">
+          <div class="hm-value">2.4<small>s</small></div>
+          <svg class="spark" viewBox="0 0 72 26" aria-hidden="true">
+            <polyline points="0,18 6,17 12,19 18,16 24,18 30,17 36,15 42,18 48,17 54,16 60,4 66,19 72,18"/>
+            <circle cx="72" cy="18" r="3.5"/>
+          </svg>
+        </div>
+        <div class="hm-cap">近 24 轮中位 2.5 s</div>
+      </div>
+    </div>
+
+    <div class="ticker">
+      <div class="ticker-label"><svg class="ic ic-sm"><use href="#i-sparkles"/></svg>最新弹幕</div>
+      <div class="ticker-chips">
+        <span class="chip"><span class="sw" style="--c:#31c3a2"></span>这段 BGM 好上头</span>
+        <span class="chip"><span class="sw" style="--c:#f59e0b"></span>Boss 二阶段要来了，小心左边</span>
+        <span class="chip"><span class="sw" style="--c:#ef476f"></span>左下角的小猫也在看</span>
+        <span class="chip"><span class="sw" style="--c:#5b8def"></span>这个转场剪得太丝滑了</span>
+        <span class="chip"><span class="sw" style="--c:#f8fafc"></span>存档点就在前面</span>
+      </div>
+      <div class="ticker-meta">第 37 轮 · 3 条 · <span class="num">14:31:58</span></div>
+    </div>
+  </section>
+
+  <div class="banner-slot"><div class="status-banner only-error" role="alert">
+    <svg class="ic"><use href="#i-circle-alert"/></svg>
+    <b>生成失败</b>
+    <span class="msg">请求超时（45000 ms）· POST http://127.0.0.1:1234/v1/chat/completions</span>
+    <a class="link-btn" href="#logs">查看日志<svg class="ic ic-sm"><use href="#i-chevron-right"/></svg></a>
+  </div></div>
+
+  <div class="main">
+    <!-- ================= SIDEBAR ================= -->
+    <nav class="sidebar" aria-label="设置导航">
+      <div class="nav-group">监控</div>
+      <a class="nav-item" href="#overview" data-nav="overview"><svg class="ic"><use href="#i-layout-dashboard"/></svg>总览</a>
+      <a class="nav-item" href="#logs" data-nav="logs"><svg class="ic"><use href="#i-history"/></svg>生成日志<span class="badge">128</span></a>
+      <div class="nav-group">设置</div>
+      <a class="nav-item" href="#model" data-nav="model"><svg class="ic"><use href="#i-cpu"/></svg>模型接口<span class="dirty-dot"></span></a>
+      <a class="nav-item" href="#character" data-nav="character"><svg class="ic"><use href="#i-bot"/></svg>角色与用户<span class="dirty-dot"></span></a>
+      <a class="nav-item" href="#prompt" data-nav="prompt"><svg class="ic"><use href="#i-message-square-text"/></svg>Prompt 模板<span class="dirty-dot"></span></a>
+      <a class="nav-item" href="#danmaku" data-nav="danmaku"><svg class="ic"><use href="#i-palette"/></svg>弹幕样式<span class="dirty-dot"></span></a>
+      <a class="nav-item" href="#cadence" data-nav="cadence"><svg class="ic"><use href="#i-timer"/></svg>运行节奏<span class="dirty-dot"></span></a>
+      <a class="nav-item" href="#capture" data-nav="capture"><svg class="ic"><use href="#i-camera"/></svg>截图与历史<span class="dirty-dot on" title="有未保存的修改"></span></a>
+      <a class="nav-item" href="#privacy" data-nav="privacy"><svg class="ic"><use href="#i-shield"/></svg>隐私与存储<span class="dirty-dot"></span></a>
+      <div class="side-foot">
+        <div class="row"><span class="dot-ok" aria-hidden="true"></span><span>127.0.0.1:1234 · 已连接</span></div>
+        <div class="row"><span>v0.2.0 · 配置仅存于本机</span></div>
+      </div>
+    </nav>
+
+    <!-- ================= CONTENT ================= -->
+    <main class="content" id="content">
+
+      <!-- ========== OVERVIEW ========== -->
+      <section class="page" data-page="overview" aria-labelledby="h-overview">
+        <header class="page-head">
+          <div><h1 id="h-overview">总览</h1><p>最近几轮的耗时、缓存与生成结果，以及当前生效的关键参数</p></div>
+        </header>
+        <div class="ov-grid">
+          <div class="stack">
+            <article class="card">
+              <header class="card-head">
+                <svg class="ic"><use href="#i-activity"/></svg><h2>最近 24 轮</h2><span class="card-sub">第 14–37 轮</span>
+                <span class="spacer"></span>
+                <div class="legend-status"><span><svg class="ic ic-xs x"><use href="#i-x"/></svg>失败</span><span><i class="dash"></i>中断</span></div>
+              </header>
+              <div class="card-body">
+                <div class="mini-chart">
+                  <div class="mc-title"><span>耗时</span><span class="mc-val">中位 2.5 s · 最长 6.9 s（第 35 轮）</span></div>
+                  <div class="mc-plot">
+                    <div class="mc-y"><span>8 s</span><span>4 s</span><span>0</span></div>
+                    <div class="mc-area"><div class="mc-cols"><span class="col" data-tip="#14 · 2.3 s"><i style="height:28.7%"></i></span><span class="col" data-tip="#15 · 2.6 s"><i style="height:32.5%"></i></span><span class="col" data-tip="#16 · 2.2 s"><i style="height:27.5%"></i></span><span class="col" data-tip="#17 · 2.8 s"><i style="height:35.0%"></i></span><span class="col" data-tip="#18 · 2.4 s"><i style="height:30.0%"></i></span><span class="col" data-tip="#19 · 2.5 s"><i style="height:31.3%"></i></span><span class="col" data-tip="#20 · 3.0 s"><i style="height:37.5%"></i></span><span class="col" data-tip="#21 · 2.4 s"><i style="height:30.0%"></i></span><span class="col" data-tip="#22 · 2.2 s"><i style="height:27.5%"></i></span><span class="col" data-tip="#23 · 2.5 s"><i style="height:31.3%"></i></span><span class="col" data-tip="#24 · 2.6 s"><i style="height:32.5%"></i></span><span class="col" data-tip="#25 · 2.3 s"><i style="height:28.7%"></i></span><span class="col" data-tip="#26 · 2.7 s"><i style="height:33.8%"></i></span><span class="col" data-tip="#27 · 2.5 s"><i style="height:31.3%"></i></span><span class="col" data-tip="#28 · 2.4 s"><i style="height:30.0%"></i></span><span class="col" data-tip="#29 · 2.9 s"><i style="height:36.3%"></i></span><span class="col" data-tip="#30 · 2.6 s"><i style="height:32.5%"></i></span><span class="col" data-tip="#31 · 2.3 s"><i style="height:28.7%"></i></span><span class="col col-abort" data-tip="#32 · 中断 · 1.1 s"><i></i></span><span class="col col-err" data-tip="#33 · 失败 · 请求超时 45.0 s"><svg class="ic ic-xs" aria-hidden="true"><use href="#i-x"/></svg></span><span class="col" data-tip="#34 · 2.6 s"><i style="height:32.5%"></i></span><span class="col" data-tip="#35 · 6.9 s"><i style="height:86.3%"></i></span><span class="col" data-tip="#36 · 2.2 s"><i style="height:27.5%"></i></span><span class="col is-latest" data-tip="#37 · 2.4 s"><i style="height:30.0%"></i></span></div></div>
+                  </div>
+                </div>
+                <div class="mini-chart">
+                  <div class="mc-title"><span>缓存命中</span><span class="mc-val">中位 81%</span><span class="spacer"></span><span class="mc-note">第 35 轮压缩历史截图，重新预填充</span></div>
+                  <div class="mc-plot">
+                    <div class="mc-y"><span>100%</span><span>50%</span><span>0</span></div>
+                    <div class="mc-area">
+                      <div class="mc-cols"><span class="col" data-tip="#14 · 缓存 80%"><i style="height:80%"></i></span><span class="col" data-tip="#15 · 缓存 81%"><i style="height:81%"></i></span><span class="col" data-tip="#16 · 缓存 83%"><i style="height:83%"></i></span><span class="col" data-tip="#17 · 缓存 79%"><i style="height:79%"></i></span><span class="col" data-tip="#18 · 缓存 84%"><i style="height:84%"></i></span><span class="col" data-tip="#19 · 缓存 82%"><i style="height:82%"></i></span><span class="col" data-tip="#20 · 缓存 80%"><i style="height:80%"></i></span><span class="col" data-tip="#21 · 缓存 83%"><i style="height:83%"></i></span><span class="col" data-tip="#22 · 缓存 85%"><i style="height:85%"></i></span><span class="col" data-tip="#23 · 缓存 82%"><i style="height:82%"></i></span><span class="col" data-tip="#24 · 缓存 76%"><i style="height:76%"></i></span><span class="col" data-tip="#25 · 缓存 79%"><i style="height:79%"></i></span><span class="col" data-tip="#26 · 缓存 81%"><i style="height:81%"></i></span><span class="col" data-tip="#27 · 缓存 83%"><i style="height:83%"></i></span><span class="col" data-tip="#28 · 缓存 82%"><i style="height:82%"></i></span><span class="col" data-tip="#29 · 缓存 80%"><i style="height:80%"></i></span><span class="col" data-tip="#30 · 缓存 84%"><i style="height:84%"></i></span><span class="col" data-tip="#31 · 缓存 83%"><i style="height:83%"></i></span><span class="col col-none" data-tip="#32 · 无数据"><i></i></span><span class="col col-none" data-tip="#33 · 无数据"><i></i></span><span class="col" data-tip="#34 · 缓存 78%"><i style="height:78%"></i></span><span class="col is-dip" data-tip="#35 · 缓存 12%"><i style="height:12%"></i></span><span class="col" data-tip="#36 · 缓存 79%"><i style="height:79%"></i></span><span class="col is-latest" data-tip="#37 · 缓存 82%"><i style="height:82%"></i></span></div>
+                    </div>
+                  </div>
+                  <div class="mc-x"><span>#14</span><span></span><span></span><span></span><span></span><span></span><span>#20</span><span></span><span></span><span></span><span></span><span></span><span>#26</span><span></span><span></span><span></span><span></span><span></span><span>#32</span><span></span><span></span><span>#35</span><span></span><span>#37</span></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <header class="card-head">
+                <svg class="ic"><use href="#i-history"/></svg><h2>最近生成</h2>
+                <span class="spacer"></span>
+                <a class="link-btn" href="#logs">全部 128 条<svg class="ic ic-sm"><use href="#i-chevron-right"/></svg></a>
+              </header>
+              <ul class="recent">
+                <li><span class="st st-ok"><svg class="ic"><use href="#i-check"/></svg></span><span class="t">14:31:58</span><span class="pv">这段 BGM 好上头 · Boss 二阶段要来了，小心左边 · 左下角的小猫也在看</span><span class="m">3/3 条</span><span class="m">2.4 s</span><span class="tag">自动</span></li>
+                <li><span class="st st-ok"><svg class="ic"><use href="#i-check"/></svg></span><span class="t">14:31:31</span><span class="pv">这个转场剪得太丝滑了 · 存档点就在前面 · 血瓶还够吗</span><span class="m">3/3 条</span><span class="m">2.2 s</span><span class="tag">自动</span></li>
+                <li><span class="st st-warn"><svg class="ic"><use href="#i-triangle-alert"/></svg></span><span class="t">14:31:06</span><span class="pv">Boss 血条只剩一半了 · 这招躲得漂亮</span><span class="m">2/3 条</span><span class="m">6.9 s</span><span class="tag">自动</span></li>
+                <li><span class="st st-ok"><svg class="ic"><use href="#i-check"/></svg></span><span class="t">14:30:41</span><span class="pv">这把武器手感不错 · 地图右上角有宝箱 · 冲冲冲</span><span class="m">3/3 条</span><span class="m">2.6 s</span><span class="tag tag-accent">手动</span></li>
+                <li><span class="st st-err"><svg class="ic"><use href="#i-x"/></svg></span><span class="t">14:30:12</span><span class="pv err">请求超时（45000 ms）</span><span class="m">0/3 条</span><span class="m">45.0 s</span><span class="tag">自动</span></li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="stack">
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-cpu"/></svg><h2>当前模型</h2><span class="spacer"></span><a class="link-btn" href="#model">设置</a></header>
+              <div class="card-body">
+                <div class="model-id">qwen2.5-vl-7b-instruct</div>
+                <div class="model-meta"><span class="tag tag-ok">已加载</span><span class="tag tag-accent"><svg class="ic"><use href="#i-eye"/></svg>视觉</span><span class="tag">温度 0.8</span></div>
+                <div class="endpoint"><svg class="ic ic-sm"><use href="#i-server"/></svg><span>http://127.0.0.1:1234/v1</span></div>
+                <dl class="mini-stats">
+                  <div><dt>最大输出</dt><dd>260</dd></div>
+                  <div><dt>超时</dt><dd>45 s</dd></div>
+                  <div><dt>视觉输入</dt><dd>开</dd></div>
+                </dl>
+                <div class="test-row">
+                  <button class="btn" type="button"><svg class="ic"><use href="#i-cable"/></svg>测试连接</button>
+                  <span class="test-ok"><svg class="ic ic-sm"><use href="#i-circle-check"/></svg>14:20 连接正常</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-sliders-horizontal"/></svg><h2>生效参数</h2><span class="card-sub">点击跳到对应设置</span></header>
+              <dl class="kv">
+                <a class="kv-row" href="#cadence"><dt>截图间隔</dt><dd>14–28 秒随机</dd><svg class="ic ic-sm go"><use href="#i-chevron-right"/></svg></a>
+                <a class="kv-row" href="#cadence"><dt>每轮弹幕</dt><dd>3 条 · 6–10 秒内投放</dd><svg class="ic ic-sm go"><use href="#i-chevron-right"/></svg></a>
+                <a class="kv-row" href="#capture"><dt>对话历史</dt><dd>30 轮 · 分批滑动</dd><svg class="ic ic-sm go"><use href="#i-chevron-right"/></svg></a>
+                <a class="kv-row" href="#capture"><dt>历史截图</dt><dd>保留 · 上限 24 张 / 48 MB</dd><svg class="ic ic-sm go"><use href="#i-chevron-right"/></svg></a>
+                <a class="kv-row" href="#capture"><dt>截图</dt><dd>960 px · JPEG q0.82</dd><svg class="ic ic-sm go"><use href="#i-chevron-right"/></svg></a>
+                <a class="kv-row" href="#danmaku"><dt>排除弹幕层</dt><dd>开 · 录屏也看不到弹幕</dd><svg class="ic ic-sm go"><use href="#i-chevron-right"/></svg></a>
+              </dl>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== LOGS ========== -->
+      <section class="page" data-page="logs" aria-labelledby="h-logs">
+        <header class="page-head">
+          <div><h1 id="h-logs">生成日志</h1><p>共 128 条 · 保留最近 200 条（在“隐私与存储”中修改）</p></div>
+          <div class="page-actions">
+            <div class="seg" role="radiogroup" aria-label="按状态筛选">
+              <label><input type="radio" name="lf" checked><span>全部</span></label>
+              <label><input type="radio" name="lf"><span>成功</span></label>
+              <label><input type="radio" name="lf"><span>失败 5</span></label>
+            </div>
+            <button class="btn" type="button"><svg class="ic"><use href="#i-refresh-cw"/></svg>刷新</button>
+            <button class="btn btn-danger" type="button"><svg class="ic"><use href="#i-trash-2"/></svg>清空日志</button>
+          </div>
+        </header>
+
+        <ol class="timeline">
+          <li class="tl-day">今天 · 10 月 28 日</li>
+
+          <li class="tl-entry">
+            <span class="tl-node st-ok" aria-hidden="true"><svg class="ic"><use href="#i-check"/></svg></span>
+            <div class="tl-card">
+            <button class="tl-row" type="button" aria-expanded="false">
+              <span class="sr-only">成功</span>
+              <span class="tl-time">14:31:58</span><span class="tl-cycle">#37</span>
+              <span class="tl-preview">这段 BGM 好上头 · Boss 二阶段要来了，小心左边 · 左下角的小猫也在看</span>
+              <span class="tl-flags"><span class="tag">缓存 82%</span></span>
+              <span class="tl-m">2.4 s</span><span class="tl-m">3/3 条</span><span class="tl-m tl-res">1920×1080</span><span class="tag">自动</span>
+              <svg class="ic ic-sm tl-chev"><use href="#i-chevron-right"/></svg>
+            </button>
+            </div>
+          </li>
+
+          <li class="tl-entry">
+            <span class="tl-node st-ok" aria-hidden="true"><svg class="ic"><use href="#i-check"/></svg></span>
+            <div class="tl-card">
+            <button class="tl-row" type="button" aria-expanded="false">
+              <span class="sr-only">成功</span>
+              <span class="tl-time">14:31:31</span><span class="tl-cycle">#36</span>
+              <span class="tl-preview">这个转场剪得太丝滑了 · 存档点就在前面 · 血瓶还够吗</span>
+              <span class="tl-flags"><span class="tag">缓存 79%</span></span>
+              <span class="tl-m">2.2 s</span><span class="tl-m">3/3 条</span><span class="tl-m tl-res">1920×1080</span><span class="tag">自动</span>
+              <svg class="ic ic-sm tl-chev"><use href="#i-chevron-right"/></svg>
+            </button>
+            </div>
+          </li>
+
+          <li class="tl-entry is-open">
+            <span class="tl-node st-warn" aria-hidden="true"><svg class="ic"><use href="#i-triangle-alert"/></svg></span>
+            <div class="tl-card">
+            <button class="tl-row" type="button" aria-expanded="true" aria-controls="log-35">
+              <span class="sr-only">成功（有警告）</span>
+              <span class="tl-time">14:31:06</span><span class="tl-cycle">#35</span>
+              <span class="tl-preview">Boss 血条只剩一半了 · 这招躲得漂亮</span>
+              <span class="tl-flags"><span class="tag tag-warn">已截断</span><span class="tag">压缩 13 张</span></span>
+              <span class="tl-m">6.9 s</span><span class="tl-m">2/3 条</span><span class="tl-m tl-res">1920×1080</span><span class="tag">自动</span>
+              <svg class="ic ic-sm tl-chev"><use href="#i-chevron-right"/></svg>
+            </button>
+            <div class="tl-detail" id="log-35">
+              <div>
+                <div class="tl-sec-title">弹幕 · 2/3 条</div>
+                <div class="tl-comments">
+                  <span class="chip"><span class="sw" style="--c:#31c3a2"></span>Boss 血条只剩一半了</span>
+                  <span class="chip"><span class="sw" style="--c:#f59e0b"></span>这招躲得漂亮</span>
+                </div>
+              </div>
+              <div class="callout warn">
+                <svg class="ic"><use href="#i-triangle-alert"/></svg>
+                <div>输出达到最大输出（260 tokens）被截断，只解析出 2 条。可以在 <a href="#model">模型接口</a> 调大“最大输出”。</div>
+              </div>
+              <div class="detail-grid">
+                <section>
+                  <div class="tl-sec-title">请求</div>
+                  <dl>
+                    <div><dt>模型</dt><dd>qwen2.5-vl-7b-instruct</dd></div>
+                    <div><dt>请求体</dt><dd>2.62 MB / 48.00 MB<div class="meter" aria-hidden="true"><i style="width:5.5%"></i></div></dd></div>
+                    <div><dt>历史压缩</dt><dd>超出张数，丢弃 13 张</dd></div>
+                    <div><dt>投放窗口</dt><dd>8.4 s</dd></div>
+                    <div><dt>开始时间</dt><dd>10-28 14:30:59</dd></div>
+                  </dl>
+                </section>
+                <section>
+                  <div class="tl-sec-title">历史与缓存</div>
+                  <dl>
+                    <div><dt>历史轮数</dt><dd>25</dd></div>
+                    <div><dt>历史模式</dt><dd>分批滑动</dd></div>
+                    <div><dt>历史截图</dt><dd>保留 · 本次 12 张</dd></div>
+                    <div><dt>缓存/输入</dt><dd>912 / 7,604（12%）<div class="meter" aria-hidden="true"><i style="width:12%"></i></div></dd></div>
+                    <div><dt>预填充</dt><dd>4.8 s</dd></div>
+                  </dl>
+                </section>
+                <section>
+                  <div class="tl-sec-title">输出与截图</div>
+                  <dl>
+                    <div><dt>输出 tokens</dt><dd><span class="warn-text">260 · 已截断</span></dd></div>
+                    <div><dt>截图来源</dt><dd>Screen 1</dd></div>
+                    <div><dt>截图格式</dt><dd>JPEG · q82</dd></div>
+                    <div><dt>图片大小</dt><dd>148 KB</dd></div>
+                    <div><dt>传输大小</dt><dd>198 KB</dd></div>
+                  </dl>
+                </section>
+              </div>
+              <details class="raw">
+                <summary><svg class="ic ic-sm"><use href="#i-chevron-right"/></svg>原始输出<span class="muted" style="font-weight:400">412 字符</span><span class="spacer"></span><button class="btn btn-ghost btn-icon" type="button" aria-label="复制原始输出" title="复制原始输出"><svg class="ic ic-sm"><use href="#i-copy"/></svg></button></summary>
+                <pre>&lt;think&gt;画面是一款动作游戏的 Boss 战，Boss 血条大约还剩一半……&lt;/think&gt;
+{"comments":["Boss 血条只剩一半了","这招躲得漂亮","右边</pre>
+              </details>
+              <div class="tl-foot"><span>第 35 轮 · 自动</span><span>开始 14:30:59 · 完成 14:31:06 · 耗时 6.9 s</span></div>
+            </div>
+            </div>
+          </li>
+
+          <li class="tl-entry">
+            <span class="tl-node st-ok" aria-hidden="true"><svg class="ic"><use href="#i-check"/></svg></span>
+            <div class="tl-card">
+            <button class="tl-row" type="button" aria-expanded="false">
+              <span class="sr-only">成功</span>
+              <span class="tl-time">14:30:41</span><span class="tl-cycle">#34</span>
+              <span class="tl-preview">这把武器手感不错 · 地图右上角有宝箱 · 冲冲冲</span>
+              <span class="tl-flags"><span class="tag">缓存 78%</span></span>
+              <span class="tl-m">2.6 s</span><span class="tl-m">3/3 条</span><span class="tl-m tl-res">1920×1080</span><span class="tag tag-accent">手动</span>
+              <svg class="ic ic-sm tl-chev"><use href="#i-chevron-right"/></svg>
+            </button>
+            </div>
+          </li>
+
+          <li class="tl-entry">
+            <span class="tl-node st-err" aria-hidden="true"><svg class="ic"><use href="#i-x"/></svg></span>
+            <div class="tl-card">
+            <button class="tl-row" type="button" aria-expanded="false">
+              <span class="sr-only">失败</span>
+              <span class="tl-time">14:30:12</span><span class="tl-cycle">#33</span>
+              <span class="tl-preview err">请求超时（45000 ms）</span>
+              <span class="tl-flags"></span>
+              <span class="tl-m">45.0 s</span><span class="tl-m">0/3 条</span><span class="tl-m tl-res">1920×1080</span><span class="tag">自动</span>
+              <svg class="ic ic-sm tl-chev"><use href="#i-chevron-right"/></svg>
+            </button>
+            </div>
+          </li>
+
+          <li class="tl-entry">
+            <span class="tl-node st-abort" aria-hidden="true"><svg class="ic"><use href="#i-pause"/></svg></span>
+            <div class="tl-card">
+            <button class="tl-row" type="button" aria-expanded="false">
+              <span class="sr-only">中断</span>
+              <span class="tl-time">14:29:20</span><span class="tl-cycle">#32</span>
+              <span class="tl-preview">已暂停，本轮中断</span>
+              <span class="tl-flags"></span>
+              <span class="tl-m">1.1 s</span><span class="tl-m">0/3 条</span><span class="tl-m tl-res">1920×1080</span><span class="tag">自动</span>
+              <svg class="ic ic-sm tl-chev"><use href="#i-chevron-right"/></svg>
+            </button>
+            </div>
+          </li>
+        </ol>
+        <button class="btn more-btn" type="button">显示更早的 28 条</button>
+      </section>
+
+      <!-- ========== MODEL ========== -->
+      <section class="page" data-page="model" aria-labelledby="h-model">
+        <header class="page-head">
+          <div><h1 id="h-model">模型接口</h1><p>OpenAI 兼容接口：LM Studio、llama.cpp、vLLM 或云端网关</p></div>
+          <div class="page-actions"><button class="btn" type="button"><svg class="ic"><use href="#i-cable"/></svg>测试连接</button></div>
+        </header>
+        <div class="cols-2">
+          <div class="stack">
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-server"/></svg><h2>连接</h2></header>
+              <div class="card-body">
+                <div class="fields two">
+                  <div class="field full">
+                    <label for="f-base">接口地址 (Base URL)</label>
+                    <input class="input mono" id="f-base" value="http://127.0.0.1:1234/v1">
+                  </div>
+                  <div class="field full">
+                    <label for="f-key">API Key<span class="aside">本地服务通常留空</span></label>
+                    <div class="input-wrap has-btn">
+                      <input class="input mono" id="f-key" type="password" value="sk-local-placeholder">
+                      <button class="in-btn" type="button" aria-label="显示 API Key" title="显示 API Key"><svg class="ic"><use href="#i-eye"/></svg></button>
+                    </div>
+                  </div>
+                  <div class="field full">
+                    <label for="f-model">模型</label>
+                    <div class="with-action">
+                      <div class="select-wrap">
+                        <select class="input" id="f-model"><option>qwen2.5-vl-7b-instruct · loaded · 视觉</option></select>
+                        <svg class="ic ic-sm chev"><use href="#i-chevron-down"/></svg>
+                      </div>
+                      <button class="btn btn-icon" type="button" aria-label="刷新模型列表" title="刷新模型列表"><svg class="ic"><use href="#i-refresh-cw"/></svg></button>
+                    </div>
+                    <div class="hint ok">共 12 个模型 · loaded · 视觉</div>
+                  </div>
+                </div>
+                <div class="callout ok mt">
+                  <svg class="ic"><use href="#i-circle-check"/></svg>
+                  <div>连接正常，返回 12 个模型。<span class="muted mono" style="font-size:11.5px">GET http://127.0.0.1:1234/v1/models</span></div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-image"/></svg><h2>视觉输入</h2></header>
+              <div class="card-body">
+                <label class="sw-row">
+                  <span class="sw-text"><span class="sw-title">发送截图（视觉输入）</span><span class="sw-desc">关闭后不再截图，只发送文字提示词。模型需要支持图像输入。</span></span>
+                  <input type="checkbox" class="switch" role="switch" checked>
+                </label>
+              </div>
+            </article>
+          </div>
+          <article class="card">
+            <header class="card-head"><svg class="ic"><use href="#i-sliders-horizontal"/></svg><h2>生成参数</h2></header>
+            <div class="card-body">
+              <div class="field">
+                <label for="f-temp">温度<span class="aside">0–2</span></label>
+                <div class="range-row">
+                  <input type="range" min="0" max="2" step="0.1" value="0.8" aria-label="温度滑块">
+                  <div class="input-wrap"><input class="input" id="f-temp" type="number" value="0.8" step="0.1"></div>
+                </div>
+              </div>
+              <label class="sw-row" style="margin-top:8px">
+                <span class="sw-text"><span class="sw-title">发送温度参数</span><span class="sw-desc">部分服务端不接受 temperature；关闭后由服务端决定。</span></span>
+                <input type="checkbox" class="switch" role="switch" checked>
+              </label>
+              <div class="fields two" style="margin-top:12px;padding-top:14px;border-top:1px solid var(--border-soft)">
+                <div class="field">
+                  <label for="f-max">最大输出</label>
+                  <div class="input-wrap"><input class="input" id="f-max" type="number" value="260"><span class="unit">tokens</span></div>
+                  <div class="hint">16–32768 · 被截断时调大</div>
+                </div>
+                <div class="field">
+                  <label for="f-timeout">超时</label>
+                  <div class="input-wrap"><input class="input" id="f-timeout" type="number" value="45000"><span class="unit">ms</span></div>
+                  <div class="hint">= 45 秒 · 5000–1800000</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ========== CHARACTER ========== -->
+      <section class="page" data-page="character" aria-labelledby="h-character">
+        <header class="page-head">
+          <div><h1 id="h-character">角色与用户</h1><p>填入 Prompt 模板中的占位符，决定弹幕的口吻</p></div>
+        </header>
+        <div class="cols-2">
+          <article class="card">
+            <header class="card-head"><svg class="ic"><use href="#i-bot"/></svg><h2>角色</h2></header>
+            <div class="card-body">
+              <div class="fields two">
+                <div class="field"><label for="c-name">角色名</label><input class="input" id="c-name" value="Mika"></div>
+                <div class="field"><label for="c-lang">语言</label><input class="input" id="c-lang" value="zh-CN" list="langs"><datalist id="langs"><option value="zh-CN"><option value="ja-JP"><option value="en-US"></datalist></div>
+                <div class="field full"><label for="c-persona">人设</label><textarea class="input" id="c-persona" rows="5">A warm, witty desktop companion who comments like a good anime watch buddy.</textarea></div>
+                <div class="field full"><label for="c-tone">语气</label><input class="input" id="c-tone" value="short, playful, observant, never intrusive"></div>
+              </div>
+            </div>
+          </article>
+          <div class="stack">
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-user-round"/></svg><h2>用户</h2></header>
+              <div class="card-body">
+                <div class="fields two">
+                  <div class="field"><label for="u-name">用户称呼</label><input class="input" id="u-name" value="你"></div>
+                  <div class="field"><label for="u-role">用户身份</label><input class="input" id="u-role" value="屏幕前的用户"></div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-braces"/></svg><h2>占位符取值</h2><span class="spacer"></span><a class="link-btn" href="#prompt">编辑模板</a></header>
+              <ul class="ph-table">
+                <li><code>{{companion.name}}</code><span>Mika</span></li>
+                <li><code>{{companion.language}}</code><span>zh-CN</span></li>
+                <li><code>{{companion.tone}}</code><span>short, playful, observant, never intrusive</span></li>
+                <li><code>{{user.name}} / {{user.role}}</code><span>你 / 屏幕前的用户</span></li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== PROMPT ========== -->
+      <section class="page" data-page="prompt" aria-labelledby="h-prompt">
+        <header class="page-head">
+          <div><h1 id="h-prompt">Prompt 模板</h1><p>点击占位符插入到光标处；发送前替换为右侧的当前取值</p></div>
+        </header>
+        <div class="prompt-grid">
+          <article class="card">
+            <header class="card-head">
+              <div class="seg" role="tablist" aria-label="模板">
+                <label><input type="radio" name="pt" checked><span>系统提示词</span></label>
+                <label><input type="radio" name="pt"><span>用户提示词<span class="tag" style="height:18px">空</span></span></label>
+              </div>
+            </header>
+            <div class="card-body">
+              <div class="ph-chips" aria-label="插入占位符">
+                <button class="ph" type="button"><svg class="ic"><use href="#i-plus"/></svg>{{companion.name}}</button>
+                <button class="ph" type="button"><svg class="ic"><use href="#i-plus"/></svg>{{companion.persona}}</button>
+                <button class="ph" type="button"><svg class="ic"><use href="#i-plus"/></svg>{{companion.tone}}</button>
+                <button class="ph" type="button"><svg class="ic"><use href="#i-plus"/></svg>{{companion.language}}</button>
+                <button class="ph" type="button"><svg class="ic"><use href="#i-plus"/></svg>{{user.name}}</button>
+                <button class="ph" type="button"><svg class="ic"><use href="#i-plus"/></svg>{{user.role}}</button>
+                <button class="ph" type="button"><svg class="ic"><use href="#i-plus"/></svg>{{requestedCount}}</button>
+                <button class="ph" type="button"><svg class="ic"><use href="#i-plus"/></svg>{{jsonShape}}</button>
+                <button class="ph todo" type="button" title="尚未实现：目前总是填入 unknown"><svg class="ic"><use href="#i-plus"/></svg>{{activeApp}}<span class="tag tag-todo" style="font-family:var(--font)">未实现</span></button>
+              </div>
+              <label class="sr-only" for="p-sys">系统提示词</label>
+              <textarea class="input editor mt" id="p-sys" spellcheck="false">You are {{companion.name}}, a desktop danmaku companion.
+Persona: {{companion.persona}}
+Tone: {{companion.tone}}
+Language: {{companion.language}}
+You are accompanying {{user.name}} ({{user.role}}).
+React to the current screen with brief, specific, non-intrusive danmaku comments.
+Return exactly {{requestedCount}} comments unless the model is unable to parse the request.
+Do not mention private data, credentials, or exact personal identifiers.
+Each comment must be short enough to fit on screen.
+Return only JSON in this shape: {{jsonShape}}</textarea>
+              <div class="editor-foot"><span>10 行 · 612 字符</span><span>用户提示词留空时，用户消息只包含截图</span></div>
+            </div>
+          </article>
+          <article class="card">
+            <header class="card-head"><svg class="ic"><use href="#i-braces"/></svg><h2>当前取值</h2></header>
+            <ul class="ph-table">
+              <li><code>{{companion.name}}</code><span>Mika</span></li>
+              <li><code>{{companion.persona}}</code><span>A warm, witty desktop companion…</span></li>
+              <li><code>{{companion.tone}}</code><span>short, playful, observant…</span></li>
+              <li><code>{{companion.language}}</code><span>zh-CN</span></li>
+              <li><code>{{user.name}}</code><span>你</span></li>
+              <li><code>{{user.role}}</code><span>屏幕前的用户</span></li>
+              <li><code>{{requestedCount}}</code><span>3（每轮弹幕）</span></li>
+              <li><code>{{jsonShape}}</code><span class="mono" style="font-size:11.5px">{"comments":["comment 1",…]}</span></li>
+              <li class="todo"><code>{{activeApp}}</code><span>unknown · 未实现</span></li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- ========== DANMAKU ========== -->
+      <section class="page" data-page="danmaku" aria-labelledby="h-danmaku">
+        <header class="page-head">
+          <div><h1 id="h-danmaku">弹幕样式</h1><p>保存后立即作用于屏幕上的弹幕层</p></div>
+        </header>
+        <article class="card">
+          <div class="card-body" style="padding:12px">
+            <div class="stage" aria-label="弹幕预览">
+              <div class="win" style="left:6%;top:16%;width:46%;height:70%"></div>
+              <div class="win" style="left:56%;top:26%;width:36%;height:58%"></div>
+              <span class="dm" style="color:#31c3a2;top:14px;left:58%">这段 BGM 好上头</span>
+              <span class="dm" style="color:#f59e0b;top:48px;left:22%">Boss 二阶段要来了，小心左边</span>
+              <span class="dm" style="color:#f8fafc;top:82px;left:64%">存档点就在前面</span>
+              <span class="dm" style="color:#ef476f;top:116px;left:8%">左下角的小猫也在看</span>
+              <span class="dm" style="color:#5b8def;top:150px;left:46%">这个转场剪得太丝滑了</span>
+              <span class="stage-cap">实际字号预览 · 全屏区域 · 22 px</span>
+            </div>
+          </div>
+        </article>
+        <div class="cols-2 mt">
+          <div class="stack">
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-type"/></svg><h2>文字</h2></header>
+              <div class="card-body">
+                <div class="field">
+                  <label for="d-size">字号<span class="aside">10–96 px</span></label>
+                  <div class="range-row"><input type="range" min="10" max="96" value="22" aria-label="字号滑块"><div class="input-wrap"><input class="input" id="d-size" type="number" value="22"><span class="unit">px</span></div></div>
+                </div>
+                <div class="field mt">
+                  <label for="d-op">不透明度<span class="aside">0.2–1</span></label>
+                  <div class="range-row"><input type="range" min="0.2" max="1" step="0.05" value="0.92" aria-label="不透明度滑块"><div class="input-wrap"><input class="input" id="d-op" type="number" value="0.92" step="0.05"></div></div>
+                </div>
+                <div class="fields two mt">
+                  <div class="field"><label for="d-len">单条最多字数</label><div class="input-wrap"><input class="input" id="d-len" type="number" value="50"><span class="unit">字</span></div><div class="hint">10–200</div></div>
+                </div>
+                <label class="sw-row" style="margin-top:12px;padding-top:12px">
+                  <span class="sw-text"><span class="sw-title">文字阴影</span><span class="sw-desc">在亮色画面上更易读</span></span>
+                  <input type="checkbox" class="switch" role="switch" checked>
+                </label>
+              </div>
+            </article>
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-droplet"/></svg><h2>配色</h2><span class="card-sub">每条弹幕随机取一种</span></header>
+              <div class="card-body">
+                <div class="swatches" aria-hidden="true">
+                  <span class="swatch"><i style="--c:#31c3a2"></i>#31c3a2</span>
+                  <span class="swatch"><i style="--c:#f59e0b"></i>#f59e0b</span>
+                  <span class="swatch"><i style="--c:#ef476f"></i>#ef476f</span>
+                  <span class="swatch"><i style="--c:#5b8def"></i>#5b8def</span>
+                  <span class="swatch"><i style="--c:#f8fafc"></i>#f8fafc</span>
+                </div>
+                <div class="field mt">
+                  <label for="d-pal">颜色列表<span class="aside">逗号分隔的 CSS 颜色</span></label>
+                  <input class="input mono" id="d-pal" value="#31c3a2, #f59e0b, #ef476f, #5b8def, #f8fafc">
+                </div>
+              </div>
+            </article>
+          </div>
+          <div class="stack">
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-move-horizontal"/></svg><h2>运动与区域</h2></header>
+              <div class="card-body">
+                <div class="field">
+                  <span class="field-label" id="lbl-zone">显示区域</span>
+                  <div class="seg block" role="radiogroup" aria-labelledby="lbl-zone">
+                    <label><input type="radio" name="zone" checked><span><i class="zone-ic zone-full"></i>全屏</span></label>
+                    <label><input type="radio" name="zone"><span><i class="zone-ic zone-top"></i>上部</span></label>
+                    <label><input type="radio" name="zone"><span><i class="zone-ic zone-mid"></i>中部</span></label>
+                    <label><input type="radio" name="zone"><span><i class="zone-ic zone-bot"></i>下部</span></label>
+                  </div>
+                </div>
+                <div class="field mt">
+                  <label for="d-speed">滚动时长<span class="aside">越大越慢 · 2–60 秒</span></label>
+                  <div class="range-row"><input type="range" min="2" max="60" value="10" aria-label="滚动时长滑块"><div class="input-wrap"><input class="input" id="d-speed" type="number" value="10"><span class="unit">秒</span></div></div>
+                </div>
+                <div class="field mt">
+                  <label for="d-den">密度<span class="aside">0.1–1 · 越大越挤</span></label>
+                  <div class="range-row"><input type="range" min="0.1" max="1" step="0.1" value="0.6" aria-label="密度滑块"><div class="input-wrap"><input class="input" id="d-den" type="number" value="0.6" step="0.1"></div></div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-monitor-off"/></svg><h2>截图与录屏</h2></header>
+              <div class="card-body">
+                <label class="sw-row">
+                  <span class="sw-text"><span class="sw-title">截图时排除弹幕层</span><span class="sw-desc">模型看不到、也不会评论自己的弹幕。需要 Windows 10 2004 及以上。</span></span>
+                  <input type="checkbox" class="switch" role="switch" checked>
+                </label>
+                <div class="callout warn mt">
+                  <svg class="ic"><use href="#i-triangle-alert"/></svg>
+                  <div>开启后 <b>OBS 等录屏软件也录不到弹幕</b>。想把弹幕录进视频或直播，请关闭此项。</div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== CADENCE ========== -->
+      <section class="page" data-page="cadence" aria-labelledby="h-cadence">
+        <header class="page-head">
+          <div><h1 id="h-cadence">运行节奏</h1><p>多久截一次图、每轮几条、在多长时间内放完</p></div>
+        </header>
+        <article class="card">
+          <header class="card-head"><svg class="ic"><use href="#i-activity"/></svg><h2>一轮的时间线</h2><span class="card-sub">按当前设置</span></header>
+          <div class="card-body">
+            <div class="flow">
+              <div class="flow-track">
+                <div class="seg-box sb-cap" style="background:var(--surface-3);color:var(--ink-2)"><svg class="ic ic-sm"><use href="#i-play"/></svg>启动</div>
+                <div class="seg-box sb-delay">延迟 5 秒</div>
+                <div class="seg-box sb-cap"><svg class="ic ic-sm"><use href="#i-camera"/></svg>截图</div>
+                <div class="seg-box sb-gen">生成 ≈2.5 s</div>
+                <div class="seg-box sb-wait">等待 14–28 秒（随机）</div>
+                <div class="seg-box sb-cap"><svg class="ic ic-sm"><use href="#i-camera"/></svg>截图</div>
+              </div>
+              <div class="flow-sub">
+                <div class="sb-release">投放 3 条 · 6–10 秒<i style="left:62%"></i><i style="left:78%"></i><i style="left:93%"></i></div>
+              </div>
+              <div class="flow-scale"><span style="grid-column:2 / 5">启动延迟只在启动后的第一轮</span><span style="grid-column:5 / 7">生成结束后开始等待计时，同时在投放窗口内放出弹幕</span></div>
+            </div>
+          </div>
+        </article>
+        <div class="cols-2 mt">
+          <article class="card">
+            <header class="card-head"><svg class="ic"><use href="#i-camera"/></svg><h2>截图间隔</h2></header>
+            <div class="card-body">
+              <div class="fields two">
+                <div class="field"><label for="r-imin">最短间隔</label><div class="input-wrap"><input class="input" id="r-imin" type="number" value="14"><span class="unit">秒</span></div></div>
+                <div class="field"><label for="r-imax">最长间隔</label><div class="input-wrap"><input class="input" id="r-imax" type="number" value="28"><span class="unit">秒</span></div></div>
+                <div class="hint full" style="grid-column:1/-1;margin-top:-6px">每轮结束后在两者之间随机等待 · 5–1800 秒</div>
+                <div class="field"><label for="r-delay">启动延迟</label><div class="input-wrap"><input class="input" id="r-delay" type="number" value="5"><span class="unit">秒</span></div><div class="hint">0–60 · 避免第一张截到本窗口</div></div>
+              </div>
+            </div>
+          </article>
+          <article class="card">
+            <header class="card-head"><svg class="ic"><use href="#i-sparkles"/></svg><h2>每轮投放</h2></header>
+            <div class="card-body">
+              <div class="fields two">
+                <div class="field"><label for="r-items">每轮弹幕</label><div class="input-wrap"><input class="input" id="r-items" type="number" value="3"><span class="unit">条</span></div><div class="hint">1–12 · 即 {{requestedCount}}</div></div>
+                <div></div>
+                <div class="field"><label for="r-wmin">投放窗口最短</label><div class="input-wrap"><input class="input" id="r-wmin" type="number" value="6"><span class="unit">秒</span></div></div>
+                <div class="field"><label for="r-wmax">投放窗口最长</label><div class="input-wrap"><input class="input" id="r-wmax" type="number" value="10"><span class="unit">秒</span></div></div>
+                <div class="hint" style="grid-column:1/-1;margin-top:-6px">一轮的弹幕在随机窗口内错开出现 · 0–60 秒</div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ========== CAPTURE & HISTORY ========== -->
+      <section class="page" data-page="capture" aria-labelledby="h-capture">
+        <header class="page-head">
+          <div><h1 id="h-capture">截图与历史</h1><p>截图质量、对话历史和请求大小，决定缓存命中与上传带宽</p></div>
+        </header>
+        <article class="card">
+          <header class="card-head"><svg class="ic"><use href="#i-gauge"/></svg><h2>当前请求预算</h2><span class="card-sub">第 37 轮实测</span></header>
+          <div class="card-body">
+            <div class="budget">
+              <div>
+                <div class="hm-label">请求体（生效上限）</div>
+                <div class="bv">3.1 MB<small>/ 48 MB</small></div>
+                <div class="meter" role="meter" aria-valuenow="3.1" aria-valuemin="0" aria-valuemax="48" aria-label="请求体"><i style="width:6.5%"></i><span class="mark" style="left:50%"></span></div>
+                <div class="meter-lbls"><span style="left:0">0</span><span style="left:50%;transform:translateX(-50%)">24 MB · 压缩后回到这里</span><span style="right:0">48 MB</span></div>
+              </div>
+              <div>
+                <div class="hm-label">历史截图</div>
+                <div class="bv">14 张<small>/ 24 张</small></div>
+                <div class="meter" role="meter" aria-valuenow="14" aria-valuemin="0" aria-valuemax="24" aria-label="历史截图"><i style="width:58.3%"></i><span class="mark" style="left:50%"></span></div>
+                <div class="meter-lbls"><span style="left:0">0</span><span style="left:50%;transform:translateX(-50%)">12 张</span><span style="right:0">24 张</span></div>
+              </div>
+            </div>
+            <p class="hint" style="margin-top:8px">任一项超过上限时，一次性丢弃最早的截图直到两项都回到一半（文字保留），只有那一轮需要重新预填充，之后继续命中缓存。</p>
+          </div>
+        </article>
+
+        <div class="cols-2 mt">
+          <div class="stack">
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-camera"/></svg><h2>截图</h2></header>
+              <div class="card-body">
+                <div class="fields two">
+                  <div class="field"><label for="k-edge">截图最长边</label><div class="input-wrap"><input class="input" id="k-edge" type="number" value="960"><span class="unit">px</span></div><div class="hint">480–2160</div></div>
+                  <div class="field">
+                    <span class="field-label" id="lbl-fmt">截图格式</span>
+                    <div class="seg block" role="radiogroup" aria-labelledby="lbl-fmt">
+                      <label><input type="radio" name="fmt" checked><span>JPEG</span></label>
+                      <label><input type="radio" name="fmt"><span>PNG</span></label>
+                    </div>
+                  </div>
+                  <div class="field full is-modified">
+                    <label for="k-q">JPEG 质量<span class="aside">0.5–0.95 · 已修改</span></label>
+                    <div class="range-row"><input type="range" min="0.5" max="0.95" step="0.01" value="0.75" aria-label="JPEG 质量滑块"><div class="input-wrap"><input class="input" id="k-q" type="number" value="0.75" step="0.01"></div></div>
+                    <div class="hint">最近 10 轮平均每张 148 KB（传输 198 KB）</div>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-image"/></svg><h2>历史截图与请求体</h2></header>
+              <div class="card-body">
+                <label class="sw-row">
+                  <span class="sw-text"><span class="sw-title">保留历史截图</span><span class="sw-desc">历史中的每张截图每轮都会以 base64 重新上传，模型能“记得”之前的画面。</span></span>
+                  <input type="checkbox" class="switch" role="switch" checked>
+                </label>
+                <div class="fields two" style="margin-top:12px">
+                  <div class="field"><label for="k-cap">历史截图上限</label><div class="input-wrap"><input class="input" id="k-cap" type="number" value="24"><span class="unit">张</span></div><div class="hint">0–50</div></div>
+                  <div class="field"><label for="k-body">请求体上限</label><div class="input-wrap"><input class="input" id="k-body" type="number" value="48"><span class="unit">MB</span></div><div class="hint">1–512 · 越大越占上行带宽</div></div>
+                </div>
+                <div class="callout info mt">
+                  <svg class="ic"><use href="#i-info"/></svg>
+                  <ul>
+                    <li>服务器返回 <b>413</b> 时，按它报告的上限自动压缩并重试一次。</li>
+                    <li>上传 8 MB 以上时连接被重置，会用一半大小重试一次。</li>
+                    <li>PNG 通常是 JPEG 的 10 倍以上，而模型看到的 token 数相同；保留历史截图时建议用 JPEG。</li>
+                  </ul>
+                </div>
+              </div>
+            </article>
+          </div>
+          <article class="card">
+            <header class="card-head"><svg class="ic"><use href="#i-history"/></svg><h2>对话历史</h2></header>
+            <div class="card-body">
+              <div class="fields two">
+                <div class="field"><label for="k-rounds">历史轮数</label><div class="input-wrap"><input class="input" id="k-rounds" type="number" value="30"><span class="unit">轮</span></div><div class="hint">0–50 · 0 为不带历史</div></div>
+              </div>
+              <div class="field mt">
+                <span class="field-label" id="lbl-mode">历史模式</span>
+                <div class="mode-cards" role="radiogroup" aria-labelledby="lbl-mode">
+                  <label class="mode-card">
+                    <input type="radio" name="hm">
+                    <div><div class="mc-h">满额重置</div><p>窗口满了就清空重来。每满一次失去全部上下文和缓存。</p>
+                      <div class="rounds-viz" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i class="drop"></i><i class="drop"></i><span class="lbl">满 → 全部清空</span></div></div>
+                  </label>
+                  <label class="mode-card">
+                    <input type="radio" name="hm" checked>
+                    <div><div class="mc-h">分批滑动<span class="tag tag-ok">缓存友好 · 推荐</span></div><p>满了一次丢弃最早的一半。保留上下文，每半个窗口只失去一次缓存。</p>
+                      <div class="rounds-viz" aria-hidden="true"><i class="drop"></i><i class="drop"></i><i class="drop"></i><i></i><i></i><i></i><i class="new"></i><span class="lbl">满 → 丢弃一半</span></div></div>
+                  </label>
+                  <label class="mode-card">
+                    <input type="radio" name="hm">
+                    <div><div class="mc-h">逐轮滑动<span class="tag tag-warn">每轮失去缓存</span></div><p>每轮丢弃最早一轮，请求开头每轮都变。保留历史截图时避免使用。</p>
+                      <div class="rounds-viz" aria-hidden="true"><i class="drop"></i><i></i><i></i><i></i><i></i><i></i><i class="new"></i><span class="lbl">每轮 → 丢弃 1 轮</span></div></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ========== PRIVACY ========== -->
+      <section class="page" data-page="privacy" aria-labelledby="h-privacy">
+        <header class="page-head">
+          <div><h1 id="h-privacy">隐私与存储</h1><p>截图会发送到哪里、保存什么</p></div>
+        </header>
+        <article class="card">
+          <header class="card-head"><svg class="ic"><use href="#i-shield-check"/></svg><h2>数据去向</h2></header>
+          <div class="card-body">
+            <div class="flowline">
+              <span class="node-box"><svg class="ic"><use href="#i-monitor"/></svg>屏幕截图 · 960 px JPEG</span>
+              <svg class="ic arrow"><use href="#i-chevron-right"/></svg>
+              <span class="node-box"><svg class="ic"><use href="#i-server"/></svg>http://127.0.0.1:1234/v1<span class="tag tag-ok">本机</span></span>
+              <svg class="ic arrow"><use href="#i-chevron-right"/></svg>
+              <span class="node-box"><svg class="ic"><use href="#i-sparkles"/></svg>弹幕文字</span>
+            </div>
+            <p class="hint" style="margin-top:10px">只有开启“视觉输入”时才会截图。截图只在内存中，不写入磁盘；配置与日志只保存在本机，没有遥测。</p>
+          </div>
+        </article>
+        <div class="cols-2 mt">
+          <article class="card">
+            <header class="card-head"><svg class="ic"><use href="#i-lock"/></svg><h2>截图隐私</h2></header>
+            <div class="card-body">
+              <div class="field">
+                <label for="v-black">隐私黑名单<span class="tag tag-todo" title="尚未实现：截图前不会检查前台应用">未实现</span></label>
+                <input class="input" id="v-black" disabled placeholder="例如：WeChat.exe, 1Password.exe">
+                <div class="hint">尚未实现：截图前不会检查前台应用，名单里的应用照样会被截图并发送。</div>
+              </div>
+              <label class="sw-row is-disabled" style="margin-top:12px;padding-top:12px">
+                <span class="sw-text"><span class="sw-title">保存截图到磁盘<span class="tag tag-todo">未实现</span></span><span class="sw-desc">尚未实现：截图从不写入磁盘。</span></span>
+                <input type="checkbox" class="switch" role="switch" disabled>
+              </label>
+            </div>
+          </article>
+          <div class="stack">
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-file-text"/></svg><h2>日志</h2></header>
+              <div class="card-body">
+                <div class="fields two">
+                  <div class="field"><label for="v-logs">日志保留</label><div class="input-wrap"><input class="input" id="v-logs" type="number" value="200"><span class="unit">条</span></div><div class="hint">10–2000 · 超出后删除最早的</div></div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <header class="card-head"><svg class="ic"><use href="#i-shield"/></svg><h2>系统权限</h2><span class="tag">仅 macOS 显示</span></header>
+              <div class="card-body">
+                <div class="sw-row" style="cursor:default">
+                  <span class="sw-text"><span class="sw-title">录屏权限</span><span class="sw-desc">macOS 需要在“系统设置 › 隐私与安全性 › 录屏”中允许本应用。</span></span>
+                  <button class="btn" type="button"><svg class="ic"><use href="#i-external-link"/></svg>打开系统设置</button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast only-error" role="alert">
+  <svg class="ic"><use href="#i-circle-alert"/></svg>
+  <span>保存失败：配置文件被其他程序占用</span>
+  <button class="btn btn-ghost btn-icon" type="button" aria-label="关闭"><svg class="ic ic-sm"><use href="#i-x"/></svg></button>
+</div>
+
+<script>
+  // Mockup-only routing: #overview #logs #model #character #prompt #danmaku #cadence #capture #privacy
+  // Variants: #error (overview in error state), #profiles (overview with the profile popover open).
+  function route() {
+    var h = (location.hash || "#overview").slice(1);
+    var page = h;
+    document.body.classList.toggle("state-error", h === "error");
+    document.body.classList.toggle("show-profiles", h === "profiles");
+    if (h === "error" || h === "profiles") page = "overview";
+    if (!document.querySelector('[data-page="' + page + '"]')) page = "overview";
+    document.querySelectorAll(".page").forEach(function (p) { p.classList.toggle("is-active", p.dataset.page === page); });
+    document.querySelectorAll("[data-nav]").forEach(function (a) {
+      if (a.dataset.nav === page) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    var dirty = page === "capture";
+    document.body.classList.toggle("is-dirty", dirty);
+    document.querySelector(".save-btn.is-clean").hidden = dirty;
+    document.querySelector(".save-btn.is-dirty").hidden = !dirty;
+    document.querySelector(".profile-btn").setAttribute("aria-expanded", h === "profiles" ? "true" : "false");
+    document.getElementById("content").scrollTop = 0;
+  }
+  window.addEventListener("hashchange", route);
+  route();
+  document.querySelectorAll(".tl-row").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var li = b.closest(".tl-entry");
+      if (!li.querySelector(".tl-detail")) return;
+      li.classList.toggle("is-open");
+      b.setAttribute("aria-expanded", li.classList.contains("is-open"));
+    });
+  });
+</script>
+</body>
+</html>

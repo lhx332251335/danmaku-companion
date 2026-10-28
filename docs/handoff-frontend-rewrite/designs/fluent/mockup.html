@@ -1,0 +1,1444 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>弹幕伴侣 设置</title>
+<style>
+/* ============ Tokens ============ */
+:root {
+  color-scheme: light;
+  --font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, "Microsoft YaHei UI", "Noto Sans Mono CJK SC", monospace;
+
+  --mica: #f3f3f3;
+  --mica-grad: linear-gradient(150deg, #edf1f5 0%, #f3f3f3 42%, #f5f2f1 100%);
+  --nav-hover: rgba(0, 0, 0, 0.04);
+  --nav-active: rgba(0, 0, 0, 0.06);
+  --card: #fbfbfb;
+  --card-2: #f6f6f6;
+  --card-hover: #f5f5f5;
+  --stroke: #e5e5e5;
+  --stroke-strong: #d1d1d1;
+  --divider: #ebebeb;
+  --ctl: #ffffff;
+  --ctl-hover: #f9f9f9;
+  --ctl-press: #f2f2f2;
+  --ctl-stroke: #dedede;
+  --ctl-stroke-bottom: #8a8a8a;
+  --ctl-disabled: #f5f5f5;
+  --subtle-hover: rgba(0, 0, 0, 0.05);
+  --subtle-press: rgba(0, 0, 0, 0.08);
+  --track: #d9d9d9;
+  --text: #1b1b1b;
+  --text-2: #5c5c5c;
+  --text-3: #6b6b6b;
+  --text-dis: #a0a0a0;
+  --accent: #0f7b6c;
+  --accent-hover: #0d6e61;
+  --accent-press: #0b5f54;
+  --accent-text: #0c6b5e;
+  --accent-subtle: #e2f2ee;
+  --on-accent: #ffffff;
+  --success: #0f7b0f;
+  --success-bg: #dff6dd;
+  --caution: #9d5d00;
+  --caution-text: #7a4a00;
+  --caution-bg: #fff4ce;
+  --critical: #c42b1c;
+  --critical-bg: #fde7e9;
+  --info-bg: #f2f4f7;
+  --chip-bg: #f0f0f0;
+  --code-bg: #f3f3f3;
+  --thumb-ring: #ffffff;
+  --focus: #1b1b1b;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  --r-ctl: 4px;
+  --r-card: 8px;
+  --r-lg: 12px;
+  --nav-w: 256px;
+  --pad-x: 32px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --mica: #202020;
+    --mica-grad: linear-gradient(150deg, #1b1f22 0%, #202020 42%, #231f21 100%);
+    --nav-hover: rgba(255, 255, 255, 0.06);
+    --nav-active: rgba(255, 255, 255, 0.09);
+    --card: #2b2b2b;
+    --card-2: #272727;
+    --card-hover: #313131;
+    --stroke: #353535;
+    --stroke-strong: #474747;
+    --divider: #222222;
+    --ctl: #353535;
+    --ctl-hover: #3b3b3b;
+    --ctl-press: #303030;
+    --ctl-stroke: #424242;
+    --ctl-stroke-bottom: #9a9a9a;
+    --ctl-disabled: #2f2f2f;
+    --subtle-hover: rgba(255, 255, 255, 0.06);
+    --subtle-press: rgba(255, 255, 255, 0.04);
+    --track: #4a4a4a;
+    --text: #ffffff;
+    --text-2: #c8c8c8;
+    --text-3: #a3a3a3;
+    --text-dis: #7a7a7a;
+    --accent: #5fd4b9;
+    --accent-hover: #55c4aa;
+    --accent-press: #4cb39c;
+    --accent-text: #6fe0c6;
+    --accent-subtle: #24403a;
+    --on-accent: #062a23;
+    --success: #6ccb5f;
+    --success-bg: #393d1b;
+    --caution: #fce100;
+    --caution-text: #fce100;
+    --caution-bg: #433519;
+    --critical: #ff99a4;
+    --critical-bg: #442726;
+    --info-bg: #303236;
+    --chip-bg: #353535;
+    --code-bg: #222222;
+    --thumb-ring: #454545;
+    --focus: #ffffff;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+@media (max-width: 1040px) {
+  :root { --nav-w: 224px; --pad-x: 24px; }
+}
+
+/* ============ Base ============ */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--mica-grad), var(--mica);
+  color: var(--text);
+  font: 14px/20px var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--accent-text); }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-ctl); }
+.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.i-lg { width: 20px; height: 20px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tabular { font-variant-numeric: tabular-nums; }
+.muted { color: var(--text-2); }
+code, .mono { font-family: var(--font-mono); }
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-thumb { background: rgba(127, 127, 127, 0.45); border: 4px solid transparent; border-radius: 6px; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: rgba(127, 127, 127, 0.7); border-width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ============ Shell ============ */
+.app { display: grid; grid-template-columns: var(--nav-w) minmax(0, 1fr); height: 100vh; }
+
+.nav { display: flex; flex-direction: column; min-height: 0; padding: 10px 8px 12px 12px; }
+.brand { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 8px; flex: none; }
+.brand img { width: 22px; height: 22px; border-radius: 5px; }
+.brand-name { font-size: 13px; font-weight: 600; }
+.brand-ver { font-size: 12px; color: var(--text-2); }
+
+.profile-card {
+  display: flex; align-items: center; gap: 12px; flex: none;
+  margin: 8px 0 12px; padding: 10px 10px 10px 12px; min-height: 60px;
+  border-radius: var(--r-card); background: var(--card); border: 1px solid var(--stroke);
+  color: var(--text); text-decoration: none; box-shadow: var(--shadow-card);
+}
+.profile-card:hover { background: var(--card-hover); }
+.profile-ico {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent-subtle); color: var(--accent-text); flex: none;
+}
+.profile-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.profile-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile-sub { font-size: 12px; line-height: 16px; color: var(--text-2); }
+.profile-card .chev { color: var(--text-2); }
+
+.nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.nav-item {
+  position: relative; display: flex; align-items: center; gap: 14px;
+  height: 36px; padding: 0 12px; border-radius: var(--r-ctl);
+  color: var(--text); text-decoration: none; white-space: nowrap;
+}
+.nav-item:hover { background: var(--nav-hover); }
+.nav-item[aria-current="page"] { background: var(--nav-active); }
+.nav-item[aria-current="page"]::before {
+  content: ""; position: absolute; left: 0; top: 50%; width: 3px; height: 16px; margin-top: -8px;
+  border-radius: 2px; background: var(--accent);
+}
+.nav-item .count { margin-left: auto; font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.nav-item .alert-dot { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: var(--critical); }
+.nav-label { padding: 12px 12px 4px; font-size: 12px; line-height: 16px; color: var(--text-2); }
+
+.run-card {
+  flex: none; margin-top: 12px; padding: 12px; display: grid; gap: 8px;
+  border-radius: var(--r-card); background: var(--card); border: 1px solid var(--stroke); box-shadow: var(--shadow-card);
+}
+.run-head { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.run-head .cycles { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--text-2); }
+.run-line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 16px; color: var(--text-2); }
+.run-line b { font-size: 14px; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.run-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 2px -4px -4px; }
+.run-actions .btn { justify-content: flex-start; padding: 0 8px; }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--text-3); }
+.dot.running { background: var(--success); box-shadow: 0 0 0 3px var(--success-bg); }
+.dot.paused { background: var(--caution); box-shadow: 0 0 0 3px var(--caution-bg); }
+.dot.error { background: var(--critical); box-shadow: 0 0 0 3px var(--critical-bg); }
+
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.page-header {
+  flex: none; display: flex; align-items: center; gap: 16px;
+  min-height: 76px; padding: 18px calc(var(--pad-x) + 12px) 14px 28px;
+}
+.page-header h1 { flex: 1; min-width: 0; margin: 0; font: 600 28px/36px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.vsep { width: 1px; height: 20px; background: var(--stroke-strong); margin: 0 4px; }
+.dirty-note { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.dirty-note::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+@media (max-width: 1040px) { .dirty-note { display: none; } }
+
+.scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 0 var(--pad-x) 40px 28px; scrollbar-gutter: stable; }
+.page { max-width: 1000px; }
+.page-lead { margin: 0 0 4px 2px; color: var(--text-2); max-width: 680px; }
+
+/* ============ Groups / cards / rows ============ */
+.group { margin-top: 24px; }
+.group:first-child { margin-top: 4px; }
+.group-head { display: flex; align-items: center; gap: 12px; margin: 0 0 8px 2px; min-height: 24px; }
+.group-title { margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; }
+.group-head .spacer { flex: 1; }
+.group-head .link { font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 2px; min-height: 32px; padding: 0 4px; }
+.group-head .link:hover { text-decoration: underline; }
+.card { background: var(--card); border: 1px solid var(--stroke); border-radius: var(--r-card); box-shadow: var(--shadow-card); }
+.card + .card { margin-top: 4px; }
+
+.row { display: flex; align-items: center; gap: 16px; min-height: 64px; padding: 11px 16px; }
+.rows > .row + .row, .rows > .row + .subrow, .rows > .subrow + .row, .rows > * + .infobar-row { border-top: 1px solid var(--divider); }
+.row-icon { flex: none; width: 20px; display: grid; place-items: center; color: var(--text); }
+.row-icon .i { width: 18px; height: 18px; }
+.row-text { flex: 1 1 auto; min-width: 0; }
+.row-label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; line-height: 20px; color: var(--text); }
+.row-desc { margin: 2px 0 0; font-size: 12px; line-height: 16px; color: var(--text-2); }
+.row-desc code { font-size: 11.5px; padding: 0 3px; border-radius: 3px; background: var(--chip-bg); color: var(--text); }
+.row-ctl { flex: none; display: flex; align-items: center; gap: 8px; }
+.row.stack { flex-wrap: wrap; row-gap: 10px; }
+.row-body { flex: 1 0 100%; padding-left: 36px; min-width: 0; }
+.row.is-disabled .row-label, .row.is-disabled .row-icon, .subrow.is-disabled .row-label { color: var(--text-dis); }
+input[type="range"]:disabled { cursor: default; }
+input[type="range"]:disabled::-webkit-slider-runnable-track { background: var(--track); }
+input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-dis); }
+.subrow { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 16px 8px 52px; }
+.subrow .row-label { font-size: 14px; }
+a.row { color: inherit; text-decoration: none; }
+a.row:hover { background: var(--card-hover); }
+.rows > a.row:first-child { border-radius: var(--r-card) var(--r-card) 0 0; }
+.rows > a.row:last-child { border-radius: 0 0 var(--r-card) var(--r-card); }
+.row .chev { color: var(--text-2); }
+.row-value { font-size: 14px; color: var(--text-2); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+
+/* ============ Controls ============ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 32px; padding: 0 12px; border-radius: var(--r-ctl);
+  border: 1px solid var(--ctl-stroke); border-bottom-color: color-mix(in srgb, var(--ctl-stroke) 70%, var(--ctl-stroke-bottom));
+  background: var(--ctl); color: var(--text); cursor: pointer; white-space: nowrap; line-height: 20px;
+}
+a.btn { text-decoration: none; color: var(--text); }
+.btn:hover { background: var(--ctl-hover); }
+.btn:active { background: var(--ctl-press); color: var(--text-2); }
+.btn:disabled { cursor: default; color: var(--text-dis); background: var(--ctl-disabled); border-color: var(--stroke); }
+.btn.accent { background: var(--accent); border-color: transparent; color: var(--on-accent); font-weight: 600; box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18); }
+.btn.accent:hover { background: var(--accent-hover); }
+.btn.accent:active { background: var(--accent-press); color: var(--on-accent); }
+.btn.subtle { background: transparent; border-color: transparent; }
+.btn.subtle:hover { background: var(--subtle-hover); }
+.btn.subtle:active { background: var(--subtle-press); }
+.btn.subtle:disabled { background: transparent; border-color: transparent; }
+.btn.danger { color: var(--critical); }
+.btn.icon { width: 32px; padding: 0; }
+.btn.toggle[aria-pressed="true"] { background: var(--accent-subtle); color: var(--accent-text); border-color: transparent; }
+.btn .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-left: -2px; }
+.btn .kbd { font-size: 12px; color: var(--text-2); font-weight: 400; }
+
+.field {
+  position: relative; display: inline-flex; align-items: center; height: 32px; min-width: 0;
+  background: var(--ctl); border: 1px solid var(--ctl-stroke); border-bottom-color: var(--ctl-stroke-bottom);
+  border-radius: var(--r-ctl);
+}
+.field:hover { background: var(--ctl-hover); }
+.field:focus-within { background: var(--ctl); border-bottom-color: var(--accent); box-shadow: inset 0 -1px 0 var(--accent); }
+.field input, .field select {
+  flex: 1 1 auto; min-width: 0; height: 100%; padding: 0 10px; border: 0; background: transparent; outline: none;
+  font-variant-numeric: tabular-nums;
+}
+.field input::placeholder, textarea::placeholder { color: var(--text-3); }
+.field .unit { flex: none; padding: 0 10px 0 0; font-size: 12px; color: var(--text-2); }
+.field .inner-btn { flex: none; display: grid; place-items: center; width: 28px; height: 24px; margin-right: 3px; border: 0; border-radius: 3px; background: transparent; color: var(--text-2); cursor: pointer; }
+.field .inner-btn:hover { background: var(--subtle-hover); }
+.field.is-disabled, .field.is-disabled:hover { background: var(--ctl-disabled); border-color: var(--stroke); color: var(--text-dis); }
+.field.is-disabled input { color: var(--text-dis); }
+.field.select select { appearance: none; -webkit-appearance: none; padding-right: 34px; cursor: pointer; }
+.field.select .chev { position: absolute; right: 10px; pointer-events: none; color: var(--text-2); }
+.field.select select option { background: var(--card); color: var(--text); }
+.w-xl { width: 340px; }
+.w-lg { width: 260px; }
+.w-md { width: 180px; }
+.w-num { width: 104px; }
+.w-num-s { width: 84px; }
+@media (max-width: 1040px) { .w-xl { width: 280px; } .w-lg { width: 220px; } }
+.range-sep { color: var(--text-2); }
+
+textarea.area {
+  display: block; width: 100%; resize: vertical; min-height: 80px; padding: 8px 10px;
+  background: var(--ctl); border: 1px solid var(--ctl-stroke); border-bottom-color: var(--ctl-stroke-bottom); border-radius: var(--r-ctl);
+  line-height: 20px;
+}
+textarea.area:focus { border-bottom-color: var(--accent); box-shadow: inset 0 -1px 0 var(--accent); }
+textarea.area.mono { font: 13px/20px var(--font-mono); }
+.area-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font-size: 12px; line-height: 16px; color: var(--text-2); }
+
+/* Toggle switch */
+.switch { display: inline-flex; align-items: center; gap: 12px; min-height: 32px; cursor: pointer; user-select: none; }
+.switch-text { min-width: 1em; text-align: right; color: var(--text); }
+.switch input { position: absolute; opacity: 0; width: 40px; height: 20px; margin: 0; pointer-events: none; }
+.switch .track {
+  position: relative; width: 40px; height: 20px; border-radius: 10px; flex: none;
+  border: 1px solid var(--text-2); background: var(--ctl);
+}
+.switch .track::after {
+  content: ""; position: absolute; top: 3px; left: 4px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--text-2); transition: left 120ms ease, width 120ms ease;
+}
+.switch:hover .track::after { width: 14px; height: 14px; top: 2px; }
+.switch input:checked + .track { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + .track::after { left: 22px; background: var(--on-accent); width: 12px; height: 12px; top: 3px; }
+.switch:hover input:checked + .track::after { left: 21px; width: 14px; height: 14px; top: 2px; }
+.switch input:focus-visible + .track { outline: 2px solid var(--focus); outline-offset: 2px; }
+.switch input:disabled + .track { border-color: var(--text-dis); }
+.switch input:disabled + .track::after { background: var(--text-dis); }
+.switch.is-disabled { cursor: default; }
+.switch.is-disabled .switch-text { color: var(--text-dis); }
+
+/* Slider */
+.slider { display: inline-flex; align-items: center; gap: 12px; }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 160px; height: 32px; margin: 0; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) 0 var(--p, 50%), var(--track) var(--p, 50%) 100%);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; margin-top: -8px; border-radius: 50%;
+  background: var(--accent); border: 5px solid var(--thumb-ring); box-shadow: 0 0 0 1px var(--ctl-stroke), var(--shadow-raised);
+}
+input[type="range"]:hover::-webkit-slider-thumb { border-width: 4px; }
+input[type="range"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
+@media (max-width: 1040px) { input[type="range"] { width: 120px; } }
+
+/* Segmented */
+.seg { display: inline-flex; height: 34px; padding: 0; border: 1px solid var(--ctl-stroke); border-radius: var(--r-ctl); background: var(--ctl); overflow: hidden; }
+.seg label { position: relative; display: flex; }
+.seg label + label { border-left: 1px solid var(--ctl-stroke); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: grid; place-items: center; min-width: 56px; height: 32px; padding: 0 12px; cursor: pointer; color: var(--text); }
+.seg span:hover { background: var(--ctl-hover); }
+.seg input:checked + span { background: var(--accent-subtle); color: var(--accent-text); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+.seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: -3px; border-radius: 3px; }
+
+/* Radio list */
+.radio-list { display: grid; gap: 2px; }
+.radio-opt { display: flex; align-items: flex-start; gap: 12px; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.radio-opt:hover { background: var(--subtle-hover); }
+.radio-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.radio-dot { flex: none; width: 20px; height: 20px; margin-top: 0; border-radius: 50%; border: 1px solid var(--text-2); background: var(--ctl); display: grid; place-items: center; }
+.radio-opt input:checked + .radio-dot { background: var(--accent); border-color: var(--accent); }
+.radio-opt input:checked + .radio-dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--on-accent); }
+.radio-opt input:focus-visible + .radio-dot { outline: 2px solid var(--focus); outline-offset: 2px; }
+.radio-text { display: flex; flex-direction: column; min-width: 0; }
+.radio-text b { font-weight: 400; display: flex; align-items: center; gap: 8px; }
+.radio-text small { font-size: 12px; line-height: 16px; color: var(--text-2); }
+
+/* Tags, chips */
+.tag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: 4px; font-size: 12px; line-height: 16px; font-weight: 400; white-space: nowrap; background: var(--chip-bg); color: var(--text-2); }
+.tag.todo { background: var(--caution-bg); color: var(--caution-text); }
+.tag.ok { background: var(--success-bg); color: var(--success); }
+.tag.err { background: var(--critical-bg); color: var(--critical); }
+.tag.accent { background: var(--accent-subtle); color: var(--accent-text); }
+.tag.mac { background: var(--info-bg); color: var(--text-2); border: 1px solid var(--stroke); }
+
+/* InfoBar */
+.infobar { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: var(--r-card); border: 1px solid var(--stroke); background: var(--info-bg); }
+.infobar > .i { margin-top: 2px; width: 16px; height: 16px; }
+.infobar .ib-body { flex: 1; min-width: 0; }
+.infobar .ib-title { font-weight: 600; margin-right: 8px; }
+.infobar .ib-msg { color: var(--text); overflow-wrap: anywhere; }
+.infobar .ib-actions { display: flex; gap: 8px; margin-top: -6px; margin-bottom: -6px; flex: none; align-items: center; }
+.infobar.info > .i { color: var(--accent-text); }
+.infobar.success { background: var(--success-bg); border-color: color-mix(in srgb, var(--success) 18%, transparent); }
+.infobar.success > .i { color: var(--success); }
+.infobar.caution { background: var(--caution-bg); border-color: color-mix(in srgb, var(--caution) 22%, transparent); }
+.infobar.caution > .i { color: var(--caution); }
+.infobar.critical { background: var(--critical-bg); border-color: color-mix(in srgb, var(--critical) 22%, transparent); }
+.infobar.critical > .i { color: var(--critical); }
+.infobar-row { padding: 12px 16px 14px 52px; }
+.infobar-row .infobar { margin: 0; }
+.rows > .infobar-row + .infobar-row { border-top: 0; padding-top: 0; }
+.page > .infobar { margin: 4px 0 12px; }
+
+/* Meter */
+.meter { height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.meter > i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.meter.lg { height: 6px; border-radius: 3px; }
+.meter.indeterminate > i { width: 30%; animation: indet 1.6s ease-in-out infinite; }
+@keyframes indet { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+@media (prefers-reduced-motion: reduce) { .meter.indeterminate > i { animation: none; width: 100%; opacity: .5; } }
+
+/* ============ Overview ============ */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 46%); overflow: hidden; }
+.hero-main { display: flex; flex-direction: column; gap: 6px; padding: 18px 24px 20px; min-width: 0; }
+.state-chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 24px; padding: 0 10px 0 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.state-chip.running { background: var(--success-bg); color: var(--success); }
+.state-chip.idle { background: var(--chip-bg); color: var(--text-2); }
+.state-chip.paused { background: var(--caution-bg); color: var(--caution-text); }
+.state-chip.error { background: var(--critical-bg); color: var(--critical); }
+.state-chip .dot { box-shadow: none; background: currentColor; }
+.hero-label { margin-top: 10px; font-size: 12px; line-height: 16px; color: var(--text-2); }
+.countdown { display: flex; align-items: baseline; gap: 6px; }
+.countdown .num { font: 600 44px/52px var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+.countdown .unit { font-size: 16px; color: var(--text-2); }
+.hero .meter { margin: 4px 0 6px; max-width: 360px; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; line-height: 16px; color: var(--text-2); }
+.hero-meta b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.stage {
+  position: relative; overflow: hidden; min-height: 196px; isolation: isolate;
+  background:
+    radial-gradient(70% 60% at 85% 100%, rgba(255, 128, 92, 0.55), transparent 70%),
+    radial-gradient(60% 70% at 10% 0%, rgba(86, 128, 255, 0.5), transparent 70%),
+    linear-gradient(180deg, #121c33 0%, #1b2544 55%, #281f3b 100%);
+}
+.stage::before {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 46%; z-index: -1;
+  background: linear-gradient(180deg, #1a1830 0%, #110f20 100%);
+  clip-path: polygon(0 55%, 14% 30%, 26% 48%, 40% 12%, 55% 44%, 68% 22%, 82% 50%, 100% 28%, 100% 100%, 0 100%);
+}
+.stage::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 26%; z-index: -1;
+  background: #0c0b17; clip-path: polygon(0 40%, 20% 70%, 38% 35%, 60% 60%, 78% 30%, 100% 55%, 100% 100%, 0 100%);
+}
+.stage .zone-band { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255, 255, 255, 0.35); border-bottom: 1px dashed rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.05); }
+.dm {
+  position: absolute; white-space: nowrap; font-family: var(--font); font-weight: 800; line-height: 1.25;
+  font-size: var(--dm-size, 15px); color: var(--c, #f8fafc); opacity: var(--dm-opacity, 0.92);
+}
+.dm.shadow { text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.26); }
+.stage-cap {
+  position: absolute; left: 12px; bottom: 10px; display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; color: #f3f3f3;
+  background: rgba(10, 12, 24, 0.62); backdrop-filter: blur(8px);
+}
+
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.tile { display: grid; gap: 4px; align-content: start; padding: 14px 16px 14px; min-width: 0; }
+.tile-label { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 16px; color: var(--text-2); }
+.tile-value { font: 600 24px/32px var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tile-value small { font: 400 13px/20px var(--font); color: var(--text-2); margin-left: 4px; }
+.tile-value small.pct { margin-left: 1px; }
+.tile .meter { margin: 2px 0 2px; }
+.tile-sub { font-size: 12px; line-height: 16px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+
+/* ============ Logs ============ */
+.log-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
+.log-toolbar .count { color: var(--text-2); margin-right: auto; display: inline-flex; align-items: center; gap: 10px; }
+.log-toolbar .keep { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); }
+.log-card { overflow: hidden; }
+.log-grid {
+  display: grid; align-items: center; column-gap: 12px;
+  grid-template-columns: 72px 118px 56px 52px 84px 36px minmax(0, 1fr) 16px;
+  padding: 0 16px;
+}
+.log-head { height: 36px; font-size: 12px; color: var(--text-2); border-bottom: 1px solid var(--divider); }
+.log-entry + .log-entry { border-top: 1px solid var(--divider); }
+.log-entry > summary { min-height: 44px; cursor: pointer; list-style: none; font-variant-numeric: tabular-nums; }
+.log-entry > summary::-webkit-details-marker { display: none; }
+.log-entry > summary:hover { background: var(--card-hover); }
+.log-entry > summary:focus-visible { outline-offset: -2px; border-radius: 0; }
+.log-entry[open] > summary { background: var(--card-hover); }
+.log-entry > summary .chev { transition: transform 120ms ease; color: var(--text-2); }
+.log-entry[open] > summary .chev { transform: rotate(90deg); }
+.log-entry .cell { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log-entry .cell.dim { color: var(--text-2); }
+.log-entry .notes { display: flex; gap: 4px; overflow: hidden; }
+.st { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.st .i { width: 16px; height: 16px; }
+.st.ok { color: var(--success); }
+.st.err { color: var(--critical); }
+.st.abort { color: var(--text-2); }
+.log-detail { padding: 14px 16px 16px 16px; background: var(--card-2); border-top: 1px solid var(--divider); display: grid; gap: 14px; }
+.detail-title { font-size: 12px; line-height: 16px; color: var(--text-2); margin: 0 0 6px; font-weight: 600; }
+.comments { display: flex; flex-wrap: wrap; gap: 6px; }
+.comment { display: inline-flex; align-items: center; gap: 8px; min-height: 28px; padding: 3px 10px 3px 8px; border-radius: 4px; background: var(--card); border: 1px solid var(--stroke); }
+.comment::before { content: ""; width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22); }
+.kv-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.kv { margin: 0; display: grid; gap: 6px; align-content: start; }
+.kv > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; font-size: 12px; line-height: 18px; }
+.kv dt { color: var(--text-2); }
+.kv dd { margin: 0; color: var(--text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.kv dd .note { color: var(--caution-text); }
+@media (max-width: 1040px) { .kv > div { grid-template-columns: 1fr; gap: 0; } }
+.raw > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px 0 6px; margin-left: -6px; border-radius: var(--r-ctl); cursor: pointer; list-style: none; color: var(--accent-text); }
+.raw > summary::-webkit-details-marker { display: none; }
+.raw > summary:hover { background: var(--subtle-hover); }
+.raw > summary .chev { transition: transform 120ms ease; }
+.raw[open] > summary .chev { transform: rotate(90deg); }
+.raw pre { margin: 6px 0 0; padding: 10px 12px; max-height: 160px; overflow: auto; border-radius: 6px; border: 1px solid var(--stroke); background: var(--code-bg); font: 12px/18px var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.log-more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid var(--divider); }
+
+/* ============ Timing flow ============ */
+.flow { padding: 18px 16px 16px; }
+.flow-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.flow-steps li { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 0 4px; min-width: 0; }
+.flow-steps li + li::before { content: ""; position: absolute; top: 18px; right: calc(50% + 24px); width: calc(100% - 48px); height: 2px; background: var(--stroke-strong); }
+.flow-ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent-subtle); color: var(--accent-text); margin-bottom: 6px; }
+.flow-steps b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.flow-steps small { font-size: 12px; line-height: 16px; color: var(--text-2); }
+.flow-steps .loop .flow-ico { background: var(--chip-bg); color: var(--text-2); }
+.flow-note { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--divider); font-size: 12px; line-height: 16px; color: var(--text-2); }
+
+/* ============ Danmaku preview ============ */
+.preview-card { overflow: hidden; }
+.preview-card .stage { min-height: 184px; }
+.preview-bar { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-top: 1px solid var(--divider); }
+.preview-bar .muted { font-size: 12px; flex: 1; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.swatch { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 4px; border-radius: 14px; background: var(--ctl); border: 1px solid var(--ctl-stroke); font: 12px/16px var(--font-mono); color: var(--text-2); }
+.swatch i { width: 20px; height: 20px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15); }
+
+/* ============ Prompt ============ */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border-radius: var(--r-ctl);
+  border: 1px solid var(--ctl-stroke); background: var(--ctl); color: var(--text); cursor: pointer; font: 12px/16px var(--font-mono);
+}
+.chip:hover { background: var(--ctl-hover); border-color: var(--stroke-strong); }
+.chip .i { width: 14px; height: 14px; color: var(--text-2); }
+.chip.todo { border-style: dashed; color: var(--text-2); }
+.chip.todo .tag { font-family: var(--font); height: 18px; }
+
+/* ============ Profiles ============ */
+.profile-row .badge-current { display: inline-flex; align-items: center; gap: 6px; color: var(--accent-text); font-weight: 600; }
+.avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--chip-bg); color: var(--text-2); font-weight: 600; flex: none; }
+.avatar.on { background: var(--accent-subtle); color: var(--accent-text); }
+
+/* Review mode (?full=1): let the document grow so full-page screenshots show every row. */
+html.full body { overflow: visible; }
+html.full .app { height: auto; min-height: 100vh; align-items: start; }
+html.full .nav { position: sticky; top: 0; height: 100vh; }
+html.full .scroll { overflow: visible; padding-right: calc(var(--pad-x) + 12px); }
+
+/* Narrow */
+@media (max-width: 1040px) {
+  .hero { grid-template-columns: minmax(0, 1fr) minmax(240px, 44%); }
+  .log-grid { grid-template-columns: 64px 120px 48px 46px 72px 32px minmax(0, 1fr) 16px; column-gap: 10px; }
+  .page-header h1 { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol><symbol id="i-audio-lines" viewBox="0 0 24 24"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></symbol><symbol id="i-blend" viewBox="0 0 24 24"><circle cx="9" cy="9" r="7"/><circle cx="15" cy="15" r="7"/></symbol><symbol id="i-bot" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></symbol><symbol id="i-braces" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></symbol><symbol id="i-cable" viewBox="0 0 24 24"><path d="M17 21v-2a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1"/><path d="M19 15V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V9"/><path d="M21 21v-2h-4"/><path d="M3 5h4V3"/><path d="M7 5a1 1 0 0 1 1 1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1V3"/></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol><symbol id="i-circle-check-big" viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></symbol><symbol id="i-circle-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="10" x2="10" y1="15" y2="9"/><line x1="14" x2="14" y1="15" y2="9"/></symbol><symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol><symbol id="i-cloud-upload" viewBox="0 0 24 24"><path d="M12 13v8"/><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m8 17 4-4 4 4"/></symbol><symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></symbol><symbol id="i-copy-plus" viewBox="0 0 24 24"><line x1="15" x2="15" y1="12" y2="18"/><line x1="12" x2="18" y1="15" y2="15"/><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol><symbol id="i-cpu" viewBox="0 0 24 24"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></symbol><symbol id="i-drama" viewBox="0 0 24 24"><path d="M10 11h.01"/><path d="M14 6h.01"/><path d="M18 6h.01"/><path d="M6.5 13.1h.01"/><path d="M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3"/><path d="M17.4 9.9c-.8.8-2 .8-2.8 0"/><path d="M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7"/><path d="M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4"/></symbol><symbol id="i-eraser" viewBox="0 0 24 24"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></symbol><symbol id="i-external-link" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-file-image" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><circle cx="10" cy="12" r="2"/><path d="m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22"/></symbol><symbol id="i-hard-drive" viewBox="0 0 24 24"><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></symbol><symbol id="i-hash" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol><symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></symbol><symbol id="i-id-card" viewBox="0 0 24 24"><path d="M16 10h2"/><path d="M16 14h2"/><path d="M6.17 15a3 3 0 0 1 5.66 0"/><circle cx="9" cy="11" r="2"/><rect x="2" y="5" width="20" height="14" rx="2"/></symbol><symbol id="i-images" viewBox="0 0 24 24"><path d="M18 22H4a2 2 0 0 1-2-2V6"/><path d="m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18"/><circle cx="12" cy="8" r="2"/><rect width="16" height="16" x="6" y="2" rx="2"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol><symbol id="i-key-round" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-languages" viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></symbol><symbol id="i-layout-dashboard" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol><symbol id="i-list-ordered" viewBox="0 0 24 24"><path d="M10 12h11"/><path d="M10 18h11"/><path d="M10 6h11"/><path d="M4 10h2"/><path d="M4 6h1v4"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></symbol><symbol id="i-maximize-2" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></symbol><symbol id="i-message-circle" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol><symbol id="i-message-square-text" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol><symbol id="i-monitor-off" viewBox="0 0 24 24"><path d="M17 17H4a2 2 0 0 1-2-2V5c0-1.5 1-2 1-2"/><path d="M22 15V5a2 2 0 0 0-2-2H9"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="m2 2 20 20"/></symbol><symbol id="i-move-horizontal" viewBox="0 0 24 24"><path d="m18 8 4 4-4 4"/><path d="M2 12h20"/><path d="m6 8-4 4 4 4"/></symbol><symbol id="i-palette" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol><symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol><symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol><symbol id="i-rows-3" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M21 9H3"/><path d="M21 15H3"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol><symbol id="i-scan-eye" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="1"/><path d="M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol><symbol id="i-shield-off" viewBox="0 0 24 24"><path d="m2 2 20 20"/><path d="M5 5a1 1 0 0 0-1 1v7c0 5 3.5 7.5 7.67 8.94a1 1 0 0 0 .67.01c2.35-.82 4.48-1.97 5.9-3.71"/><path d="M9.309 3.652A12.252 12.252 0 0 0 11.24 2.28a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1v7a9.784 9.784 0 0 1-.08 1.264"/></symbol><symbol id="i-sliders-horizontal" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol><symbol id="i-text-cursor-input" viewBox="0 0 24 24"><path d="M5 4h1a3 3 0 0 1 3 3 3 3 0 0 1 3-3h1"/><path d="M13 20h-1a3 3 0 0 1-3-3 3 3 0 0 1-3 3H5"/><path d="M5 16H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1"/><path d="M13 8h7a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-7"/><path d="M9 7v10"/></symbol><symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></symbol><symbol id="i-timer" viewBox="0 0 24 24"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></symbol><symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-type" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></symbol><symbol id="i-undo-2" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol><symbol id="i-user-round" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol></svg>
+<div class="app">
+  <!-- ================= NAVIGATION ================= -->
+  <nav class="nav" aria-label="设置导航">
+    <div class="brand">
+      <img src="data:image/png;base64,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" alt="">
+      <span class="brand-name">弹幕伴侣</span>
+      <span class="brand-ver">0.2</span>
+    </div>
+
+    <a class="profile-card" href="#profiles" data-nav="profiles" aria-label="当前配置：游戏实况，管理配置方案">
+      <span class="profile-ico"><svg class="i i-lg"><use href="#i-layers"/></svg></span>
+      <span class="profile-text">
+        <span class="profile-name">游戏实况</span>
+        <span class="profile-sub">当前配置 · 共 3 套</span>
+      </span>
+      <svg class="i chev"><use href="#i-chevron-right"/></svg>
+    </a>
+
+    <ul class="nav-list">
+      <li><a class="nav-item" href="#overview" data-nav="overview"><svg class="i"><use href="#i-layout-dashboard"/></svg><span>概览</span><span class="alert-dot" data-when="lasterror" title="上一轮生成失败"></span></a></li>
+      <li class="nav-label" aria-hidden="true">设置</li>
+      <li><a class="nav-item" href="#model" data-nav="model"><svg class="i"><use href="#i-cpu"/></svg><span>模型接口</span></a></li>
+      <li><a class="nav-item" href="#character" data-nav="character"><svg class="i"><use href="#i-user-round"/></svg><span>角色与用户</span></a></li>
+      <li><a class="nav-item" href="#prompt" data-nav="prompt"><svg class="i"><use href="#i-message-square-text"/></svg><span>提示词模板</span></a></li>
+      <li><a class="nav-item" href="#danmaku" data-nav="danmaku"><svg class="i"><use href="#i-sliders-horizontal"/></svg><span>弹幕样式</span></a></li>
+      <li><a class="nav-item" href="#timing" data-nav="timing"><svg class="i"><use href="#i-timer"/></svg><span>运行节奏</span></a></li>
+      <li><a class="nav-item" href="#capture" data-nav="capture"><svg class="i"><use href="#i-camera"/></svg><span>截图与历史</span></a></li>
+      <li class="nav-label" aria-hidden="true">记录</li>
+      <li><a class="nav-item" href="#logs" data-nav="logs"><svg class="i"><use href="#i-history"/></svg><span>生成日志</span><span class="count">48</span></a></li>
+    </ul>
+
+    <section class="run-card" aria-label="运行状态">
+      <div class="run-head" role="status">
+        <span class="dot running" data-when="running"></span>
+        <span class="dot" data-when="idle"></span>
+        <span class="dot paused" data-when="paused"></span>
+        <span class="dot error" data-when="error"></span>
+        <span data-when="running">运行中</span><span data-when="idle">空闲</span><span data-when="paused">已暂停</span><span data-when="error">错误</span>
+        <span class="cycles tabular">第 48 轮</span>
+      </div>
+      <div data-when="ticking">
+        <div class="run-line"><span>下次截图</span><b>12 秒</b></div>
+        <div class="meter" style="margin-top:6px"><i style="width:57%"></i></div>
+      </div>
+      <div data-when="starting">
+        <div class="run-line"><span>启动延迟 · 首次截图</span><b>4 秒</b></div>
+        <div class="meter" style="margin-top:6px"><i style="width:20%"></i></div>
+      </div>
+      <div data-when="generating">
+        <div class="run-line"><span>正在生成…</span><b></b></div>
+        <div class="meter indeterminate" style="margin-top:6px"><i></i></div>
+      </div>
+      <div class="run-line" data-when="stopped"><span>上次生成</span><b>14:32:08</b></div>
+      <div class="run-actions">
+        <button class="btn subtle toggle" type="button" aria-pressed="true" title="隐藏弹幕层"><svg class="i"><use href="#i-eye"/></svg>弹幕层</button>
+        <button class="btn subtle" type="button" title="清空屏幕上的弹幕"><svg class="i"><use href="#i-eraser"/></svg>清屏</button>
+      </div>
+    </section>
+  </nav>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+    <header class="page-header">
+      <h1 id="page-title">概览</h1>
+      <div class="header-actions">
+        <span class="dirty-note" data-dirty="1">有未保存的更改</span>
+        <button class="btn subtle" type="button" data-dirty="1" title="放弃未保存的更改"><svg class="i"><use href="#i-undo-2"/></svg>还原</button>
+        <button class="btn" type="button" data-dirty="1" title="保存 (Ctrl+S)"><span class="save-dot"></span><svg class="i"><use href="#i-save"/></svg>保存</button>
+        <button class="btn subtle" type="button" data-dirty="0" disabled><svg class="i"><use href="#i-check"/></svg>已保存</button>
+        <span class="vsep" aria-hidden="true"></span>
+        <button class="btn" type="button"><svg class="i"><use href="#i-sparkles"/></svg>生成一次</button>
+        <button class="btn" type="button" data-when="running"><svg class="i"><use href="#i-pause"/></svg>暂停</button>
+        <button class="btn accent" type="button" data-when="stopped"><svg class="i"><use href="#i-play"/></svg>启动</button>
+      </div>
+    </header>
+
+    <div class="scroll" id="scroll">
+
+<!-- ======================= OVERVIEW ======================= -->
+<section class="page" id="page-overview" data-title="概览" aria-labelledby="page-title">
+  <div class="infobar critical" role="alert" data-when="lasterror">
+    <svg class="i"><use href="#i-circle-alert"/></svg>
+    <div class="ib-body"><span class="ib-title">上一轮生成失败</span><span class="ib-msg">请求超时：45 秒内没有收到 http://127.0.0.1:1234/v1 的响应。</span><span class="ib-msg muted" data-when="running"> 循环仍在运行，下一轮会自动重试。</span></div>
+    <div class="ib-actions"><a class="btn" href="#logs">查看日志</a></div>
+  </div>
+
+  <div class="group">
+    <div class="card hero">
+      <div class="hero-main">
+        <span class="state-chip running" data-when="running"><span class="dot"></span>运行中</span>
+        <span class="state-chip idle" data-when="idle"><span class="dot"></span>空闲</span>
+        <span class="state-chip paused" data-when="paused"><span class="dot"></span>已暂停</span>
+        <span class="state-chip error" data-when="error"><span class="dot"></span>错误</span>
+        <div data-when="ticking">
+          <div class="hero-label">距离下一次截图</div>
+          <div class="countdown"><span class="num">12</span><span class="unit">秒</span></div>
+          <div class="meter lg"><i style="width:57%"></i></div>
+        </div>
+        <div data-when="starting">
+          <div class="hero-label">启动延迟 · 首次截图前请切回要看的窗口</div>
+          <div class="countdown"><span class="num">4</span><span class="unit">秒后截第一张图</span></div>
+          <div class="meter lg"><i style="width:20%"></i></div>
+        </div>
+        <div data-when="generating">
+          <div class="hero-label">正在截图并等待模型返回</div>
+          <div class="countdown"><span class="num" style="font-size:32px;line-height:52px">生成中…</span></div>
+          <div class="meter lg indeterminate"><i></i></div>
+        </div>
+        <div data-when="stopped">
+          <div class="hero-label" data-when="idle error">弹幕循环未在运行</div>
+          <div class="hero-label" data-when="paused">已暂停，屏幕上的弹幕会照常播完</div>
+          <div class="countdown"><span class="num" style="font-size:28px;line-height:40px">点击“启动”开始</span></div>
+          <div class="hero-meta" style="margin:2px 0 6px"><span>启动后先等待 <b>5 秒</b> 再截第一张图，避免截到本窗口。</span></div>
+        </div>
+        <div class="hero-meta">
+          <span>已完成 <b>48</b> 轮</span>
+          <span>上次生成 <b>14:32:08</b></span>
+          <span>间隔 <b>14–28</b> 秒</span>
+        </div>
+      </div>
+      <div class="stage" role="img" aria-label="最近一轮弹幕预览：这个 boss 血条也太厚了吧；左下角的宝箱别忘了拿；BGM 一响我就起鸡皮疙瘩">
+        <span class="dm shadow" style="--c:#f8fafc;top:20px;left:8%">这个 boss 血条也太厚了吧</span>
+        <span class="dm shadow" style="--c:#31c3a2;top:50px;right:6%">左下角的宝箱别忘了拿</span>
+        <span class="dm shadow" style="--c:#f59e0b;top:80px;left:16%">BGM 一响我就起鸡皮疙瘩</span>
+        <span class="dm shadow" style="--c:#ef476f;top:110px;left:4%">前方高能预警！</span>
+        <span class="dm shadow" style="--c:#5b8def;top:110px;right:8%">手速可以啊</span>
+        <span class="stage-cap"><svg class="i" style="width:14px;height:14px"><use href="#i-message-square-text"/></svg>最近一轮 · 3 条 · 14:32:08</span>
+      </div>
+    </div>
+
+    <div class="tiles">
+      <div class="card tile">
+        <div class="tile-label"><svg class="i"><use href="#i-activity"/></svg>生成耗时</div>
+        <div class="tile-value">2.4<small>秒</small></div>
+        <div class="tile-sub">其中预填充 0.4 秒</div>
+      </div>
+      <div class="card tile">
+        <div class="tile-label"><svg class="i"><use href="#i-zap"/></svg>缓存命中</div>
+        <div class="tile-value">82<small class="pct">%</small></div>
+        <div class="meter" role="meter" aria-label="缓存命中率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="82"><i style="width:82%"></i></div>
+        <div class="tile-sub">7,718 / 9,412 tokens</div>
+      </div>
+      <div class="card tile">
+        <div class="tile-label"><svg class="i"><use href="#i-cloud-upload"/></svg>请求体</div>
+        <div class="tile-value">3.1<small>/ 48 MB</small></div>
+        <div class="meter" role="meter" aria-label="请求体占上限比例" aria-valuemin="0" aria-valuemax="48" aria-valuenow="3.1"><i style="width:6.5%"></i></div>
+        <div class="tile-sub">413 后自动下调</div>
+      </div>
+      <div class="card tile">
+        <div class="tile-label"><svg class="i"><use href="#i-images"/></svg>历史截图</div>
+        <div class="tile-value">6<small>/ 8 张</small></div>
+        <div class="meter" role="meter" aria-label="历史截图占上限比例" aria-valuemin="0" aria-valuemax="8" aria-valuenow="6"><i style="width:75%"></i></div>
+        <div class="tile-sub">本轮随请求发送</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">弹幕层</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-eye"/></svg></span>
+        <div class="row-text"><label class="row-label" for="ov-visible">显示弹幕层</label><p class="row-desc">隐藏后循环照常运行，弹幕不会出现在屏幕上</p></div>
+        <div class="row-ctl"><label class="switch"><span class="switch-text">开</span><input id="ov-visible" type="checkbox" role="switch" checked><span class="track"></span></label></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-eraser"/></svg></span>
+        <div class="row-text"><span class="row-label">清空当前弹幕</span><p class="row-desc">立即移除屏幕上正在滚动和排队的弹幕</p></div>
+        <div class="row-ctl"><button class="btn" type="button">清空弹幕</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">当前配置</h2><span class="spacer"></span><a class="link" href="#profiles">管理配置方案<svg class="i" style="width:14px;height:14px"><use href="#i-chevron-right"/></svg></a></div>
+    <div class="card rows">
+      <a class="row" href="#model">
+        <span class="row-icon"><svg class="i"><use href="#i-cpu"/></svg></span>
+        <div class="row-text"><span class="row-label">模型</span><p class="row-desc">qwen2.5-vl-7b-instruct · 已加载 · 视觉</p></div>
+        <span class="row-value">127.0.0.1:1234</span><svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </a>
+      <a class="row" href="#character">
+        <span class="row-icon"><svg class="i"><use href="#i-user-round"/></svg></span>
+        <div class="row-text"><span class="row-label">角色</span><p class="row-desc">Mika · 温暖、机灵的看番搭子</p></div>
+        <span class="row-value">zh-CN</span><svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </a>
+      <a class="row" href="#timing">
+        <span class="row-icon"><svg class="i"><use href="#i-timer"/></svg></span>
+        <div class="row-text"><span class="row-label">节奏</span><p class="row-desc">每 14–28 秒一轮 · 每轮 3 条 · 6–10 秒内陆续出现</p></div>
+        <span class="row-value">启动延迟 5 秒</span><svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </a>
+      <a class="row" href="#capture">
+        <span class="row-icon"><svg class="i"><use href="#i-camera"/></svg></span>
+        <div class="row-text"><span class="row-label">截图与历史</span><p class="row-desc">1280 px JPEG · 8 轮历史 · 分批滑动 · 保留截图</p></div>
+        <span class="row-value">上限 8 张 / 48 MB</span><svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">最近生成</h2><span class="spacer"></span><a class="link" href="#logs">查看全部日志<svg class="i" style="width:14px;height:14px"><use href="#i-chevron-right"/></svg></a></div>
+    <div class="card log-card">
+      <a class="log-entry" href="#logs" style="display:block;color:inherit;text-decoration:none">
+        <div class="log-grid" style="min-height:44px">
+          <span class="st ok"><svg class="i"><use href="#i-circle-check-big"/></svg>成功</span>
+          <span class="cell tabular">10-28 14:32:08</span><span class="cell tabular">2.4s</span><span class="cell">3/3 条</span><span class="cell dim">1280×720</span><span class="cell dim">自动</span><span class="notes"></span><svg class="i chev" style="color:var(--text-2)"><use href="#i-chevron-right"/></svg>
+        </div>
+      </a>
+      <a class="log-entry" href="#logs" style="display:block;color:inherit;text-decoration:none">
+        <div class="log-grid" style="min-height:44px">
+          <span class="st ok"><svg class="i"><use href="#i-circle-check-big"/></svg>成功</span>
+          <span class="cell tabular">10-28 14:31:47</span><span class="cell tabular">2.2s</span><span class="cell">3/3 条</span><span class="cell dim">1280×720</span><span class="cell dim">自动</span><span class="notes"></span><svg class="i chev" style="color:var(--text-2)"><use href="#i-chevron-right"/></svg>
+        </div>
+      </a>
+      <a class="log-entry" href="#logs" style="display:block;color:inherit;text-decoration:none">
+        <div class="log-grid" style="min-height:44px">
+          <span class="st ok"><svg class="i"><use href="#i-circle-check-big"/></svg>成功</span>
+          <span class="cell tabular">10-28 14:31:21</span><span class="cell tabular">5.9s</span><span class="cell">3/3 条</span><span class="cell dim">1280×720</span><span class="cell dim">自动</span><span class="notes"><span class="tag">超出张数丢弃 4 张</span></span><svg class="i chev" style="color:var(--text-2)"><use href="#i-chevron-right"/></svg>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MODEL ======================= -->
+<section class="page" id="page-model" data-title="模型接口">
+  <p class="page-lead">任何兼容 OpenAI 的接口，例如 LM Studio、llama.cpp、vLLM 或云端网关。</p>
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">连接</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-link"/></svg></span>
+        <div class="row-text"><label class="row-label" for="m-url">接口地址 (Base URL)</label><p class="row-desc">通常以 /v1 结尾</p></div>
+        <div class="row-ctl"><span class="field w-xl"><input id="m-url" value="http://127.0.0.1:1234/v1" spellcheck="false"></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-key-round"/></svg></span>
+        <div class="row-text"><label class="row-label" for="m-key">API Key</label><p class="row-desc">本地服务可留空；只保存在本机配置中</p></div>
+        <div class="row-ctl"><span class="field w-xl"><input id="m-key" type="password" value="sk-local-4f9c2a7e19" spellcheck="false"><button class="inner-btn" type="button" aria-label="显示 API Key" title="显示"><svg class="i"><use href="#i-eye"/></svg></button></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-bot"/></svg></span>
+        <div class="row-text"><label class="row-label" for="m-model">模型</label><p class="row-desc">12 个模型 · 当前 loaded · 支持视觉</p></div>
+        <div class="row-ctl">
+          <span class="field select w-xl"><select id="m-model"><option>qwen2.5-vl-7b-instruct · loaded · 视觉</option><option>gemma-3-12b-it · not-loaded · 视觉</option><option>llama-3.2-11b-vision · loaded · 视觉</option></select><svg class="i chev"><use href="#i-chevron-down"/></svg></span>
+          <button class="btn icon" type="button" aria-label="刷新模型列表" title="刷新模型列表"><svg class="i"><use href="#i-refresh-cw"/></svg></button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-cable"/></svg></span>
+        <div class="row-text"><span class="row-label">测试连接</span><p class="row-desc">先保存更改，再请求接口的模型列表</p></div>
+        <div class="row-ctl"><button class="btn" type="button"><svg class="i"><use href="#i-cable"/></svg>测试连接</button></div>
+      </div>
+      <div class="infobar-row">
+        <div class="infobar success" role="status">
+          <svg class="i"><use href="#i-circle-check-big"/></svg>
+          <div class="ib-body"><span class="ib-title">连接成功</span><span class="ib-msg">找到 12 个模型。接口：http://127.0.0.1:1234/v1/models</span></div>
+          <div class="ib-actions"><button class="btn subtle icon" type="button" aria-label="关闭"><svg class="i"><use href="#i-x"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">生成参数</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-thermometer"/></svg></span>
+        <div class="row-text"><label class="row-label" for="m-sendt">发送温度参数</label><p class="row-desc">部分接口不接受 temperature，关闭后不发送</p></div>
+        <div class="row-ctl"><label class="switch"><span class="switch-text">开</span><input id="m-sendt" type="checkbox" role="switch" checked><span class="track"></span></label></div>
+      </div>
+      <div class="subrow">
+        <div class="row-text"><label class="row-label" for="m-temp">温度</label><p class="row-desc">0–2，越高越随机</p></div>
+        <div class="row-ctl slider"><input type="range" min="0" max="2" step="0.1" value="0.8" style="--p:40%" aria-label="温度滑块"><span class="field w-num-s"><input id="m-temp" value="0.8" inputmode="decimal"></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-hash"/></svg></span>
+        <div class="row-text"><label class="row-label" for="m-max">最大输出</label><p class="row-desc">16–32768；日志提示“被截断”时调大</p></div>
+        <div class="row-ctl"><span class="field w-num"><input id="m-max" value="260" inputmode="numeric"><span class="unit">tokens</span></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-hourglass"/></svg></span>
+        <div class="row-text"><label class="row-label" for="m-timeout">超时</label><p class="row-desc">单次请求的最长等待时间，5000–1800000</p></div>
+        <div class="row-ctl"><span class="field w-num"><input id="m-timeout" value="45000" inputmode="numeric"><span class="unit">ms</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">视觉输入</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-scan-eye"/></svg></span>
+        <div class="row-text"><label class="row-label" for="m-vision">发送截图</label><p class="row-desc">关闭后只发送文字，模型看不到屏幕；截图设置见“截图与历史”</p></div>
+        <div class="row-ctl"><label class="switch"><span class="switch-text">开</span><input id="m-vision" type="checkbox" role="switch" checked><span class="track"></span></label></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= CHARACTER ======================= -->
+<section class="page" id="page-character" data-title="角色与用户">
+  <p class="page-lead">这些内容会填入提示词模板中对应的变量。</p>
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">角色</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-sparkles"/></svg></span>
+        <div class="row-text"><label class="row-label" for="c-name">角色名</label><p class="row-desc">填入 <code>{{companion.name}}</code></p></div>
+        <div class="row-ctl"><span class="field w-lg"><input id="c-name" value="Mika"></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-languages"/></svg></span>
+        <div class="row-text"><label class="row-label" for="c-lang">语言</label><p class="row-desc">弹幕使用的语言，如 zh-CN、ja-JP · <code>{{companion.language}}</code></p></div>
+        <div class="row-ctl"><span class="field w-md"><input id="c-lang" value="zh-CN"></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-message-circle"/></svg></span>
+        <div class="row-text"><label class="row-label" for="c-tone">语气</label><p class="row-desc">说话风格，例如简短、俏皮 · <code>{{companion.tone}}</code></p></div>
+        <div class="row-ctl"><span class="field w-xl"><input id="c-tone" value="short, playful, observant, never intrusive"></span></div>
+      </div>
+      <div class="row stack">
+        <span class="row-icon"><svg class="i"><use href="#i-drama"/></svg></span>
+        <div class="row-text"><label class="row-label" for="c-persona">人设</label><p class="row-desc">角色是谁、怎么说话 · <code>{{companion.persona}}</code></p></div>
+        <div class="row-body"><textarea class="area" id="c-persona" rows="3">A warm, witty desktop companion who comments like a good anime watch buddy. 喜欢吐槽但从不剧透，看到好看的画面会真心夸。</textarea></div>
+      </div>
+    </div>
+  </div>
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">用户</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-user-round"/></svg></span>
+        <div class="row-text"><label class="row-label" for="u-name">用户称呼</label><p class="row-desc">角色怎么称呼你 · <code>{{user.name}}</code></p></div>
+        <div class="row-ctl"><span class="field w-lg"><input id="u-name" value="你"></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-id-card"/></svg></span>
+        <div class="row-text"><label class="row-label" for="u-role">用户身份</label><p class="row-desc">你在做什么，例如正在打游戏的玩家 · <code>{{user.role}}</code></p></div>
+        <div class="row-ctl"><span class="field w-lg"><input id="u-role" value="屏幕前的用户"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= PROMPT ======================= -->
+<section class="page" id="page-prompt" data-title="提示词模板">
+  <div class="group">
+    <div class="card rows">
+      <div class="row stack">
+        <span class="row-icon"><svg class="i"><use href="#i-braces"/></svg></span>
+        <div class="row-text"><span class="row-label">可插入的变量</span><p class="row-desc">点击插入到光标所在的模板；发送前替换为实际内容</p></div>
+        <div class="row-body chips" role="group" aria-label="插入变量">
+          <button class="chip" type="button">{{companion.name}}</button>
+          <button class="chip" type="button">{{companion.persona}}</button>
+          <button class="chip" type="button">{{companion.tone}}</button>
+          <button class="chip" type="button">{{companion.language}}</button>
+          <button class="chip" type="button">{{user.name}}</button>
+          <button class="chip" type="button">{{user.role}}</button>
+          <button class="chip" type="button">{{requestedCount}}</button>
+          <button class="chip" type="button">{{jsonShape}}</button>
+          <button class="chip todo" type="button" title="尚未实现：目前总是填入 unknown">{{activeApp}}<span class="tag todo">未实现</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">系统提示词</h2></div>
+    <div class="card rows">
+      <div class="row stack" style="padding-top:12px">
+        <div class="row-text" style="padding-left:0"><p class="row-desc" style="margin:0">定义角色与输出格式，位于每次请求的最前面。修改后下一轮无法命中前缀缓存。</p></div>
+        <div class="row-body" style="padding-left:0">
+          <textarea class="area mono" rows="11" aria-label="系统提示词">You are {{companion.name}}, a desktop danmaku companion.
+Persona: {{companion.persona}}
+Tone: {{companion.tone}}
+Language: {{companion.language}}
+You are accompanying {{user.name}} ({{user.role}}).
+React to the current screen with brief, specific, non-intrusive danmaku comments.
+Return exactly {{requestedCount}} comments unless the model is unable to parse the request.
+Do not mention private data, credentials, or exact personal identifiers.
+Each comment must be short enough to fit on screen.
+Return only JSON in this shape: {{jsonShape}}</textarea>
+          <div class="area-foot"><span>10 行 · 612 字符</span><span>Ctrl+S 保存</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">用户提示词</h2></div>
+    <div class="card rows">
+      <div class="row stack" style="padding-top:12px">
+        <div class="row-text"><p class="row-desc" style="margin:0">每轮和截图一起发送的文字，可留空；留空时只发送截图。</p></div>
+        <div class="row-body" style="padding-left:0"><textarea class="area mono" rows="4" aria-label="用户提示词" placeholder="例如：这是 {{user.name}} 现在的屏幕，请给出 {{requestedCount}} 条弹幕。"></textarea></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= DANMAKU ======================= -->
+<section class="page" id="page-danmaku" data-title="弹幕样式">
+  <div class="group">
+    <div class="card preview-card">
+      <div class="stage" role="img" aria-label="弹幕样式预览">
+        <span class="dm shadow" style="--dm-size:19px;--c:#f8fafc;top:16px;left:34%">这个 boss 血条也太厚了吧</span>
+        <span class="dm shadow" style="--dm-size:19px;--c:#31c3a2;top:50px;left:4%">左下角的宝箱别忘了拿</span>
+        <span class="dm shadow" style="--dm-size:19px;--c:#f59e0b;top:84px;right:5%">BGM 一响我就起鸡皮疙瘩</span>
+        <span class="dm shadow" style="--dm-size:19px;--c:#ef476f;top:118px;left:16%">前方高能预警！</span>
+        <span class="dm shadow" style="--dm-size:19px;--c:#5b8def;top:118px;right:14%">手速可以啊兄弟</span>
+        <span class="dm shadow" style="--dm-size:19px;--c:#f8fafc;top:152px;left:42%">笑死，又掉坑里了</span>
+      </div>
+      <div class="preview-bar">
+        <span class="muted">预览按 0.8 倍缩放；实际效果以屏幕上的弹幕层为准</span>
+        <button class="btn" type="button"><svg class="i"><use href="#i-sparkles"/></svg>生成一次看看</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">文字</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-type"/></svg></span>
+        <div class="row-text"><label class="row-label" for="d-size">字号</label><p class="row-desc">10–96 px</p></div>
+        <div class="row-ctl slider"><input type="range" min="10" max="96" value="24" style="--p:16%" aria-label="字号滑块"><span class="field w-num"><input id="d-size" value="24" inputmode="numeric"><span class="unit">px</span></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-blend"/></svg></span>
+        <div class="row-text"><label class="row-label" for="d-op">不透明度</label><p class="row-desc">0.2–1</p></div>
+        <div class="row-ctl slider"><input type="range" min="0.2" max="1" step="0.05" value="0.92" style="--p:90%" aria-label="不透明度滑块"><span class="field w-num"><input id="d-op" value="0.92" inputmode="decimal"></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-contrast"/></svg></span>
+        <div class="row-text"><label class="row-label" for="d-shadow">文字阴影</label><p class="row-desc">在明亮画面上更容易看清</p></div>
+        <div class="row-ctl"><label class="switch"><span class="switch-text">开</span><input id="d-shadow" type="checkbox" role="switch" checked><span class="track"></span></label></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-text-cursor-input"/></svg></span>
+        <div class="row-text"><label class="row-label" for="d-len">单条最多字数</label><p class="row-desc">超出的部分会被截掉，10–200</p></div>
+        <div class="row-ctl"><span class="field w-num"><input id="d-len" value="50" inputmode="numeric"><span class="unit">字</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">运动与位置</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-move-horizontal"/></svg></span>
+        <div class="row-text"><label class="row-label" for="d-speed">滚动时长</label><p class="row-desc">横穿屏幕所需时间，越大越慢</p></div>
+        <div class="row-ctl slider"><input type="range" min="2" max="60" value="10" style="--p:14%" aria-label="滚动时长滑块"><span class="field w-num"><input id="d-speed" value="10" inputmode="decimal"><span class="unit">秒</span></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-rows-3"/></svg></span>
+        <div class="row-text"><span class="row-label" id="d-zone-l">显示区域</span><p class="row-desc">弹幕只在这部分屏幕里滚动</p></div>
+        <div class="row-ctl">
+          <div class="seg" role="radiogroup" aria-labelledby="d-zone-l">
+            <label><input type="radio" name="zone" checked><span>全屏</span></label>
+            <label><input type="radio" name="zone"><span>上部</span></label>
+            <label><input type="radio" name="zone"><span>中部</span></label>
+            <label><input type="radio" name="zone"><span>下部</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-audio-lines"/></svg></span>
+        <div class="row-text"><label class="row-label" for="d-density">密度</label><p class="row-desc">可用轨道的比例，0.1–1</p></div>
+        <div class="row-ctl slider"><input type="range" min="0.1" max="1" step="0.1" value="0.6" style="--p:56%" aria-label="密度滑块"><span class="field w-num"><input id="d-density" value="0.6" inputmode="decimal"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">颜色</h2></div>
+    <div class="card rows">
+      <div class="row stack">
+        <span class="row-icon"><svg class="i"><use href="#i-palette"/></svg></span>
+        <div class="row-text"><label class="row-label" for="d-palette">配色</label><p class="row-desc">逗号分隔的 CSS 颜色，每条弹幕随机取一种</p></div>
+        <div class="row-body">
+          <span class="field" style="width:100%"><input id="d-palette" class="mono" value="#31c3a2, #f59e0b, #ef476f, #5b8def, #f8fafc" spellcheck="false" style="font-family:var(--font-mono);font-size:13px"></span>
+          <div class="swatches" aria-hidden="true">
+            <span class="swatch"><i style="--c:#31c3a2"></i>#31c3a2</span>
+            <span class="swatch"><i style="--c:#f59e0b"></i>#f59e0b</span>
+            <span class="swatch"><i style="--c:#ef476f"></i>#ef476f</span>
+            <span class="swatch"><i style="--c:#5b8def"></i>#5b8def</span>
+            <span class="swatch"><i style="--c:#f8fafc"></i>#f8fafc</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">相关设置</h2></div>
+    <div class="card rows">
+      <a class="row" href="#capture">
+        <span class="row-icon"><svg class="i"><use href="#i-monitor-off"/></svg></span>
+        <div class="row-text"><span class="row-label">截图时排除弹幕层</span><p class="row-desc">已开启 · 录屏软件也看不到弹幕</p></div>
+        <svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= TIMING ======================= -->
+<section class="page" id="page-timing" data-title="运行节奏">
+  <div class="group">
+    <div class="card flow">
+      <ol class="flow-steps">
+        <li><span class="flow-ico"><svg class="i i-lg"><use href="#i-play"/></svg></span><b>启动</b><small>点击“启动”</small></li>
+        <li><span class="flow-ico"><svg class="i i-lg"><use href="#i-hourglass"/></svg></span><b>等待 5 秒</b><small>启动延迟</small></li>
+        <li><span class="flow-ico"><svg class="i i-lg"><use href="#i-camera"/></svg></span><b>截图并请求</b><small>每轮要 3 条</small></li>
+        <li><span class="flow-ico"><svg class="i i-lg"><use href="#i-send"/></svg></span><b>6–10 秒内</b><small>陆续放出弹幕</small></li>
+        <li class="loop"><span class="flow-ico"><svg class="i i-lg"><use href="#i-repeat"/></svg></span><b>14–28 秒后</b><small>随机间隔，下一轮</small></li>
+      </ol>
+      <p class="flow-note">间隔从上一轮生成结束时开始计时，所以实际节奏还要加上模型耗时（最近约 2.4 秒）。</p>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">节奏</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-hourglass"/></svg></span>
+        <div class="row-text"><label class="row-label" for="t-delay">启动延迟</label><p class="row-desc">启动后等几秒再截第一张图，让你有时间切回要看的窗口</p></div>
+        <div class="row-ctl"><span class="field w-num"><input id="t-delay" value="5" inputmode="numeric"><span class="unit">秒</span></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-repeat"/></svg></span>
+        <div class="row-text"><span class="row-label" id="t-int-l">截图间隔</span><p class="row-desc">每轮之间在这个范围内随机，5–1800 秒</p></div>
+        <div class="row-ctl" role="group" aria-labelledby="t-int-l">
+          <span class="field w-num-s"><input aria-label="最短间隔（秒）" value="14" inputmode="numeric"><span class="unit">秒</span></span>
+          <span class="range-sep">–</span>
+          <span class="field w-num-s"><input aria-label="最长间隔（秒）" value="28" inputmode="numeric"><span class="unit">秒</span></span>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-list-ordered"/></svg></span>
+        <div class="row-text"><label class="row-label" for="t-items">每轮弹幕</label><p class="row-desc">每次请求让模型返回的条数，1–12</p></div>
+        <div class="row-ctl"><span class="field w-num"><input id="t-items" value="3" inputmode="numeric"><span class="unit">条</span></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-send"/></svg></span>
+        <div class="row-text"><span class="row-label" id="t-rel-l">投放窗口</span><p class="row-desc">一轮的弹幕在这段时间内错开放出，0 表示同时出现</p></div>
+        <div class="row-ctl" role="group" aria-labelledby="t-rel-l">
+          <span class="field w-num-s"><input aria-label="投放窗口最短（秒）" value="6" inputmode="numeric"><span class="unit">秒</span></span>
+          <span class="range-sep">–</span>
+          <span class="field w-num-s"><input aria-label="投放窗口最长（秒）" value="10" inputmode="numeric"><span class="unit">秒</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= CAPTURE ======================= -->
+<section class="page" id="page-capture" data-title="截图与历史">
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">截图</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-maximize-2"/></svg></span>
+        <div class="row-text"><label class="row-label" for="cp-edge">截图最长边</label><p class="row-desc">发送前缩小到这个尺寸，480–2160 px</p></div>
+        <div class="row-ctl"><span class="field w-num"><input id="cp-edge" value="1280" inputmode="numeric"><span class="unit">px</span></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-file-image"/></svg></span>
+        <div class="row-text"><span class="row-label" id="cp-fmt-l">图片格式</span><p class="row-desc">PNG 通常是 JPEG 的 10 倍以上大小，模型看到的 token 数相同</p></div>
+        <div class="row-ctl">
+          <div class="seg" role="radiogroup" aria-labelledby="cp-fmt-l">
+            <label><input type="radio" name="fmt" id="fmt-jpeg" checked><span>JPEG</span></label>
+            <label><input type="radio" name="fmt" id="fmt-png"><span>PNG</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="subrow" id="row-quality">
+        <div class="row-text"><label class="row-label" for="cp-q">JPEG 质量</label><p class="row-desc">0.5–0.95；仅 JPEG 生效</p></div>
+        <div class="row-ctl slider"><input type="range" min="0.5" max="0.95" step="0.01" value="0.82" style="--p:71%" aria-label="JPEG 质量滑块"><span class="field w-num-s"><input id="cp-q" value="0.82" inputmode="decimal"></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-monitor-off"/></svg></span>
+        <div class="row-text"><label class="row-label" for="cp-ex">截图时排除弹幕层</label><p class="row-desc">模型不会读到自己的弹幕。需要 Windows 10 2004 及以上；开启后 OBS 等录屏软件也录不到弹幕</p></div>
+        <div class="row-ctl"><label class="switch"><span class="switch-text">开</span><input id="cp-ex" type="checkbox" role="switch" checked><span class="track"></span></label></div>
+      </div>
+      <div class="row" data-mac>
+        <span class="row-icon"><svg class="i"><use href="#i-shield"/></svg></span>
+        <div class="row-text"><span class="row-label">屏幕录制权限 <span class="tag mac">仅 macOS</span></span><p class="row-desc">macOS 需要在系统设置中允许本应用录制屏幕</p></div>
+        <div class="row-ctl"><button class="btn" type="button">打开系统设置<svg class="i"><use href="#i-external-link"/></svg></button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">对话历史</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-history"/></svg></span>
+        <div class="row-text"><label class="row-label" for="h-rounds">历史轮数</label><p class="row-desc">每次请求附带最近几轮的问答，0 表示不带历史，最多 50</p></div>
+        <div class="row-ctl"><span class="field w-num"><input id="h-rounds" value="8" inputmode="numeric"><span class="unit">轮</span></span></div>
+      </div>
+      <div class="row stack">
+        <span class="row-icon"><svg class="i"><use href="#i-layers"/></svg></span>
+        <div class="row-text"><span class="row-label" id="h-mode-l">历史模式</span><p class="row-desc">服务端只复用请求开头没变的部分（前缀缓存），模式决定开头多久变一次</p></div>
+        <div class="row-body">
+          <div class="radio-list" role="radiogroup" aria-labelledby="h-mode-l">
+            <label class="radio-opt"><input type="radio" name="hmode"><span class="radio-dot"></span><span class="radio-text"><b>满额重置</b><small>历史满了就清空重来，清空后的第一轮没有上下文</small></span></label>
+            <label class="radio-opt"><input type="radio" name="hmode" checked><span class="radio-dot"></span><span class="radio-text"><b>分批滑动 <span class="tag accent">缓存友好 · 推荐</span></b><small>满了一次丢弃最早的一半，每半个窗口才失去一次缓存</small></span></label>
+            <label class="radio-opt"><input type="radio" name="hmode"><span class="radio-dot"></span><span class="radio-text"><b>逐轮滑动 <span class="tag">每轮失去缓存</span></b><small>每轮丢弃最早的一轮，请求开头每轮都变；保留历史截图时不要用</small></span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">历史截图与请求大小</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-images"/></svg></span>
+        <div class="row-text"><label class="row-label" for="h-keep">保留历史截图</label><p class="row-desc">模型能对比前几轮的画面，但每轮都会重新上传全部历史截图</p></div>
+        <div class="row-ctl"><label class="switch"><span class="switch-text">开</span><input id="h-keep" type="checkbox" role="switch" checked><span class="track"></span></label></div>
+      </div>
+      <div class="subrow">
+        <div class="row-text"><label class="row-label" for="h-cap">历史截图上限</label><p class="row-desc">超过后一次丢弃最早的一半截图（保留文字），0–50</p></div>
+        <div class="row-ctl"><span class="field w-num"><input id="h-cap" value="8" inputmode="numeric"><span class="unit">张</span></span></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-cloud-upload"/></svg></span>
+        <div class="row-text"><label class="row-label" for="h-body">请求体上限</label><p class="row-desc">按服务器允许的大小填写；越大越占上行带宽，1–512 MB</p></div>
+        <div class="row-ctl"><span class="field w-num"><input id="h-body" value="48" inputmode="decimal"><span class="unit">MB</span></span></div>
+      </div>
+      <div class="subrow" style="min-height:64px">
+        <div class="row-text">
+          <span class="row-label">最近一次请求</span>
+          <div class="meter" style="margin:6px 0 4px;max-width:420px"><i style="width:6.5%"></i></div>
+          <p class="row-desc" style="margin:0">3.1 MB / 48 MB · 6 张历史截图 · 缓存命中 82%</p>
+        </div>
+        <div class="row-ctl"><a class="btn subtle" href="#logs">查看日志</a></div>
+      </div>
+      <div class="infobar-row">
+        <div class="infobar info" role="note">
+          <svg class="i"><use href="#i-info"/></svg>
+          <div class="ib-body"><span class="ib-msg">截图数或请求体超过上限时，会一次丢弃最早的一半截图，只有这一轮需要重新预填充，之后的轮次又能命中缓存。服务器返回 413 时，会按它报告的上限自动压缩并重试一次。</span></div>
+        </div>
+      </div>
+      <div class="infobar-row" hidden data-png-warning>
+        <div class="infobar caution" role="note">
+          <svg class="i"><use href="#i-triangle-alert"/></svg>
+          <div class="ib-body"><span class="ib-msg">PNG 截图体积通常是 JPEG 的 10 倍以上，而模型看到的 token 数相同。保留历史截图时建议改用 JPEG。</span></div>
+          <div class="ib-actions"><button class="btn" type="button">改用 JPEG</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">隐私</h2></div>
+    <div class="card rows">
+      <div class="row is-disabled">
+        <span class="row-icon"><svg class="i"><use href="#i-shield-off"/></svg></span>
+        <div class="row-text"><label class="row-label" for="p-black">隐私黑名单 <span class="tag todo">未实现</span></label><p class="row-desc">尚未实现：截图前不会检查前台应用，名单里的应用照样会被截图并发送</p></div>
+        <div class="row-ctl"><span class="field w-lg is-disabled"><input id="p-black" disabled placeholder="1Password, 微信"></span></div>
+      </div>
+      <div class="row is-disabled">
+        <span class="row-icon"><svg class="i"><use href="#i-hard-drive"/></svg></span>
+        <div class="row-text"><label class="row-label" for="p-persist">保存截图到磁盘 <span class="tag todo">未实现</span></label><p class="row-desc">尚未实现：截图从不写入磁盘</p></div>
+        <div class="row-ctl"><label class="switch is-disabled"><span class="switch-text">关</span><input id="p-persist" type="checkbox" role="switch" disabled><span class="track"></span></label></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= LOGS ======================= -->
+<section class="page" id="page-logs" data-title="生成日志">
+  <div class="log-toolbar">
+    <span class="count">共 48 条记录
+      <span class="keep"><label for="l-keep">保留最近</label><span class="field w-num-s"><input id="l-keep" value="200" inputmode="numeric"><span class="unit">条</span></span></span>
+    </span>
+    <button class="btn" type="button"><svg class="i"><use href="#i-refresh-cw"/></svg>刷新</button>
+    <button class="btn" type="button"><svg class="i"><use href="#i-trash-2"/></svg>清空日志</button>
+  </div>
+
+  <div class="card log-card">
+    <div class="log-grid log-head" aria-hidden="true">
+      <span>状态</span><span>完成时间</span><span>耗时</span><span>弹幕</span><span>截图</span><span>触发</span><span>备注</span><span></span>
+    </div>
+
+    <details class="log-entry" open>
+      <summary class="log-grid">
+        <span class="st ok"><svg class="i"><use href="#i-circle-check-big"/></svg>成功</span>
+        <span class="cell">10-28 14:32:08</span><span class="cell">2.4s</span><span class="cell">3/3 条</span><span class="cell dim">1280×720</span><span class="cell dim">自动</span><span class="notes"></span>
+        <svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </summary>
+      <div class="log-detail">
+        <div>
+          <h3 class="detail-title">生成的弹幕</h3>
+          <div class="comments">
+            <span class="comment" style="--c:#f8fafc">这个 boss 血条也太厚了吧</span>
+            <span class="comment" style="--c:#31c3a2">左下角的宝箱别忘了拿</span>
+            <span class="comment" style="--c:#f59e0b">BGM 一响我就起鸡皮疙瘩</span>
+          </div>
+        </div>
+        <div class="kv-cols">
+          <div>
+            <h3 class="detail-title">请求</h3>
+            <dl class="kv">
+              <div><dt>模型</dt><dd>qwen2.5-vl-7b-instruct</dd></div>
+              <div><dt>请求体</dt><dd>3.10 MB / 48.00 MB</dd></div>
+              <div><dt>缓存 / 输入</dt><dd>7718 / 9412 (82%)</dd></div>
+              <div><dt>输出 tokens</dt><dd>96</dd></div>
+              <div><dt>预填充耗时</dt><dd>412ms</dd></div>
+              <div><dt>开始时间</dt><dd>10-28 14:32:05</dd></div>
+            </dl>
+          </div>
+          <div>
+            <h3 class="detail-title">历史</h3>
+            <dl class="kv">
+              <div><dt>历史轮数</dt><dd>8</dd></div>
+              <div><dt>历史模式</dt><dd>分批滑动</dd></div>
+              <div><dt>历史截图</dt><dd>保留 · 本次 6 张</dd></div>
+              <div><dt>历史压缩</dt><dd>-</dd></div>
+              <div><dt>投放窗口</dt><dd>8s</dd></div>
+            </dl>
+          </div>
+          <div>
+            <h3 class="detail-title">截图</h3>
+            <dl class="kv">
+              <div><dt>来源</dt><dd>整个屏幕</dd></div>
+              <div><dt>格式</dt><dd>JPEG · q82</dd></div>
+              <div><dt>图片大小</dt><dd>332 KB</dd></div>
+              <div><dt>传输大小</dt><dd>443 KB</dd></div>
+            </dl>
+          </div>
+        </div>
+        <details class="raw" open>
+          <summary><svg class="i chev"><use href="#i-chevron-right"/></svg>原始输出</summary>
+          <pre>{"comments":["这个 boss 血条也太厚了吧","左下角的宝箱别忘了拿","BGM 一响我就起鸡皮疙瘩"]}</pre>
+        </details>
+      </div>
+    </details>
+
+    <details class="log-entry">
+      <summary class="log-grid">
+        <span class="st ok"><svg class="i"><use href="#i-circle-check-big"/></svg>成功</span>
+        <span class="cell">10-28 14:31:47</span><span class="cell">2.2s</span><span class="cell">3/3 条</span><span class="cell dim">1280×720</span><span class="cell dim">自动</span><span class="notes"></span>
+        <svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </summary>
+    </details>
+    <details class="log-entry">
+      <summary class="log-grid">
+        <span class="st ok"><svg class="i"><use href="#i-circle-check-big"/></svg>成功</span>
+        <span class="cell">10-28 14:31:21</span><span class="cell">5.9s</span><span class="cell">3/3 条</span><span class="cell dim">1280×720</span><span class="cell dim">自动</span><span class="notes"><span class="tag">超出张数丢弃 4 张</span></span>
+        <svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </summary>
+    </details>
+    <details class="log-entry" id="log-failed">
+      <summary class="log-grid">
+        <span class="st err"><svg class="i"><use href="#i-circle-x"/></svg>失败</span>
+        <span class="cell">10-28 14:30:55</span><span class="cell">45.0s</span><span class="cell">0/3 条</span><span class="cell dim">1280×720</span><span class="cell dim">自动</span><span class="notes"><span class="tag err">请求超时</span></span>
+        <svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </summary>
+      <div class="log-detail">
+        <div class="infobar critical" role="note"><svg class="i"><use href="#i-circle-alert"/></svg><div class="ib-body"><span class="ib-msg">请求超时：45000 ms 内没有收到 http://127.0.0.1:1234/v1/chat/completions 的响应</span></div></div>
+        <div><h3 class="detail-title">生成的弹幕</h3><span class="muted">没有生成弹幕</span></div>
+        <div class="kv-cols">
+          <div><h3 class="detail-title">请求</h3><dl class="kv"><div><dt>模型</dt><dd>qwen2.5-vl-7b-instruct</dd></div><div><dt>请求体</dt><dd>2.68 MB / 48.00 MB</dd></div><div><dt>缓存 / 输入</dt><dd>-</dd></div><div><dt>输出 tokens</dt><dd>-</dd></div></dl></div>
+          <div><h3 class="detail-title">历史</h3><dl class="kv"><div><dt>历史轮数</dt><dd>7</dd></div><div><dt>历史模式</dt><dd>分批滑动</dd></div><div><dt>历史截图</dt><dd>保留 · 本次 5 张</dd></div></dl></div>
+          <div><h3 class="detail-title">截图</h3><dl class="kv"><div><dt>来源</dt><dd>整个屏幕</dd></div><div><dt>格式</dt><dd>JPEG · q82</dd></div><div><dt>传输大小</dt><dd>438 KB</dd></div></dl></div>
+        </div>
+      </div>
+    </details>
+    <details class="log-entry">
+      <summary class="log-grid">
+        <span class="st ok"><svg class="i"><use href="#i-circle-check-big"/></svg>成功</span>
+        <span class="cell">10-28 14:30:12</span><span class="cell">2.6s</span><span class="cell">2/3 条</span><span class="cell dim">1280×720</span><span class="cell dim">手动</span><span class="notes"><span class="tag todo">输出被截断</span></span>
+        <svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </summary>
+    </details>
+    <details class="log-entry">
+      <summary class="log-grid">
+        <span class="st abort"><svg class="i"><use href="#i-circle-pause"/></svg>中断</span>
+        <span class="cell">10-28 14:29:40</span><span class="cell">0.6s</span><span class="cell">0/3 条</span><span class="cell dim">1280×720</span><span class="cell dim">手动</span><span class="notes"></span>
+        <svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </summary>
+    </details>
+    <details class="log-entry">
+      <summary class="log-grid">
+        <span class="st ok"><svg class="i"><use href="#i-circle-check-big"/></svg>成功</span>
+        <span class="cell">10-28 14:29:18</span><span class="cell">2.3s</span><span class="cell">3/3 条</span><span class="cell dim">无截图</span><span class="cell dim">自动</span><span class="notes"></span>
+        <svg class="i chev"><use href="#i-chevron-right"/></svg>
+      </summary>
+    </details>
+    <div class="log-more"><button class="btn subtle" type="button">显示更早的 41 条</button></div>
+  </div>
+</section>
+
+<!-- ======================= PROFILES ======================= -->
+<section class="page" id="page-profiles" data-title="配置方案">
+  <p class="page-lead">每套配置保存一整份设置。切换或复制前会先保存当前的更改。</p>
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">当前配置</h2></div>
+    <div class="card rows">
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-pencil"/></svg></span>
+        <div class="row-text"><label class="row-label" for="pf-name">配置名称</label><p class="row-desc">只改名字，不影响其中的设置</p></div>
+        <div class="row-ctl"><span class="field w-lg"><input id="pf-name" value="游戏实况"></span><button class="btn" type="button" disabled>重命名</button></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-copy-plus"/></svg></span>
+        <div class="row-text"><label class="row-label" for="pf-new">复制为新配置</label><p class="row-desc">以当前设置为起点新建一套，并切换过去</p></div>
+        <div class="row-ctl"><span class="field w-lg"><input id="pf-new" placeholder="新配置名称"></span><button class="btn" type="button"><svg class="i"><use href="#i-copy-plus"/></svg>复制新建</button></div>
+      </div>
+      <div class="row">
+        <span class="row-icon"><svg class="i"><use href="#i-trash-2"/></svg></span>
+        <div class="row-text"><span class="row-label">删除此配置</span><p class="row-desc">删除后切换到列表中的下一套；只剩一套时不能删除</p></div>
+        <div class="row-ctl"><button class="btn danger" type="button"><svg class="i"><use href="#i-trash-2"/></svg>删除</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="group">
+    <div class="group-head"><h2 class="group-title">全部配置</h2></div>
+    <div class="card rows" role="list">
+      <div class="row profile-row" role="listitem">
+        <span class="avatar on">游</span>
+        <div class="row-text"><span class="row-label">游戏实况</span><p class="row-desc">更新于 10-28 14:02 · qwen2.5-vl-7b-instruct</p></div>
+        <span class="badge-current"><svg class="i"><use href="#i-check"/></svg>使用中</span>
+      </div>
+      <div class="row profile-row" role="listitem">
+        <span class="avatar">看</span>
+        <div class="row-text"><span class="row-label">看番陪伴</span><p class="row-desc">更新于 10-26 22:41 · gemma-3-12b-it</p></div>
+        <button class="btn" type="button">切换到此配置</button>
+      </div>
+      <div class="row profile-row" role="listitem">
+        <span class="avatar">默</span>
+        <div class="row-text"><span class="row-label">默认配置</span><p class="row-desc">更新于 10-20 09:15 · local-model</p></div>
+        <button class="btn" type="button">切换到此配置</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var state = params.get("state") || "running";
+  if (params.get("full") === "1") document.documentElement.classList.add("full");
+  var tokenMap = {
+    idle: ["idle", "stopped"], paused: ["paused", "stopped"], error: ["error", "stopped", "lasterror"],
+    running: ["running", "ticking"], starting: ["running", "starting"], generating: ["running", "generating"]
+  };
+  var tokens = (tokenMap[state] || tokenMap.running).slice();
+  if (params.get("lasterror") === "1") tokens.push("lasterror");
+  var dirtyPages = { danmaku: 1, capture: 1, model: 1 };
+  function apply() {
+    var page = (location.hash || "#overview").slice(1).split("?")[0] || "overview";
+    if (!document.getElementById("page-" + page)) page = "overview";
+    document.querySelectorAll(".page").forEach(function (el) { el.hidden = el.id !== "page-" + page; });
+    document.querySelectorAll("[data-nav]").forEach(function (el) {
+      if (el.dataset.nav === page) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current");
+    });
+    var section = document.getElementById("page-" + page);
+    document.getElementById("page-title").textContent = section.dataset.title;
+    document.title = section.dataset.title + " - 弹幕伴侣";
+    var dirty = params.has("dirty") ? params.get("dirty") === "1" : !!dirtyPages[page];
+    document.querySelectorAll("[data-dirty]").forEach(function (el) { el.hidden = (el.dataset.dirty === "1") !== dirty; });
+    document.querySelectorAll("[data-when]").forEach(function (el) { el.hidden = !el.dataset.when.split(" ").some(function (t) { return tokens.indexOf(t) >= 0; }); });
+    if (params.get("png") === "1") {
+      document.querySelectorAll("[data-png-warning]").forEach(function (el) { el.hidden = false; });
+      document.getElementById("fmt-png").checked = true;
+      var q = document.getElementById("row-quality"); q.classList.add("is-disabled");
+      q.querySelectorAll("input").forEach(function (el) { el.disabled = true; });
+      q.querySelector(".field").classList.add("is-disabled");
+    }
+    if (params.has("expand")) { var e = document.getElementById(params.get("expand")); if (e) e.open = true; }
+    document.getElementById("scroll").scrollTop = 0;
+  }
+  window.addEventListener("hashchange", apply);
+  apply();
+})();
+</script>
+</body>
+</html>

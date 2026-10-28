@@ -1,0 +1,1832 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>弹幕伴侣 设置</title>
+<style>
+/* ============================================================
+   弹幕伴侣 · Danmaku native — design tokens
+   ============================================================ */
+:root {
+  color-scheme: light;
+  --font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI",
+    "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, "Microsoft YaHei UI", monospace;
+
+  --bg: #f4f5f9;
+  --side: #fafafc;
+  --surface: #ffffff;
+  --surface-2: #f7f8fb;
+  --surface-3: #eef0f5;
+  --line: #e4e7ee;
+  --line-strong: #cbd1dc;
+  --line-hover: #aeb6c6;
+  --text: #1d2130;
+  --text-2: #545b6e;
+  --text-3: #666d80;
+
+  --accent: #d6336c;          /* filled buttons, switch on, slider fill (white text 4.6:1) */
+  --accent-hover: #c42a63;
+  --on-accent: #ffffff;
+  --accent-text: #bd2760;     /* pink text on surface (5.8:1), on accent-soft-2 4.7:1 */
+  --accent-soft: #fff0f5;
+  --accent-soft-2: #ffe0eb;
+  --accent-ring: rgba(214, 51, 108, 0.22);
+  --pink: #fb7299;            /* decoration only, never text */
+  --cyan: #23ade5;            /* decoration only */
+  --cyan-text: #0a76a8;
+  --cyan-soft: #e7f6fd;
+
+  --ok: #137a52;
+  --ok-soft: #e6f5ee;
+  --warn: #a35f00;
+  --warn-soft: #fff4df;
+  --bad: #b42318;
+  --bad-soft: #fdeceA;
+  --violet: #6d4fcb;
+  --violet-soft: #f1edff;
+
+  --switch-off: #c3c9d5;
+  --shadow-1: 0 1px 2px rgba(20, 22, 40, 0.05), 0 1px 1px rgba(20, 22, 40, 0.03);
+  --shadow-2: 0 12px 32px rgba(20, 22, 40, 0.14), 0 2px 8px rgba(20, 22, 40, 0.08);
+
+  /* the player dock is a dark "screen" strip in both themes */
+  --dock: #191a22;
+  --dock-2: #262836;
+  --dock-3: #30333f;
+  --dock-line: #2c2f3c;
+  --dock-text: #f1f2f6;
+  --dock-text-2: #a9aebe;
+
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-pill: 999px;
+
+  --side-w: 212px;
+  --dock-h: 72px;
+  --pad-x: 28px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121318;
+    --side: #16171d;
+    --surface: #1c1e26;
+    --surface-2: #20232c;
+    --surface-3: #282b36;
+    --line: #2b2f3a;
+    --line-strong: #3b404d;
+    --line-hover: #525868;
+    --text: #eceef4;
+    --text-2: #b4bac8;
+    --text-3: #9198a8;
+    --accent: #ff7aa5;
+    --accent-hover: #ff93b6;
+    --on-accent: #2a0a18;
+    --accent-text: #ff8ab0;
+    --accent-soft: rgba(255, 122, 165, 0.12);
+    --accent-soft-2: rgba(255, 122, 165, 0.2);
+    --accent-ring: rgba(255, 122, 165, 0.28);
+    --cyan-text: #5cc8f0;
+    --cyan-soft: rgba(35, 173, 229, 0.13);
+    --ok: #4fd1a0;
+    --ok-soft: rgba(79, 209, 160, 0.12);
+    --warn: #f5b54a;
+    --warn-soft: rgba(245, 181, 74, 0.12);
+    --bad: #ff7b7b;
+    --bad-soft: rgba(255, 123, 123, 0.12);
+    --violet: #b79bff;
+    --violet-soft: rgba(183, 155, 255, 0.13);
+    --switch-off: #474d5c;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 16px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
+    --dock: #0d0e12;
+    --dock-2: #1d1f28;
+    --dock-3: #272a35;
+    --dock-line: #24262f;
+  }
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font: 14px/1.5 var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  font-synthesis: weight;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--mono); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.i-sm { width: 15px; height: 15px; }
+.i-xs { width: 13px; height: 13px; }
+
+/* ============================================================
+   App frame: sidebar | main  /  dock spans both
+   ============================================================ */
+.app {
+  display: grid;
+  grid-template-columns: var(--side-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) var(--dock-h);
+  height: 100vh;
+}
+
+/* ---------- sidebar ---------- */
+.side {
+  grid-row: 1; grid-column: 1;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 16px 12px 12px;
+  background: var(--side);
+  border-right: 1px solid var(--line);
+  min-height: 0;
+  position: relative;
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 2px 6px 0; }
+.brand-mark { width: 34px; height: 34px; flex: none; }
+.brand-name { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; line-height: 1.2; }
+.brand-sub { font-size: 11px; color: var(--text-3); line-height: 1.3; }
+
+.profile { position: relative; }
+.profile-btn {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  height: 50px; padding: 0 10px 0 8px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  text-align: left; box-shadow: var(--shadow-1);
+}
+.profile-btn:hover { border-color: var(--line-hover); }
+.profile-btn .ico { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-text); flex: none; }
+.profile-btn .t { flex: 1; min-width: 0; }
+.profile-btn .t small { display: block; font-size: 11px; color: var(--text-3); line-height: 1.2; }
+.profile-btn .t b { display: block; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
+.profile-btn .i { color: var(--text-3); }
+
+.popover {
+  position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; width: 272px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: var(--shadow-2); padding: 6px; display: none;
+}
+.popover.open { display: block; }
+.pop-label { font-size: 11.5px; color: var(--text-3); padding: 6px 10px 4px; display: flex; justify-content: space-between; }
+.pop-item {
+  width: 100%; display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 10px;
+  border: 0; background: transparent; border-radius: 9px; text-align: left; font-size: 13.5px;
+}
+.pop-item:hover { background: var(--surface-3); }
+.pop-item .check { width: 16px; color: var(--accent-text); }
+.pop-item .pop-meta { margin-left: auto; font-size: 11.5px; color: var(--text-3); }
+.pop-item.danger { color: var(--bad); }
+.pop-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.pop-form { display: flex; gap: 6px; padding: 4px 4px 6px; }
+.pop-form .input { height: 34px; }
+
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-label { font-size: 11.5px; font-weight: 600; color: var(--text-3); padding: 8px 10px 4px; letter-spacing: 0.04em; }
+.nav a {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  height: 38px; padding: 0 10px; border-radius: 10px;
+  color: var(--text-2); text-decoration: none; font-weight: 500; font-size: 13.5px;
+}
+.nav a:hover { background: var(--surface-3); color: var(--text); }
+.nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+.nav a[aria-current="page"]::before {
+  content: ""; position: absolute; left: -12px; top: 10px; bottom: 10px; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--accent);
+}
+.nav .badge { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--text-3); background: var(--surface-3); border-radius: 999px; padding: 0 7px; line-height: 19px; }
+.nav a[aria-current="page"] .badge { background: var(--accent-soft-2); color: var(--accent-text); }
+.nav .dirty-dot { margin-left: auto; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: none; }
+body[data-dirty="1"] .nav .dirty-dot.on { display: block; }
+
+.side-foot { margin-top: auto; display: flex; align-items: center; gap: 7px; padding: 8px 10px 2px; font-size: 11.5px; color: var(--text-3); }
+
+/* ---------- main ---------- */
+.main { grid-row: 1; grid-column: 2; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.page { display: none; flex: 1; min-height: 0; flex-direction: column; }
+.page.on { display: flex; }
+.page-head {
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px var(--pad-x) 14px;
+}
+.page-head .ttl { flex: 1; min-width: 0; }
+.page-head h1 { font-size: 20px; line-height: 1.3; margin: 0; font-weight: 700; letter-spacing: 0.01em; }
+.page-head p { margin: 2px 0 0; color: var(--text-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.page-body { flex: 1; min-height: 0; overflow: auto; padding: 2px var(--pad-x) 28px; scrollbar-gutter: stable; }
+
+.banner {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px 10px 14px; border-radius: 12px;
+  font-size: 13px; margin-bottom: 14px; border: 1px solid transparent;
+}
+.banner .i { margin-top: 1px; }
+.banner .grow { flex: 1; min-width: 0; }
+.banner b { font-weight: 600; }
+.banner.bad { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 25%, transparent); }
+.banner.bad .grow { color: var(--text); }
+.banner.ok { background: var(--ok-soft); color: var(--ok); }
+.banner .x { width: 32px; height: 32px; margin: -6px -6px -6px 0; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); display: grid; place-items: center; }
+.banner .x:hover { background: rgba(0,0,0,.06); }
+.banner .link { color: inherit; font-weight: 600; white-space: nowrap; }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: 36px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--text);
+  font-weight: 600; font-size: 13.5px; white-space: nowrap;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.btn .i { width: 17px; height: 17px; }
+.btn:hover { background: var(--surface-3); border-color: var(--line-hover); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn-primary { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hover); border-color: transparent; }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+.btn-ghost:hover { background: var(--surface-3); color: var(--text); border-color: transparent; }
+.btn-danger { color: var(--bad); }
+.btn-danger:hover { background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+.btn-icon { width: 36px; padding: 0; }
+.btn-sm { height: 32px; padding: 0 11px; font-size: 13px; border-radius: 9px; }
+.btn-sm.btn-icon { width: 32px; padding: 0; }
+
+.save-btn { min-width: 108px; }
+.save-btn .pip { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .9; }
+.save-btn kbd { font: 11px var(--font); opacity: .8; border: 1px solid currentColor; border-radius: 5px; padding: 0 4px; line-height: 16px; margin-left: 2px; }
+.save-btn.saved { background: transparent; border-color: var(--line); color: var(--text-3); }
+.save-state { font-size: 12.5px; color: var(--accent-text); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.save-state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+/* ---------- cards & layout ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-1); min-width: 0; }
+.card + .card { margin-top: 16px; }
+.stats > .card, .row2 > .card, .ov-grid > .card { margin-top: 0; }
+.card-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px 2px; min-height: 48px; }
+.card-head h2 { font-size: 15px; margin: 0; font-weight: 650; line-height: 1.3; }
+.card-head .sub { color: var(--text-3); font-size: 12.5px; }
+.card-head .tail { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.tile-ico { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-text); flex: none; }
+.tile-ico .i { width: 16px; height: 16px; }
+.tile-ico.cyan { background: var(--cyan-soft); color: var(--cyan-text); }
+.tile-ico.violet { background: var(--violet-soft); color: var(--violet); }
+.tile-ico.ok { background: var(--ok-soft); color: var(--ok); }
+.tile-ico.warn { background: var(--warn-soft); color: var(--warn); }
+.card-body { padding: 10px 18px 18px; display: grid; gap: 16px; }
+.card-foot { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); }
+
+.split { display: grid; grid-template-columns: minmax(0, 1fr) clamp(264px, 32%, 320px); gap: 20px; align-items: start; }
+.split.wide { grid-template-columns: minmax(0, 1fr) clamp(280px, 40%, 360px); }
+.aside { position: sticky; top: 0; display: grid; gap: 16px; min-width: 0; }
+.row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
+.divider { height: 1px; background: var(--line); margin: 2px 0; }
+
+/* ---------- fields ---------- */
+.field { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.lbl { display: flex; align-items: baseline; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text); min-width: 0; }
+.lbl .hint { margin-left: auto; font-weight: 400; font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.help { font-size: 12.5px; line-height: 1.55; color: var(--text-3); margin: 0; }
+.help b { color: var(--text-2); font-weight: 600; }
+.input {
+  height: 36px; width: 100%; min-width: 0;
+  border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface);
+  padding: 0 11px; color: var(--text); font-size: 13.5px;
+  transition: border-color .12s, box-shadow .12s;
+}
+textarea.input { height: auto; padding: 9px 11px; line-height: 1.6; resize: vertical; }
+.input:hover { border-color: var(--line-hover); }
+.input:focus, .input.focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.input:disabled { background: var(--surface-2); color: var(--text-3); border-style: dashed; cursor: not-allowed; }
+.input::placeholder { color: var(--text-3); opacity: .85; }
+.input.mono { font-family: var(--mono); font-size: 12.5px; }
+.affix { position: relative; display: flex; align-items: center; min-width: 0; }
+.affix .unit { position: absolute; right: 11px; font-size: 12.5px; color: var(--text-3); pointer-events: none; }
+.affix .pre { position: absolute; left: 11px; color: var(--text-3); pointer-events: none; display: flex; }
+.affix .input { padding-right: 46px; }
+.affix.has-pre .input { padding-left: 36px; }
+.affix .in-btn { position: absolute; right: 2px; width: 32px; height: 32px; border: 0; background: transparent; border-radius: 8px; color: var(--text-3); display: grid; place-items: center; }
+.affix .in-btn:hover { background: var(--surface-3); color: var(--text); }
+select.input {
+  appearance: none; padding-right: 34px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%), linear-gradient(135deg, var(--text-3) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 15px, calc(100% - 12px) 15px;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+}
+
+/* range + number combo */
+.slide { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 12px; align-items: center; }
+input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 32px; background: transparent; margin: 0; cursor: pointer;
+  --p: 50%;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent) 0 var(--p), var(--surface-3) var(--p) 100%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line-strong) 40%, transparent);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; margin-top: -6px;
+  background: #fff; border: 2px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+input[type="range"]:focus-visible { outline: none; }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--accent-ring); }
+input[type="range"]:disabled { opacity: .45; cursor: not-allowed; }
+
+/* min – max pair */
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+.pair .dash { color: var(--text-3); }
+
+/* stepper */
+.stepper { display: inline-grid; grid-template-columns: 36px 64px 36px; height: 36px; border: 1px solid var(--line-strong); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.stepper button { border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; }
+.stepper button:hover { background: var(--surface-3); color: var(--text); }
+.stepper input { border: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); text-align: center; background: transparent; width: 100%; font-weight: 600; }
+
+/* switch row */
+.switch-row { display: flex; align-items: flex-start; gap: 14px; min-height: 40px; cursor: pointer; }
+.switch-row .txt { flex: 1; min-width: 0; }
+.switch-row .txt b { display: block; font-weight: 600; font-size: 13.5px; line-height: 1.4; }
+.switch-row .txt > span { display: block; color: var(--text-3); font-size: 12.5px; line-height: 1.5; margin-top: 1px; }
+.switch-row.disabled { cursor: not-allowed; }
+.switch-row.disabled .txt b { color: var(--text-3); }
+.switch {
+  -webkit-appearance: none; appearance: none; flex: none; margin: 1px 0 0;
+  width: 40px; height: 22px; border-radius: 999px; background: var(--switch-off);
+  position: relative; cursor: pointer; transition: background .15s;
+}
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.switch:checked { background: var(--accent); }
+.switch:checked::after { transform: translateX(18px); }
+.switch:disabled { opacity: .5; cursor: not-allowed; }
+
+/* segmented */
+.seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--surface-3); border-radius: 11px; max-width: 100%; }
+.seg label { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; flex: 1; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:hover { color: var(--text); }
+.seg label:has(input:checked) { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--line); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seg.full { display: flex; }
+.zone-ico { width: 18px; height: 13px; border: 1.5px solid currentColor; border-radius: 3px; position: relative; flex: none; opacity: .9; }
+.zone-ico::after { content: ""; position: absolute; left: 2px; right: 2px; background: currentColor; border-radius: 1px; opacity: .55; }
+.zone-ico.full::after { top: 2px; bottom: 2px; }
+.zone-ico.top::after { top: 2px; height: 3px; }
+.zone-ico.middle::after { top: 3.5px; height: 3px; }
+.zone-ico.bottom::after { bottom: 2px; height: 3px; }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--surface-3); color: var(--text-2); }
+.chip .i { width: 13px; height: 13px; }
+.chip.pink { background: var(--accent-soft); color: var(--accent-text); }
+.chip.cyan { background: var(--cyan-soft); color: var(--cyan-text); }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.violet { background: var(--violet-soft); color: var(--violet); }
+.chip.line { background: transparent; border: 1px solid var(--line-strong); }
+.todo { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; border: 1px dashed var(--line-strong); color: var(--text-3); font-size: 11px; font-weight: 600; white-space: nowrap; letter-spacing: .02em; }
+.mac { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--surface-3); color: var(--text-3); font-size: 11px; font-weight: 600; }
+
+.callout { display: flex; gap: 10px; padding: 11px 13px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-size: 12.5px; line-height: 1.6; color: var(--text-2); }
+.callout .i { margin-top: 2px; color: var(--text-3); width: 16px; height: 16px; }
+.callout.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 22%, transparent); }
+.callout.warn .i { color: var(--warn); }
+.callout.cyan { background: var(--cyan-soft); border-color: color-mix(in srgb, var(--cyan-text) 20%, transparent); }
+.callout.cyan .i { color: var(--cyan-text); }
+.callout p { margin: 0; }
+.callout p + p { margin-top: 6px; }
+.callout b { color: var(--text); font-weight: 600; }
+
+/* meters */
+.meter { position: relative; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: visible; }
+.meter > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--accent); }
+.meter.cyan > i { background: var(--cyan); }
+.meter.ok > i { background: var(--ok); }
+.meter .mark { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 1px; background: var(--text-3); opacity: .5; }
+
+/* ============================================================
+   Danmaku stage (preview)
+   ============================================================ */
+.stage {
+  --fs: 22px; --op: 0.92;
+  position: relative; overflow: hidden; border-radius: 12px; isolation: isolate;
+  background: #1a1f3d; height: 220px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.stage .scene { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+.stage .scene.light { display: none; }
+.stage[data-bg="light"] .scene.light { display: block; }
+.stage[data-bg="light"] .scene.dark { display: none; }
+.stage .zone-guide { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255,255,255,.35); border-bottom: 1px dashed rgba(255,255,255,.35); background: rgba(251,114,153,.07); pointer-events: none; }
+.stage[data-bg="light"] .zone-guide { border-color: rgba(214,51,108,.45); }
+.stage .zone-guide span { position: absolute; right: 6px; top: 3px; font-size: 10.5px; color: rgba(255,255,255,.75); }
+.stage[data-bg="light"] .zone-guide span { color: #9a2450; }
+.dm {
+  position: absolute; left: 100%; top: var(--top); white-space: nowrap;
+  font-size: var(--fs); font-weight: 800; line-height: 1.25; color: var(--c, #f8fafc);
+  opacity: var(--op);
+  animation: dm-move var(--dur, 10s) linear var(--delay, 0s) infinite;
+  will-change: left, transform;
+}
+.stage.shadow .dm { text-shadow: 0 2px 4px rgba(0,0,0,.5), 0 0 12px rgba(0,0,0,.26); }
+@keyframes dm-move {
+  from { left: 100%; transform: translateX(0); }
+  to { left: 0; transform: translateX(-100%); }
+}
+.stage-cap { position: absolute; left: 10px; bottom: 8px; display: flex; gap: 6px; }
+.stage-cap .chip { background: rgba(10,12,20,.62); color: #f1f2f6; backdrop-filter: blur(6px); }
+
+.zmap { position: relative; width: 112px; height: 63px; border-radius: 7px; background: var(--surface-3); border: 1px solid var(--line-strong); overflow: hidden; flex: none; }
+.zmap .lanes { position: absolute; left: 6px; right: 6px; background: repeating-linear-gradient(180deg, color-mix(in srgb, var(--accent) 55%, transparent) 0 1.5px, transparent 1.5px 4px); border-radius: 2px; }
+.zmap .band { position: absolute; left: 0; right: 0; background: var(--accent-soft-2); }
+
+/* ============================================================
+   Dock (player bar)
+   ============================================================ */
+.dock {
+  grid-row: 2; grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 14px 0 14px;
+  background: var(--dock); color: var(--dock-text);
+  border-top: 1px solid var(--dock-line);
+  position: relative; z-index: 5;
+}
+.play {
+  width: 46px; height: 46px; border-radius: 50%; border: 0; flex: none;
+  display: grid; place-items: center; background: var(--pink); color: #2a0a18;
+  box-shadow: 0 0 0 4px rgba(251,114,153,.18), 0 4px 14px rgba(251,114,153,.35);
+  transition: transform .12s, background .12s;
+}
+.play:hover { background: #ff8aac; transform: scale(1.04); }
+.play .i { width: 20px; height: 20px; fill: currentColor; stroke-width: 1.5; }
+.play:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.dock-state { display: grid; gap: 1px; min-width: 96px; flex: none; }
+.dock-state .st { display: flex; align-items: center; gap: 7px; font-weight: 650; font-size: 14px; }
+.dock-state .st .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 0 0 rgba(251,114,153,.6); animation: pulse 1.8s ease-out infinite; }
+.dock-state .sub { font-size: 12px; color: var(--dock-text-2); }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(251,114,153,.55); } 80%, 100% { box-shadow: 0 0 0 7px rgba(251,114,153,0); } }
+
+.dock-track { flex: 1; min-width: 160px; display: grid; gap: 7px; padding: 0 6px; }
+.dock-track .row { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--dock-text-2); }
+.dock-track .row b { color: var(--dock-text); font-weight: 600; }
+.dock-track .row .cd { margin-left: auto; font-size: 15px; font-weight: 700; color: var(--dock-text); }
+.dock-track .row .cd small { font-size: 12px; font-weight: 500; color: var(--dock-text-2); margin-left: 2px; }
+.track { position: relative; height: 6px; border-radius: 999px; background: var(--dock-3); }
+.track > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, #ff9ebb, var(--pink)); }
+.track > i::after { content: ""; position: absolute; right: -6px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(251,114,153,.35); }
+.track.delay > i { background: repeating-linear-gradient(-45deg, #5cc8f0 0 6px, #23ade5 6px 12px); }
+.track.empty > i { display: none; }
+.track.delay > i::after { box-shadow: 0 0 0 3px rgba(35,173,229,.35); }
+
+.dock-stats { display: flex; align-items: center; gap: 0; flex: none; }
+.dock-stats .s { display: grid; padding: 0 14px; border-left: 1px solid var(--dock-line); }
+.dock-stats .s:first-child { border-left: 0; }
+.dock-stats .s small { font-size: 11.5px; color: var(--dock-text-2); line-height: 1.3; }
+.dock-stats .s b { font-size: 14px; font-weight: 650; line-height: 1.35; white-space: nowrap; }
+.dock-stats .s b em { font-style: normal; font-weight: 500; color: var(--dock-text-2); font-size: 12px; }
+
+.dock-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.dbtn {
+  height: 36px; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; border-radius: 10px;
+  background: var(--dock-2); color: var(--dock-text); border: 1px solid var(--dock-3); font-weight: 600; font-size: 13.5px; white-space: nowrap;
+}
+.dbtn:hover { background: var(--dock-3); }
+.dbtn.icon { width: 36px; padding: 0; justify-content: center; }
+.dbtn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.dan {
+  width: 40px; height: 36px; border-radius: 10px; display: grid; place-items: center; position: relative;
+  background: rgba(251,114,153,.16); color: #ff9ebb; border: 1px solid rgba(251,114,153,.4);
+}
+.dan .glyph { font-weight: 800; font-size: 15px; line-height: 1; border: 1.8px solid currentColor; border-radius: 6px; padding: 2px 3px 3px; position: relative; }
+.dan[aria-pressed="false"] { background: var(--dock-2); color: var(--dock-text-2); border-color: var(--dock-3); }
+.dan[aria-pressed="false"]::after { content: ""; position: absolute; width: 26px; height: 2px; background: currentColor; transform: rotate(-35deg); border-radius: 1px; }
+.dock-sep { width: 1px; height: 28px; background: var(--dock-line); }
+
+/* ============================================================
+   Overview
+   ============================================================ */
+.hero {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 22px;
+  padding: 18px 22px; min-height: 140px;
+}
+.ring { position: relative; width: 108px; height: 108px; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .t { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .t b { font-size: 32px; line-height: 1; font-weight: 750; }
+.ring .t b small { font-size: 15px; font-weight: 600; margin-left: 1px; }
+.ring .t span { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+.hero-main { flex: 1; min-width: 0; max-width: 540px; position: relative; z-index: 1; }
+.live { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px 0 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 12.5px; font-weight: 700; }
+.live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); animation: pulse 1.8s ease-out infinite; }
+.hero h2 { margin: 10px 0 4px; font-size: 21px; line-height: 1.3; font-weight: 700; }
+.hero h2 em { font-style: normal; color: var(--accent-text); }
+.hero p { margin: 0; color: var(--text-2); font-size: 13px; }
+.hero .facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.hero-deco { position: absolute; top: 0; bottom: 0; right: 0; left: 58%; pointer-events: none; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%); mask-image: linear-gradient(90deg, transparent, #000 35%); }
+.hero-deco i { position: absolute; height: 6px; border-radius: 999px; opacity: .55; animation: drift linear infinite; }
+@keyframes drift { from { transform: translateX(0); } to { transform: translateX(-560px); } }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.stat { padding: 14px 16px 14px; display: grid; gap: 6px; }
+.stat .k { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-2); font-weight: 600; }
+.stat .k .tile-ico { width: 24px; height: 24px; border-radius: 7px; }
+.stat .k .tile-ico .i { width: 14px; height: 14px; }
+.stat .v { font-size: 24px; font-weight: 750; line-height: 1.15; letter-spacing: -.01em; }
+.stat .v small { font-size: 13px; font-weight: 600; color: var(--text-3); margin-left: 3px; letter-spacing: 0; }
+.stat .d { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ov-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.ov-grid .card + .card { margin-top: 0; }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px 14px; font-size: 13px; }
+.kv dt { color: var(--text-3); }
+.kv dd { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; font-weight: 550; }
+.summary-text { font-size: 13px; color: var(--text-2); line-height: 1.65; margin: 0; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ============================================================
+   Logs
+   ============================================================ */
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.toolbar .grow { flex: 1; }
+.toolbar .note { font-size: 12.5px; color: var(--text-3); }
+.seg .cnt { font-size: 11.5px; color: var(--text-3); font-weight: 600; }
+.logs { display: grid; gap: 8px; }
+.log { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; }
+.log[open] { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-1); }
+.log > summary {
+  list-style: none; display: grid; align-items: center; gap: 12px;
+  grid-template-columns: 58px 92px 36px minmax(0, 1fr) auto 84px 52px 20px;
+  min-height: 52px; padding: 0 14px; cursor: pointer;
+}
+.log > summary::-webkit-details-marker { display: none; }
+.log > summary:hover { background: var(--surface-2); }
+.log > summary:focus-visible { outline-offset: -2px; border-radius: 14px; }
+.st-pill { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 24px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.st-pill.ok { background: var(--ok-soft); color: var(--ok); }
+.st-pill.bad { background: var(--bad-soft); color: var(--bad); }
+.st-pill.warn { background: var(--warn-soft); color: var(--warn); }
+.st-pill.violet { background: var(--violet-soft); color: var(--violet); }
+.log .time { font-size: 13px; font-weight: 600; }
+.log .time small { display: block; font-size: 11.5px; color: var(--text-3); font-weight: 500; }
+.log .why { font-size: 12px; color: var(--text-3); text-align: center; }
+.log .why.manual { color: var(--cyan-text); font-weight: 600; }
+.log .preview { min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.log .preview .q { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log .preview .q.err { color: var(--bad); }
+.log .tags { display: flex; gap: 6px; }
+.log .tags .chip { height: 22px; font-size: 11.5px; padding: 0 8px; }
+.log .facts { font-size: 12px; color: var(--text-3); text-align: right; line-height: 1.35; }
+.log .facts b { color: var(--text); font-weight: 600; font-size: 13px; }
+.log .chev { color: var(--text-3); transition: transform .15s; }
+.log[open] .chev { transform: rotate(90deg); }
+.log-detail { border-top: 1px solid var(--line); padding: 14px 16px 16px; display: grid; gap: 14px; background: var(--surface-2); }
+.dm-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.dm-pill { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px 0 10px; border-radius: 999px; background: #1f2230; border: 1px solid rgba(255,255,255,.08); color: var(--c); font-weight: 750; font-size: 13.5px; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+.dm-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent); }
+.meta-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.meta { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.meta h4 { margin: 0 0 6px; font-size: 12px; color: var(--text-3); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.meta dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 10px; font-size: 12.5px; }
+.meta dt { color: var(--text-3); white-space: nowrap; }
+.meta dd { margin: 0; text-align: right; font-weight: 550; min-width: 0; overflow-wrap: anywhere; }
+.meta dd .sub { display: block; font-size: 11.5px; color: var(--text-3); font-weight: 400; }
+.raw { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.raw > summary { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; font-size: 12.5px; font-weight: 600; color: var(--text-2); cursor: pointer; list-style: none; }
+.raw > summary::-webkit-details-marker { display: none; }
+.raw pre { margin: 0; padding: 10px 12px 12px; border-top: 1px solid var(--line); font: 12px/1.6 var(--mono); color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; }
+.more { width: 100%; margin-top: 6px; }
+
+/* ============================================================
+   Rhythm timeline
+   ============================================================ */
+.tl { padding: 18px 18px 8px; }
+.tl-row { display: grid; grid-template-columns: 30px 5fr 30px 3fr 30px 16fr 30px; align-items: center; }
+.node { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1.5px solid var(--line-strong); color: var(--text-2); position: relative; z-index: 1; }
+.node .i { width: 15px; height: 15px; }
+.node.pink { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+.node.cyan { border-color: var(--cyan); color: var(--cyan-text); background: var(--cyan-soft); }
+.seg-bar { height: 8px; border-radius: 999px; margin: 0 -2px; position: relative; }
+.seg-bar.delay { background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--cyan) 70%, transparent) 0 5px, color-mix(in srgb, var(--cyan) 35%, transparent) 5px 10px); }
+.seg-bar.gen { background: var(--line-strong); }
+.seg-bar.wait { background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 11px); }
+.release { position: absolute; left: 0; width: 40%; top: -56px; height: 48px; }
+.release .band { position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--pink), color-mix(in srgb, var(--pink) 45%, transparent)); }
+.release .p { position: absolute; top: 0; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-1); }
+.tl-labels { display: grid; grid-template-columns: 30px 5fr 30px 3fr 30px 16fr 30px; margin-top: 10px; font-size: 12px; color: var(--text-3); }
+.tl-labels > div { text-align: center; line-height: 1.4; }
+.tl-labels b { display: block; color: var(--text); font-weight: 650; font-size: 12.5px; }
+.tl-labels .edge { white-space: nowrap; }
+
+/* ============================================================
+   Capture / history
+   ============================================================ */
+.modes { display: grid; gap: 8px; }
+.mode { position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 12px; cursor: pointer; background: var(--surface); }
+.mode:hover { border-color: var(--line-hover); }
+.mode input { position: absolute; opacity: 0; }
+.mode .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-strong); margin-top: 1px; display: grid; place-items: center; }
+.mode:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
+.mode:has(input:checked) .radio { border-color: var(--accent); }
+.mode:has(input:checked) .radio::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.mode:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mode .mt { font-weight: 650; font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mode .md { grid-column: 2; font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+.mode .blocks { grid-row: 1 / span 2; grid-column: 3; display: flex; align-items: center; gap: 3px; align-self: center; }
+.blocks i { width: 9px; height: 16px; border-radius: 3px; background: color-mix(in srgb, var(--text-3) 55%, transparent); }
+.blocks i.drop { background: transparent; border: 1.5px dashed color-mix(in srgb, var(--text-3) 60%, transparent); }
+.blocks i.new { background: var(--pink); }
+.blocks .arrow { color: var(--text-3); margin: 0 2px; font-size: 12px; }
+.sub-block { display: grid; gap: 14px; padding: 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.sec-title { font-size: 12px; color: var(--text-3); font-weight: 650; letter-spacing: .04em; margin: 4px 0 -4px; display: flex; align-items: center; gap: 8px; }
+.sec-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+.usage { display: grid; gap: 14px; }
+.usage .u-k { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; color: var(--text-2); margin-bottom: 7px; }
+.usage .u-k b { margin-left: auto; color: var(--text); font-size: 14px; font-weight: 700; }
+.usage .u-k b em { font-style: normal; font-weight: 500; color: var(--text-3); font-size: 12px; }
+.usage .u-n { font-size: 11.5px; color: var(--text-3); margin-top: 6px; display: flex; justify-content: space-between; gap: 8px; }
+
+/* ============================================================
+   Prompt editor
+   ============================================================ */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); padding: 0 12px; }
+.tab { position: relative; height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--text-2); font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px; }
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { color: var(--accent-text); }
+.tab[aria-selected="true"]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2.5px; border-radius: 2px; background: var(--accent); }
+.editor { width: 100%; border: 0; resize: none; padding: 14px 18px; font: 12.5px/1.75 var(--mono); color: var(--text); background: transparent; min-height: 360px; display: block; }
+.editor:focus { outline: none; }
+.editor-wrap { border-radius: 0 0 16px 16px; }
+.editor-wrap:focus-within { box-shadow: inset 0 0 0 2px var(--accent-ring); }
+.ph-list { display: grid; gap: 4px; }
+.ph { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; width: 100%; min-height: 44px; padding: 6px 10px; border: 1px solid transparent; border-radius: 10px; background: transparent; text-align: left; }
+.ph:hover { background: var(--surface-3); border-color: var(--line); }
+.ph code { font: 600 12px var(--mono); color: var(--accent-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph .ins { grid-row: 1 / span 2; grid-column: 2; color: var(--text-3); opacity: 0; }
+.ph:hover .ins, .ph:focus-visible .ins { opacity: 1; }
+.ph span { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph span b { color: var(--text-2); font-weight: 600; }
+.ph.todo-ph code { color: var(--text-3); text-decoration: line-through dashed; }
+.ph.todo-ph { border: 1px dashed var(--line-strong); }
+
+.prompt-preview { font: 12px/1.7 var(--mono); color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; max-height: 360px; overflow: auto; }
+.prompt-preview mark { background: var(--accent-soft-2); color: var(--accent-text); border-radius: 4px; padding: 0 3px; font-weight: 600; }
+.prompt-preview .tok { background: var(--surface-3); color: var(--text-3); border-radius: 4px; padding: 0 3px; }
+
+.persona-card { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, var(--accent-soft), var(--cyan-soft)); }
+.avatar { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--pink); color: #2a0a18; font-weight: 800; font-size: 19px; flex: none; }
+
+/* palette */
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.sw { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px 0 5px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font: 12px var(--mono); color: var(--text-2); }
+.sw i { width: 22px; height: 22px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+
+/* empty state */
+.empty { display: grid; place-items: center; text-align: center; gap: 8px; padding: 40px 20px; border: 1px dashed var(--line-strong); border-radius: 16px; color: var(--text-3); }
+
+/* ============================================================
+   Responsive: minimum window 940 x 660
+   ============================================================ */
+@media (max-width: 1060px) {
+  :root { --side-w: 196px; --pad-x: 22px; }
+  .dock-stats .s.opt { display: none; }
+  .stats { gap: 12px; }
+  .stat .v { font-size: 22px; }
+  .log > summary { grid-template-columns: 58px 88px 36px minmax(0, 1fr) 80px 48px 20px; }
+  .log .tags { display: none; }
+  .meta-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .meta-groups .meta:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 980px) {
+  .dock-stats { display: none; }
+  .ov-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr); }
+  .hero .facts .chip.opt { display: none; }
+  .split { grid-template-columns: minmax(0, 1fr) 264px; }
+  .split.wide { grid-template-columns: minmax(0, 1fr) 284px; }
+}
+@media (max-height: 700px) {
+  .page-head { padding-top: 14px; padding-bottom: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dm { animation: none; left: var(--x, 10%); }
+  .hero-deco i, .dock-state .st .dot, .live .dot { animation: none; }
+}
+
+/* save state visibility (mockup: one markup, two states) */
+body:not([data-dirty="1"]) .dirty-only { display: none !important; }
+body[data-dirty="1"] .clean-only { display: none !important; }
+.save-btn.saved:disabled { opacity: 1; }
+
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dm-pill { background: #0d0e12; } }
+@media (max-width: 1060px) {
+  .meta-groups .meta:last-child dl { grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 12px; }
+}
+.stepper { justify-self: start; }
+/* review helper: ?full=1 lets a full-page screenshot include the scrolled content */
+html.full, html.full body { height: auto; }
+html.full .app { height: auto; min-height: 100vh; grid-template-rows: auto var(--dock-h); }
+html.full .page-body { overflow: visible; }
+html.full .side { position: sticky; top: 0; height: calc(100vh - var(--dock-h)); align-self: start; }
+html.full .dock { position: static; }
+
+</style>
+</head>
+<body data-page="overview" data-dirty="0">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
+<symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol>
+<symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></symbol>
+<symbol id="i-eraser" viewBox="0 0 24 24"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></symbol>
+<symbol id="i-cpu" viewBox="0 0 24 24"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></symbol>
+<symbol id="i-sliders-horizontal" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol>
+<symbol id="i-user-round" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+<symbol id="i-message-square-text" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+<symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+<symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+<symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol>
+<symbol id="i-copy-plus" viewBox="0 0 24 24"><line x1="15" x2="15" y1="12" y2="18"/><line x1="12" x2="18" y1="15" y2="15"/><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol>
+<symbol id="i-cable" viewBox="0 0 24 24"><path d="M17 21v-2a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1"/><path d="M19 15V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V9"/><path d="M21 21v-2h-4"/><path d="M3 5h4V3"/><path d="M7 5a1 1 0 0 1 1 1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1V3"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+<symbol id="i-timer" viewBox="0 0 24 24"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="i-chevrons-up-down" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+<symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
+<symbol id="i-loader-circle" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+<symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+<symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol>
+<symbol id="i-scroll-text" viewBox="0 0 24 24"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></symbol>
+<symbol id="i-palette" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></symbol>
+<symbol id="i-type" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></symbol>
+<symbol id="i-bot" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></symbol>
+<symbol id="i-braces" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></symbol>
+<symbol id="i-layout-dashboard" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+<symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+<symbol id="i-lightbulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+<symbol id="i-key-round" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+<symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></symbol>
+<symbol id="i-file-image" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><circle cx="10" cy="12" r="2"/><path d="m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+<symbol id="i-messages-square" viewBox="0 0 24 24"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+<symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+<symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
+<symbol id="i-circle-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="10" x2="10" y1="15" y2="9"/><line x1="14" x2="14" y1="15" y2="9"/></symbol>
+<symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
+<symbol id="i-shrink" viewBox="0 0 24 24"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8"/><path d="M9 19.8V15m0 0H4.2M9 15l-6 6"/><path d="M15 4.2V9m0 0h4.8M15 9l6-6"/><path d="M9 4.2V9m0 0H4.2M9 9 3 3"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol>
+<symbol id="i-sliders-vertical" viewBox="0 0 24 24"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></symbol>
+<symbol id="i-user-pen" viewBox="0 0 24 24"><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/><circle cx="10" cy="7" r="4"/></symbol>
+<symbol id="i-square-pen" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></symbol>
+
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141a38"/><stop offset=".62" stop-color="#352552"/><stop offset="1" stop-color="#5a2b55"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2a57"/><stop offset="1" stop-color="#1f1d40"/>
+    </linearGradient>
+    <g id="scene-dark-g">
+      <rect width="400" height="240" fill="url(#sky)"/>
+      <g fill="#fff">
+        <circle cx="30" cy="30" r="1" opacity=".7"/><circle cx="88" cy="18" r="1.2" opacity=".5"/><circle cx="140" cy="44" r="1" opacity=".6"/>
+        <circle cx="196" cy="22" r="1.3" opacity=".7"/><circle cx="240" cy="60" r="1" opacity=".5"/><circle cx="372" cy="28" r="1.2" opacity=".6"/>
+        <circle cx="358" cy="92" r="1" opacity=".5"/><circle cx="60" cy="80" r="1" opacity=".45"/><circle cx="270" cy="16" r="1" opacity=".6"/>
+      </g>
+      <circle cx="318" cy="62" r="42" fill="#ffd9a8" opacity=".10"/>
+      <circle cx="318" cy="62" r="22" fill="#ffe7bf"/>
+      <path d="M0 168 L44 128 L82 150 L132 98 L184 146 L232 112 L282 150 L334 108 L400 148 V240 H0Z" fill="url(#hill)"/>
+      <path d="M0 204 Q64 172 126 194 T252 186 T400 178 V240 H0Z" fill="#17142c"/>
+      <rect x="54" y="174" width="70" height="9" rx="3" fill="#463c75"/>
+      <rect x="236" y="156" width="58" height="9" rx="3" fill="#463c75"/>
+      <rect x="82" y="152" width="13" height="20" rx="5" fill="#fb7299"/>
+      <circle cx="91" cy="159" r="1.6" fill="#2a0a18"/>
+      <circle cx="262" cy="142" r="5" fill="#f5b54a"/><circle cx="278" cy="136" r="5" fill="#f5b54a" opacity=".85"/>
+      <rect x="12" y="12" width="74" height="9" rx="4.5" fill="#fff" opacity=".14"/>
+      <rect x="14" y="14" width="46" height="5" rx="2.5" fill="#4fd1a0"/>
+    </g>
+    <g id="scene-light-g">
+      <rect width="400" height="240" fill="#e8ecf3"/>
+      <rect x="16" y="12" width="368" height="220" rx="8" fill="#ffffff"/>
+      <rect x="16" y="12" width="368" height="20" rx="8" fill="#dfe5ee"/><rect x="16" y="24" width="368" height="8" fill="#dfe5ee"/>
+      <circle cx="28" cy="22" r="3" fill="#f2a3a3"/><circle cx="38" cy="22" r="3" fill="#f2d39a"/><circle cx="48" cy="22" r="3" fill="#a9dcb6"/>
+      <rect x="16" y="32" width="74" height="200" fill="#f3f5f9"/>
+      <g fill="#d5dbe5"><rect x="26" y="46" width="50" height="6" rx="3"/><rect x="26" y="62" width="40" height="6" rx="3"/><rect x="26" y="78" width="54" height="6" rx="3"/><rect x="26" y="94" width="36" height="6" rx="3"/></g>
+      <rect x="106" y="46" width="150" height="12" rx="4" fill="#b9c3d3"/>
+      <g fill="#dde3ec"><rect x="106" y="68" width="262" height="6" rx="3"/><rect x="106" y="82" width="244" height="6" rx="3"/><rect x="106" y="96" width="256" height="6" rx="3"/><rect x="106" y="110" width="180" height="6" rx="3"/></g>
+      <rect x="106" y="126" width="140" height="92" rx="6" fill="#cfe4f7"/>
+      <path d="M106 206 L146 168 L172 190 L196 172 L246 212 V218 H106Z" fill="#9fc6ea"/>
+      <circle cx="222" cy="148" r="9" fill="#ffffff" opacity=".9"/>
+      <g fill="#dde3ec"><rect x="258" y="130" width="110" height="6" rx="3"/><rect x="258" y="144" width="96" height="6" rx="3"/><rect x="258" y="158" width="104" height="6" rx="3"/></g>
+      <rect x="258" y="186" width="66" height="22" rx="6" fill="#fbd3e0"/>
+    </g>
+  </defs>
+</svg>
+
+<div class="app">
+  <!-- ======================= SIDEBAR ======================= -->
+  <aside class="side" aria-label="导航">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 34 34" aria-hidden="true">
+        <rect width="34" height="34" rx="11" fill="#fb7299"/>
+        <rect x="8" y="9.5" width="15" height="3.4" rx="1.7" fill="#fff"/>
+        <rect x="13" y="15.3" width="14" height="3.4" rx="1.7" fill="#fff" opacity=".88"/>
+        <rect x="7" y="21.1" width="10" height="3.4" rx="1.7" fill="#fff" opacity=".72"/>
+        <rect x="20" y="21.1" width="5" height="3.4" rx="1.7" fill="#23ade5"/>
+      </svg>
+      <div>
+        <div class="brand-name">弹幕伴侣</div>
+        <div class="brand-sub">Danmaku Companion</div>
+      </div>
+    </div>
+
+    <div class="profile">
+      <button class="profile-btn" type="button" aria-haspopup="menu" aria-expanded="false" id="profileBtn">
+        <span class="ico"><svg class="i i-sm"><use href="#i-layers"/></svg></span>
+        <span class="t"><small>当前配置</small><b>默认配置</b></span>
+        <svg class="i i-sm"><use href="#i-chevrons-up-down"/></svg>
+      </button>
+      <div class="popover" id="profilePop" role="menu" aria-label="配置">
+        <div class="pop-label"><span>切换配置</span><span>切换前自动保存</span></div>
+        <button class="pop-item" role="menuitemradio" aria-checked="true"><svg class="i i-sm check"><use href="#i-check"/></svg><b>默认配置</b><span class="pop-meta">当前</span></button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false"><span class="check"></span>直播用（录屏可见）<span class="pop-meta">10-21</span></button>
+        <button class="pop-item" role="menuitemradio" aria-checked="false"><span class="check"></span>云端 GPT-4o<span class="pop-meta">10-08</span></button>
+        <div class="pop-sep"></div>
+        <div class="pop-label"><span>重命名当前配置</span></div>
+        <div class="pop-form">
+          <label class="sr-only" for="rn">配置名称</label>
+          <input id="rn" class="input" value="默认配置">
+          <button class="btn btn-sm" type="button"><svg class="i i-sm"><use href="#i-pencil"/></svg>重命名</button>
+        </div>
+        <div class="pop-label"><span>复制为新配置</span></div>
+        <div class="pop-form">
+          <label class="sr-only" for="np">新配置名称</label>
+          <input id="np" class="input" placeholder="基于当前配置">
+          <button class="btn btn-sm" type="button"><svg class="i i-sm"><use href="#i-copy-plus"/></svg>新建</button>
+        </div>
+        <div class="pop-sep"></div>
+        <button class="pop-item danger" role="menuitem"><svg class="i i-sm"><use href="#i-trash-2"/></svg>删除“默认配置”…</button>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-label">实时</div>
+      <a href="#overview" data-p="overview"><svg class="i"><use href="#i-layout-dashboard"/></svg>总览</a>
+      <a href="#logs" data-p="logs"><svg class="i"><use href="#i-scroll-text"/></svg>生成日志<span class="badge num">128</span></a>
+      <div class="nav-label">设置</div>
+      <a href="#model" data-p="model"><svg class="i"><use href="#i-cpu"/></svg>模型接口</a>
+      <a href="#danmaku" data-p="danmaku"><svg class="i"><use href="#i-palette"/></svg>弹幕外观<span class="dirty-dot on" title="有未保存的修改"></span></a>
+      <a href="#character" data-p="character"><svg class="i"><use href="#i-user-round"/></svg>角色与称呼</a>
+      <a href="#prompt" data-p="prompt"><svg class="i"><use href="#i-braces"/></svg>提示词模板</a>
+      <a href="#rhythm" data-p="rhythm"><svg class="i"><use href="#i-timer"/></svg>运行节奏</a>
+      <a href="#capture" data-p="capture"><svg class="i"><use href="#i-camera"/></svg>截图与历史</a>
+    </nav>
+
+    <div class="side-foot"><svg class="i i-xs"><use href="#i-lock"/></svg>配置与密钥只保存在本机</div>
+  </aside>
+
+  <!-- ======================= MAIN ======================= -->
+  <main class="main">
+
+    <!-- ---------- OVERVIEW ---------- -->
+    <section class="page" id="p-overview" aria-labelledby="h-overview">
+      <header class="page-head">
+        <div class="ttl"><h1 id="h-overview">总览</h1><p>运行状态、缓存与请求体的实时情况</p></div>
+        <span class="save-state dirty-only">有未保存的修改</span>
+        <button class="btn btn-primary save-btn dirty-only" type="button"><svg class="i"><use href="#i-save"/></svg>保存<kbd>Ctrl S</kbd></button>
+        <button class="btn save-btn saved clean-only" type="button" disabled><svg class="i"><use href="#i-check"/></svg>已保存</button>
+      </header>
+      <div class="page-body">
+        <div class="card hero">
+          <div class="hero-deco" aria-hidden="true">
+            <i style="top:26px; right:-60px; width:120px; background:var(--pink); animation-duration:16s; animation-delay:-4s"></i>
+            <i style="top:52px; right:-140px; width:70px; background:var(--cyan); animation-duration:21s; animation-delay:-9s; opacity:.4"></i>
+            <i style="top:96px; right:-40px; width:150px; background:var(--pink); animation-duration:26s; animation-delay:-14s; opacity:.28"></i>
+            <i style="top:122px; right:-90px; width:56px; background:var(--cyan); animation-duration:18s; animation-delay:-2s; opacity:.35"></i>
+          </div>
+          <div class="ring" role="img" aria-label="下次截图倒计时 12 秒，共 21 秒">
+            <svg viewBox="0 0 108 108"><circle cx="54" cy="54" r="46" fill="none" stroke="var(--surface-3)" stroke-width="9"/>
+              <circle id="ringArc" cx="54" cy="54" r="46" fill="none" stroke="var(--pink)" stroke-width="9" stroke-linecap="round" stroke-dasharray="165 289"/></svg>
+            <div class="t"><b class="num" id="ringNum">12<small>s</small></b><span id="ringLbl">后截图</span></div>
+          </div>
+          <div class="hero-main">
+            <span class="live" id="heroPill"><span class="dot"></span>运行中 · 第 37 轮</span>
+            <h2 id="heroTitle"><em>Mika</em> 正在陪你看屏幕</h2>
+            <p id="heroSub">每轮结束后随机等待 14–28 秒再截图；每轮 3 条弹幕，在 6–10 秒内陆续飘出。</p>
+            <div class="facts">
+              <span class="chip"><svg class="i"><use href="#i-cpu"/></svg>qwen2.5-vl-7b-instruct</span>
+              <span class="chip"><svg class="i"><use href="#i-image"/></svg>JPEG · 960 px</span>
+              <span class="chip opt"><svg class="i"><use href="#i-history"/></svg>历史 4 轮 · 分批滑动</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="card stat">
+            <div class="k"><span class="tile-ico cyan"><svg class="i"><use href="#i-gauge"/></svg></span>生成耗时</div>
+            <div class="v num">2.41<small>s</small></div>
+            <svg viewBox="0 0 100 18" preserveAspectRatio="none" style="width:100%;height:18px" aria-hidden="true">
+              <g fill="var(--cyan)" opacity=".75">
+                <rect x="0" y="9" width="7" height="9" rx="1.5"/><rect x="10" y="7" width="7" height="11" rx="1.5"/><rect x="20" y="11" width="7" height="7" rx="1.5"/><rect x="30" y="4" width="7" height="14" rx="1.5"/>
+                <rect x="40" y="9" width="7" height="9" rx="1.5"/><rect x="50" y="10" width="7" height="8" rx="1.5"/><rect x="60" y="0" width="7" height="18" rx="1.5" fill="var(--bad)"/><rect x="70" y="8" width="7" height="10" rx="1.5"/>
+                <rect x="80" y="10" width="7" height="8" rx="1.5"/><rect x="90" y="8" width="7" height="10" rx="1.5" opacity="1"/>
+              </g>
+            </svg>
+            <div class="d">最近 10 轮 · 预填充 412 ms</div>
+          </div>
+          <div class="card stat">
+            <div class="k"><span class="tile-ico ok"><svg class="i"><use href="#i-database"/></svg></span>缓存命中</div>
+            <div class="v num">82<small>%</small></div>
+            <div class="meter ok" style="margin:5px 0 5px"><i style="width:82%"></i></div>
+            <div class="d num">5,612 / 6,840 tokens</div>
+          </div>
+          <div class="card stat">
+            <div class="k"><span class="tile-ico"><svg class="i"><use href="#i-upload"/></svg></span>请求体</div>
+            <div class="v num">3.1<small>/ 48 MB</small></div>
+            <div class="meter" style="margin:5px 0 5px"><i style="width:6.5%; min-width:6px"></i><span class="mark" style="left:50%" title="超限后压缩到一半"></span></div>
+            <div class="d">有效上限 48 MB</div>
+          </div>
+          <div class="card stat">
+            <div class="k"><span class="tile-ico violet"><svg class="i"><use href="#i-image"/></svg></span>历史截图</div>
+            <div class="v num">6<small>/ 24 张</small></div>
+            <div class="meter" style="margin:5px 0 5px"><i style="width:25%; background:var(--violet)"></i><span class="mark" style="left:50%"></span></div>
+            <div class="d">超限后丢弃最早一半</div>
+          </div>
+        </div>
+
+        <div class="ov-grid">
+          <div class="card">
+            <div class="card-head">
+              <span class="tile-ico"><svg class="i"><use href="#i-messages-square"/></svg></span>
+              <div><h2>最近一轮弹幕</h2><div class="sub num">14:32:08 · 3/3 条 · 自动</div></div>
+              <div class="tail"><a class="btn btn-ghost btn-sm" href="#logs">查看日志<svg class="i i-sm"><use href="#i-arrow-right"/></svg></a></div>
+            </div>
+            <div class="card-body" style="padding-top:12px">
+              <div class="stage shadow" style="height:164px; --fs:20px" aria-label="最近一轮弹幕预览">
+                <svg class="scene dark" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice"><use href="#scene-dark-g"/></svg>
+                <div class="dm" style="--top:14px; --c:#31c3a2; --dur:11s; --delay:-5.2s; --x:18%">这关的 BGM 也太燃了吧</div>
+                <div class="dm" style="--top:58px; --c:#f8fafc; --dur:11s; --delay:-2.6s; --x:44%">左下角那个宝箱是不是还没开？</div>
+                <div class="dm" style="--top:102px; --c:#f59e0b; --dur:11s; --delay:-7.4s; --x:6%">Boss 血条只剩一点了，冲！</div>
+                <div class="stage-cap"><span class="chip">按当前字号 · 颜色 · 阴影渲染</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <span class="tile-ico violet"><svg class="i"><use href="#i-scroll-text"/></svg></span>
+              <div><h2>上下文摘要</h2><div class="sub num">14:20:31 写入 · 312 字</div></div>
+              <div class="tail"><span class="chip violet">已启用</span></div>
+            </div>
+            <div class="card-body" style="gap:12px">
+              <p class="summary-text">你在玩一款像素风平台跳跃游戏，已经通过第三关，正在挑战第一个 Boss。之前卡在跳台上掉坑三次，后来找到了右侧的存档点。聊过的梗：“又掉坑里了”、“宝箱强迫症”。我已经吐槽过 BGM 和配色，之后换个角度。</p>
+              <div class="help">历史重置或减半前，会先在后台总结之前的内容，并放进系统提示词。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- LOGS ---------- -->
+    <section class="page" id="p-logs" aria-labelledby="h-logs">
+      <header class="page-head">
+        <div class="ttl"><h1 id="h-logs">生成日志</h1><p>每一轮请求的结果、用量与原始输出，只保存在本机</p></div>
+        <span class="save-state dirty-only">有未保存的修改</span>
+        <button class="btn btn-primary save-btn dirty-only" type="button"><svg class="i"><use href="#i-save"/></svg>保存<kbd>Ctrl S</kbd></button>
+        <button class="btn save-btn saved clean-only" type="button" disabled><svg class="i"><use href="#i-check"/></svg>已保存</button>
+      </header>
+      <div class="page-body">
+        <div class="toolbar">
+          <div class="seg" role="radiogroup" aria-label="筛选">
+            <label><input type="radio" name="lf" checked>全部 <span class="cnt num">128</span></label>
+            <label><input type="radio" name="lf">失败 <span class="cnt num">5</span></label>
+            <label><input type="radio" name="lf">摘要 <span class="cnt num">2</span></label>
+          </div>
+          <span class="grow"></span>
+          <span class="note">最多保留 200 条</span>
+          <button class="btn btn-sm" type="button"><svg class="i i-sm"><use href="#i-refresh-cw"/></svg>刷新</button>
+          <button class="btn btn-sm btn-danger" type="button"><svg class="i i-sm"><use href="#i-trash-2"/></svg>清空日志</button>
+        </div>
+
+        <div class="logs">
+          <details class="log" open>
+            <summary>
+              <span class="st-pill ok">成功</span>
+              <span class="time num">14:32:08<small>10-28</small></span>
+              <span class="why">自动</span>
+              <span class="preview"><span class="q">“这关的 BGM 也太燃了吧” 等 3 条</span></span>
+              <span class="tags"><span class="chip ok">缓存 82%</span></span>
+              <span class="facts num"><b>3/3</b> 条<br>960×540</span>
+              <span class="facts num"><b>2.4 s</b></span>
+              <svg class="i i-sm chev"><use href="#i-chevron-right"/></svg>
+            </summary>
+            <div class="log-detail">
+              <div class="dm-pills">
+                <span class="dm-pill" style="--c:#31c3a2">这关的 BGM 也太燃了吧</span>
+                <span class="dm-pill" style="--c:#f8fafc">左下角那个宝箱是不是还没开？</span>
+                <span class="dm-pill" style="--c:#f59e0b">Boss 血条只剩一点了，冲！</span>
+              </div>
+              <div class="meta-groups">
+                <div class="meta">
+                  <h4><svg class="i i-xs"><use href="#i-upload"/></svg>请求</h4>
+                  <dl>
+                    <dt>模型</dt><dd>qwen2.5-vl-7b-instruct</dd>
+                    <dt>请求体</dt><dd class="num">3.12 MB / 48.00 MB</dd>
+                    <dt>历史</dt><dd>4 轮 · 分批滑动</dd>
+                    <dt>历史截图</dt><dd>保留 · 本次 6 张</dd>
+                    <dt>历史压缩</dt><dd>-</dd>
+                    <dt>投放窗口</dt><dd class="num">8 s</dd>
+                  </dl>
+                </div>
+                <div class="meta">
+                  <h4><svg class="i i-xs"><use href="#i-database"/></svg>Tokens 与耗时</h4>
+                  <dl>
+                    <dt>缓存 / 输入</dt><dd class="num">5,612 / 6,840（82%）</dd>
+                    <dt>输出 tokens</dt><dd class="num">74</dd>
+                    <dt>预填充</dt><dd class="num">412 ms</dd>
+                    <dt>总耗时</dt><dd class="num">2.4 s</dd>
+                    <dt>开始时间</dt><dd class="num">10-28 14:32:05</dd>
+                  </dl>
+                </div>
+                <div class="meta">
+                  <h4><svg class="i i-xs"><use href="#i-camera"/></svg>截图</h4>
+                  <dl>
+                    <dt>来源</dt><dd>屏幕 1</dd>
+                    <dt>尺寸</dt><dd class="num">960×540</dd>
+                    <dt>格式</dt><dd>JPEG · q82</dd>
+                    <dt>图片大小</dt><dd class="num">186 KB</dd>
+                    <dt>传输大小</dt><dd class="num">248 KB</dd>
+                  </dl>
+                </div>
+              </div>
+              <details class="raw">
+                <summary><svg class="i i-sm"><use href="#i-braces"/></svg>原始输出<span style="margin-left:auto;font-weight:400;color:var(--text-3)">218 字符</span></summary>
+                <pre>{"comments":["这关的 BGM 也太燃了吧","左下角那个宝箱是不是还没开？","Boss 血条只剩一点了，冲！"]}</pre>
+              </details>
+            </div>
+          </details>
+
+          <details class="log">
+            <summary>
+              <span class="st-pill ok">成功</span>
+              <span class="time num">14:31:44<small>10-28</small></span>
+              <span class="why">自动</span>
+              <span class="preview"><span class="q">“存档点在右边，别跳过了” 等 3 条</span></span>
+              <span class="tags"><span class="chip ok">缓存 79%</span></span>
+              <span class="facts num"><b>3/3</b> 条<br>960×540</span>
+              <span class="facts num"><b>2.1 s</b></span>
+              <svg class="i i-sm chev"><use href="#i-chevron-right"/></svg>
+            </summary>
+          </details>
+
+          <details class="log">
+            <summary>
+              <span class="st-pill violet">摘要</span>
+              <span class="time num">14:31:20<small>10-28</small></span>
+              <span class="why">后台</span>
+              <span class="preview"><span class="q">你在玩一款像素风平台跳跃游戏，已经通过第三关，正在挑战第一个 Boss……</span></span>
+              <span class="tags"><span class="chip violet">312 字</span></span>
+              <span class="facts num"><b>—</b><br>无截图</span>
+              <span class="facts num"><b>6.8 s</b></span>
+              <svg class="i i-sm chev"><use href="#i-chevron-right"/></svg>
+            </summary>
+          </details>
+
+          <details class="log">
+            <summary>
+              <span class="st-pill bad">失败</span>
+              <span class="time num">14:30:58<small>10-28</small></span>
+              <span class="why">自动</span>
+              <span class="preview"><svg class="i i-sm" style="color:var(--bad)"><use href="#i-circle-alert"/></svg><span class="q err">请求超时（45000 ms），历史保持不变</span></span>
+              <span class="tags"></span>
+              <span class="facts num"><b>0/3</b> 条<br>960×540</span>
+              <span class="facts num"><b>45.0 s</b></span>
+              <svg class="i i-sm chev"><use href="#i-chevron-right"/></svg>
+            </summary>
+            <div class="log-detail">
+              <div class="banner bad" style="margin:0"><svg class="i"><use href="#i-circle-alert"/></svg><div class="grow"><b>请求超时：</b>45000 ms 内没有收到响应。超时、429 和 5xx 不会缩减历史；如果经常出现，可以调大“模型接口 › 超时”。</div></div>
+              <div class="meta-groups">
+                <div class="meta"><h4><svg class="i i-xs"><use href="#i-upload"/></svg>请求</h4><dl>
+                  <dt>模型</dt><dd>qwen2.5-vl-7b-instruct</dd><dt>请求体</dt><dd class="num">3.05 MB / 48.00 MB</dd><dt>历史</dt><dd>4 轮 · 分批滑动</dd><dt>历史截图</dt><dd>保留 · 本次 6 张</dd><dt>历史压缩</dt><dd>-</dd></dl></div>
+                <div class="meta"><h4><svg class="i i-xs"><use href="#i-database"/></svg>Tokens 与耗时</h4><dl>
+                  <dt>缓存 / 输入</dt><dd>-</dd><dt>输出 tokens</dt><dd>-</dd><dt>总耗时</dt><dd class="num">45.0 s</dd><dt>开始时间</dt><dd class="num">10-28 14:30:13</dd></dl></div>
+                <div class="meta"><h4><svg class="i i-xs"><use href="#i-camera"/></svg>截图</h4><dl>
+                  <dt>来源</dt><dd>屏幕 1</dd><dt>格式</dt><dd>JPEG · q82</dd><dt>图片大小</dt><dd class="num">181 KB</dd><dt>传输大小</dt><dd class="num">242 KB</dd></dl></div>
+              </div>
+              <div class="help">没有生成弹幕</div>
+            </div>
+          </details>
+
+          <details class="log">
+            <summary>
+              <span class="st-pill ok">成功</span>
+              <span class="time num">14:30:31<small>10-28</small></span>
+              <span class="why manual">手动</span>
+              <span class="preview"><span class="q">“这个配色好舒服” 等 2 条</span></span>
+              <span class="tags"><span class="chip warn" title="达到最大输出被截断，可调大最大输出"><svg class="i"><use href="#i-scissors"/></svg>输出截断</span></span>
+              <span class="facts num"><b>2/3</b> 条<br>960×540</span>
+              <span class="facts num"><b>3.9 s</b></span>
+              <svg class="i i-sm chev"><use href="#i-chevron-right"/></svg>
+            </summary>
+            <div class="log-detail">
+              <div class="dm-pills"><span class="dm-pill" style="--c:#ef476f">这个配色好舒服</span><span class="dm-pill" style="--c:#5b8def">右上角的小猫是彩蛋吗</span></div>
+              <div class="callout warn"><svg class="i"><use href="#i-scissors"/></svg><div><p><b>输出 260 tokens，达到最大输出被截断。</b>只解析出 2/3 条，可在“模型接口”调大最大输出。</p></div></div>
+              <div class="meta-groups">
+                <div class="meta"><h4><svg class="i i-xs"><use href="#i-upload"/></svg>请求</h4><dl>
+                  <dt>模型</dt><dd>qwen2.5-vl-7b-instruct</dd><dt>请求体</dt><dd class="num">2.71 MB / 48.00 MB</dd><dt>历史</dt><dd>3 轮 · 分批滑动</dd><dt>历史截图</dt><dd>保留 · 本次 5 张</dd><dt>历史压缩</dt><dd>-</dd><dt>投放窗口</dt><dd class="num">7 s</dd></dl></div>
+                <div class="meta"><h4><svg class="i i-xs"><use href="#i-database"/></svg>Tokens 与耗时</h4><dl>
+                  <dt>缓存 / 输入</dt><dd class="num">5,120 / 5,904（87%）</dd><dt>输出 tokens</dt><dd class="num">260 <span class="sub">达到最大输出被截断</span></dd><dt>预填充</dt><dd class="num">388 ms</dd><dt>总耗时</dt><dd class="num">3.9 s</dd></dl></div>
+                <div class="meta"><h4><svg class="i i-xs"><use href="#i-camera"/></svg>截图</h4><dl>
+                  <dt>来源</dt><dd>屏幕 1</dd><dt>格式</dt><dd>JPEG · q82</dd><dt>图片大小</dt><dd class="num">174 KB</dd><dt>传输大小</dt><dd class="num">233 KB</dd></dl></div>
+              </div>
+              <details class="raw" open><summary><svg class="i i-sm"><use href="#i-braces"/></svg>原始输出<span style="margin-left:auto;font-weight:400;color:var(--text-3)">含推理内容 · 1,042 字符</span></summary>
+<pre>&lt;think&gt;画面是一个配色柔和的网页，右上角有一只像素小猫……&lt;/think&gt;
+{"comments":["这个配色好舒服","右上角的小猫是彩蛋吗","我赌下一页还有</pre></details>
+            </div>
+          </details>
+
+          <details class="log">
+            <summary>
+              <span class="st-pill ok">成功</span>
+              <span class="time num">14:30:02<small>10-28</small></span>
+              <span class="why">自动</span>
+              <span class="preview"><span class="q">“又掉坑里了哈哈哈” 等 3 条</span></span>
+              <span class="tags"><span class="chip cyan" title="超出张数，丢弃 12 张历史截图"><svg class="i"><use href="#i-shrink"/></svg>压缩 −12 张</span></span>
+              <span class="facts num"><b>3/3</b> 条<br>960×540</span>
+              <span class="facts num"><b>5.6 s</b></span>
+              <svg class="i i-sm chev"><use href="#i-chevron-right"/></svg>
+            </summary>
+          </details>
+
+          <details class="log">
+            <summary>
+              <span class="st-pill warn">中断</span>
+              <span class="time num">14:29:40<small>10-28</small></span>
+              <span class="why manual">手动</span>
+              <span class="preview"><span class="q">已暂停，本轮请求已取消</span></span>
+              <span class="tags"></span>
+              <span class="facts num"><b>0/3</b> 条<br>960×540</span>
+              <span class="facts num"><b>1.2 s</b></span>
+              <svg class="i i-sm chev"><use href="#i-chevron-right"/></svg>
+            </summary>
+          </details>
+
+          <details class="log">
+            <summary>
+              <span class="st-pill ok">成功</span>
+              <span class="time num">14:29:12<small>10-28</small></span>
+              <span class="why">自动</span>
+              <span class="preview"><span class="q">“这一跳我替你捏把汗” 等 3 条</span></span>
+              <span class="tags"><span class="chip ok">缓存 0%</span></span>
+              <span class="facts num"><b>3/3</b> 条<br>960×540</span>
+              <span class="facts num"><b>2.6 s</b></span>
+              <svg class="i i-sm chev"><use href="#i-chevron-right"/></svg>
+            </summary>
+          </details>
+          <button class="btn more" type="button">显示更早的 28 条</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- MODEL ---------- -->
+    <section class="page" id="p-model" aria-labelledby="h-model">
+      <header class="page-head">
+        <div class="ttl"><h1 id="h-model">模型接口</h1><p>OpenAI 兼容接口：LM Studio、llama.cpp、vLLM 或云端服务</p></div>
+        <span class="save-state dirty-only">有未保存的修改</span>
+        <button class="btn btn-primary save-btn dirty-only" type="button"><svg class="i"><use href="#i-save"/></svg>保存<kbd>Ctrl S</kbd></button>
+        <button class="btn save-btn saved clean-only" type="button" disabled><svg class="i"><use href="#i-check"/></svg>已保存</button>
+      </header>
+      <div class="page-body">
+        <div class="split">
+          <div>
+            <div class="card">
+              <div class="card-head"><span class="tile-ico cyan"><svg class="i"><use href="#i-link"/></svg></span><h2>连接</h2></div>
+              <div class="card-body">
+                <div class="field">
+                  <label class="lbl" for="m-url">接口地址<span class="hint">Base URL</span></label>
+                  <div class="affix has-pre"><span class="pre"><svg class="i i-sm"><use href="#i-link"/></svg></span><input id="m-url" class="input mono" value="http://127.0.0.1:1234/v1"></div>
+                </div>
+                <div class="field">
+                  <label class="lbl" for="m-key">API Key<span class="hint">本地服务通常可留空</span></label>
+                  <div class="affix has-pre"><span class="pre"><svg class="i i-sm"><use href="#i-key-round"/></svg></span><input id="m-key" class="input mono" type="password" value="sk-local-1234567890abcd"><button class="in-btn" type="button" aria-label="显示 API Key" title="显示"><svg class="i i-sm"><use href="#i-eye"/></svg></button></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-cpu"/></svg></span><h2>模型与参数</h2></div>
+              <div class="card-body">
+                <div class="field">
+                  <div class="lbl"><label for="m-model">模型</label><span class="hint" style="display:flex;gap:6px;align-items:center"><span class="chip ok" style="height:20px">loaded</span><span class="chip cyan" style="height:20px">视觉</span></span></div>
+                  <div style="display:flex; gap:8px">
+                    <select id="m-model" class="input"><option>qwen2.5-vl-7b-instruct · loaded · 视觉</option></select>
+                    <button class="btn btn-icon" type="button" aria-label="刷新模型列表" title="刷新模型列表"><svg class="i"><use href="#i-refresh-cw"/></svg></button>
+                  </div>
+                  <p class="help">从接口读到 12 个模型。列表为空时可以直接输入模型 ID。</p>
+                </div>
+                <div class="field">
+                  <div class="lbl"><label for="m-temp">温度</label><span class="hint">0 – 2，越高越跳脱</span></div>
+                  <div class="slide"><input type="range" min="0" max="2" step="0.1" value="0.8" style="--p:40%" aria-label="温度"><div class="affix"><input id="m-temp" class="input num" value="0.8"></div></div>
+                </div>
+                <label class="switch-row"><input class="switch" type="checkbox" checked><span class="txt"><b>发送温度参数</b><span>有些服务不接受 temperature，关闭后请求里不再携带</span></span></label>
+                <div class="row2">
+                  <div class="field"><label class="lbl" for="m-max">最大输出</label><div class="affix"><input id="m-max" class="input num" value="260"><span class="unit">tokens</span></div></div>
+                  <div class="field"><label class="lbl" for="m-to">超时</label><div class="affix"><input id="m-to" class="input num" value="45"><span class="unit">秒</span></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="tile-ico violet"><svg class="i"><use href="#i-image"/></svg></span><h2>视觉输入</h2></div>
+              <div class="card-body">
+                <label class="switch-row"><input class="switch" type="checkbox" checked><span class="txt"><b>发送截图</b><span>关闭后只发送文字，模型看不到屏幕；截图与历史截图设置随之失效</span></span></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="aside">
+            <div class="card">
+              <div class="card-head"><span class="tile-ico ok"><svg class="i"><use href="#i-cable"/></svg></span><h2>连接测试</h2></div>
+              <div class="card-body" style="gap:12px">
+                <button class="btn" type="button" style="width:100%"><svg class="i"><use href="#i-cable"/></svg>测试连接</button>
+                <div class="banner ok" style="margin:0">
+                  <svg class="i"><use href="#i-circle-check"/></svg>
+                  <div class="grow"><b>连接成功</b><div style="color:var(--text-2); margin-top:2px">模型列表返回 12 个模型</div>
+                    <div class="mono" style="color:var(--text-3); font-size:11.5px; margin-top:4px; overflow-wrap:anywhere">http://127.0.0.1:1234/v1/models</div></div>
+                </div>
+                <p class="help">测试前会先保存当前修改，并刷新模型列表。</p>
+              </div>
+            </div>
+            <div class="callout">
+              <svg class="i"><use href="#i-lightbulb"/></svg>
+              <div><p><b>先用“生成一次”试试。</b>它会立刻截一张图并发出一轮请求，结果出现在生成日志里，不需要启动循环。</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- DANMAKU ---------- -->
+    <section class="page" id="p-danmaku" aria-labelledby="h-danmaku">
+      <header class="page-head">
+        <div class="ttl"><h1 id="h-danmaku">弹幕外观</h1><p>字号、颜色、速度和区域；右侧预览即时反映修改</p></div>
+        <span class="save-state dirty-only">有未保存的修改</span>
+        <button class="btn btn-primary save-btn dirty-only" type="button"><svg class="i"><use href="#i-save"/></svg>保存<kbd>Ctrl S</kbd></button>
+        <button class="btn save-btn saved clean-only" type="button" disabled><svg class="i"><use href="#i-check"/></svg>已保存</button>
+      </header>
+      <div class="page-body">
+        <div class="split wide">
+          <div>
+            <div class="card">
+              <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-type"/></svg></span><h2>文字</h2></div>
+              <div class="card-body">
+                <div class="field">
+                  <div class="lbl"><label for="d-fs">字号</label><span class="hint">10 – 96 px</span></div>
+                  <div class="slide"><input type="range" min="10" max="96" value="22" style="--p:14%" aria-label="字号"><div class="affix"><input id="d-fs" class="input num" value="22"><span class="unit">px</span></div></div>
+                </div>
+                <div class="field">
+                  <div class="lbl"><label for="d-op">不透明度</label><span class="hint">20% – 100%</span></div>
+                  <div class="slide"><input type="range" min="0.2" max="1" step="0.01" value="0.92" style="--p:90%" aria-label="不透明度"><div class="affix"><input id="d-op" class="input num focus" value="92"><span class="unit">%</span></div></div>
+                </div>
+                <div class="row2">
+                  <div class="field"><div class="lbl"><label for="d-len">单条最多字数</label><span class="hint">10 – 200</span></div><div class="affix"><input id="d-len" class="input num" value="50"><span class="unit">字</span></div></div>
+                  <label class="switch-row" style="align-self:end; padding-bottom:2px"><input class="switch" type="checkbox" checked><span class="txt"><b>文字阴影</b><span>亮色画面上更清楚</span></span></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="tile-ico cyan"><svg class="i"><use href="#i-sliders-horizontal"/></svg></span><h2>运动与分布</h2></div>
+              <div class="card-body">
+                <div class="field">
+                  <span class="lbl" id="zone-l">显示区域</span>
+                  <div class="seg full" role="radiogroup" aria-labelledby="zone-l">
+                    <label><input type="radio" name="zone" checked><span class="zone-ico full"></span>全屏</label>
+                    <label><input type="radio" name="zone"><span class="zone-ico top"></span>上部</label>
+                    <label><input type="radio" name="zone"><span class="zone-ico middle"></span>中部</label>
+                    <label><input type="radio" name="zone"><span class="zone-ico bottom"></span>下部</label>
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="lbl"><label for="d-sp">滚动时长</label><span class="hint">穿过整个屏幕的秒数，越大越慢</span></div>
+                  <div class="slide"><input type="range" min="2" max="60" value="10" style="--p:14%" aria-label="滚动时长"><div class="affix"><input id="d-sp" class="input num" value="10"><span class="unit">秒</span></div></div>
+                </div>
+                <div class="field">
+                  <div class="lbl"><label for="d-de">密度</label><span class="hint">平时使用的轨道比例</span></div>
+                  <div class="slide"><input type="range" min="0.1" max="1" step="0.1" value="0.6" style="--p:56%" aria-label="密度"><div class="affix"><input id="d-de" class="input num" value="0.6"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-palette"/></svg></span><h2>配色</h2><span class="sub">每条弹幕随机取一种</span></div>
+              <div class="card-body" style="gap:10px">
+                <label class="sr-only" for="d-pal">配色（逗号分隔的 CSS 颜色）</label>
+                <input id="d-pal" class="input mono" value="#31c3a2, #f59e0b, #ef476f, #5b8def, #f8fafc">
+                <div class="swatches">
+                  <span class="sw" style="--c:#31c3a2"><i></i>#31c3a2</span>
+                  <span class="sw" style="--c:#f59e0b"><i></i>#f59e0b</span>
+                  <span class="sw" style="--c:#ef476f"><i></i>#ef476f</span>
+                  <span class="sw" style="--c:#5b8def"><i></i>#5b8def</span>
+                  <span class="sw" style="--c:#f8fafc"><i></i>#f8fafc</span>
+                </div>
+                <p class="help">逗号分隔，支持任意 CSS 颜色（#hex、rgb()、颜色名）。无法识别的颜色不会保存。</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="tile-ico violet"><svg class="i"><use href="#i-layers"/></svg></span><h2>弹幕层与录屏</h2></div>
+              <div class="card-body" style="gap:12px">
+                <label class="switch-row"><input class="switch" type="checkbox" checked><span class="txt"><b>截图时排除弹幕层</b><span>截图里不含弹幕，模型不会看到并评论自己的弹幕</span></span></label>
+                <div class="callout warn"><svg class="i"><use href="#i-triangle-alert"/></svg><div><p>开启后 <b>OBS 等录屏、直播软件也录不到弹幕</b>。需要 Windows 10 2004 及以上。想把弹幕录进视频时请关闭。</p></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="aside">
+            <div class="card">
+              <div class="card-head">
+                <span class="tile-ico"><svg class="i"><use href="#i-eye"/></svg></span><h2>实时预览</h2>
+                <div class="tail">
+                  <div class="seg" role="radiogroup" aria-label="预览背景" style="padding:2px">
+                    <label style="height:28px;padding:0 7px" title="深色画面"><input type="radio" name="pbg" value="dark" checked><svg class="i i-sm"><use href="#i-moon"/></svg><span class="sr-only">深色画面</span></label>
+                    <label style="height:28px;padding:0 7px" title="浅色画面"><input type="radio" name="pbg" value="light"><svg class="i i-sm"><use href="#i-sun"/></svg><span class="sr-only">浅色画面</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="card-body" style="gap:12px; padding-top:12px">
+                <div class="stage shadow" id="pv" data-bg="dark" style="height:236px; --fs:22px; --op:.92" aria-label="弹幕预览">
+                  <svg class="scene dark" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice"><use href="#scene-dark-g"/></svg>
+                  <svg class="scene light" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice"><use href="#scene-light-g"/></svg>
+                  <div class="zone-guide" style="top:6%; height:86%"></div>
+                  <div class="dm" style="--top:16px; --c:#31c3a2; --dur:10s; --delay:-4.4s; --x:10%">这关的 BGM 也太燃了吧</div>
+                  <div class="dm" style="--top:48px; --c:#f8fafc; --dur:10s; --delay:-1.8s; --x:46%">前方高能！</div>
+                  <div class="dm" style="--top:80px; --c:#ef476f; --dur:10s; --delay:-5.4s; --x:0%">宝箱强迫症又犯了</div>
+                  <div class="dm" style="--top:144px; --c:#f59e0b; --dur:10s; --delay:-3.2s; --x:24%">Boss 只剩一丝血</div>
+                  <div class="dm" style="--top:176px; --c:#5b8def; --dur:10s; --delay:-0.6s; --x:60%">稳住，我们能赢</div>
+                </div>
+                <div style="display:flex; gap:12px; align-items:center">
+                  <div class="zmap" aria-hidden="true"><span class="band" style="top:6%; height:86%"></span><span class="lanes" style="top:8%; height:82%"></span></div>
+                  <div style="min-width:0; font-size:12.5px; line-height:1.55; color:var(--text-2)">
+                    <b style="color:var(--text)">全屏 · 29 条轨道</b><br>平时使用其中 17 条<br>约 10 秒穿过屏幕
+                  </div>
+                </div>
+                <div>
+                  <div class="u-k" style="display:flex;font-size:12.5px;color:var(--text-2);margin-bottom:7px">最长一条（50 字）约占屏宽<b class="num" style="margin-left:auto;color:var(--text)">57%</b></div>
+                  <div class="meter"><i style="width:57%"></i></div>
+                </div>
+                <p class="help">预览按 1:1 字号显示；轨道数与占比按 1920×1080 估算。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- CHARACTER ---------- -->
+    <section class="page" id="p-character" aria-labelledby="h-character">
+      <header class="page-head">
+        <div class="ttl"><h1 id="h-character">角色与称呼</h1><p>弹幕以谁的口吻说话、怎样称呼你</p></div>
+        <span class="save-state dirty-only">有未保存的修改</span>
+        <button class="btn btn-primary save-btn dirty-only" type="button"><svg class="i"><use href="#i-save"/></svg>保存<kbd>Ctrl S</kbd></button>
+        <button class="btn save-btn saved clean-only" type="button" disabled><svg class="i"><use href="#i-check"/></svg>已保存</button>
+      </header>
+      <div class="page-body">
+        <div class="split">
+          <div>
+            <div class="card">
+              <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-sparkles"/></svg></span><h2>角色</h2></div>
+              <div class="card-body">
+                <div class="persona-card">
+                  <div class="avatar" aria-hidden="true">M</div>
+                  <div style="min-width:0"><b style="font-size:15px">Mika</b><div class="help" style="color:var(--text-2)">温柔、有点毒舌的陪看搭子 · zh-CN</div></div>
+                </div>
+                <div class="row2">
+                  <div class="field"><label class="lbl" for="c-name">角色名</label><input id="c-name" class="input" value="Mika"></div>
+                  <div class="field"><div class="lbl"><label for="c-lang">语言</label><span class="hint">如 zh-CN、ja、en</span></div><input id="c-lang" class="input" value="zh-CN" list="langs"><datalist id="langs"><option value="zh-CN"><option value="zh-TW"><option value="ja"><option value="en"></datalist></div>
+                </div>
+                <div class="field"><label class="lbl" for="c-persona">人设</label><textarea id="c-persona" class="input" rows="4">温柔、有点毒舌的桌面陪看搭子，像一起追番的好朋友。喜欢注意画面里的小细节，偶尔接梗，但不抢戏。</textarea></div>
+                <div class="field"><label class="lbl" for="c-tone">语气</label><input id="c-tone" class="input" value="简短、俏皮、观察细致、从不打扰"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><span class="tile-ico cyan"><svg class="i"><use href="#i-user-round"/></svg></span><h2>你</h2><span class="sub">角色如何称呼和理解你</span></div>
+              <div class="card-body">
+                <div class="row2">
+                  <div class="field"><label class="lbl" for="u-name">用户称呼</label><input id="u-name" class="input" value="你"></div>
+                  <div class="field"><label class="lbl" for="u-role">用户身份</label><input id="u-role" class="input" value="屏幕前的用户"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="aside">
+            <div class="card">
+              <div class="card-head"><span class="tile-ico violet"><svg class="i"><use href="#i-braces"/></svg></span><h2>系统提示词预览</h2></div>
+              <div class="card-body" style="gap:10px">
+<pre class="prompt-preview">You are <mark>Mika</mark>, a desktop danmaku companion.
+Persona: <mark>温柔、有点毒舌的桌面陪看搭子…</mark>
+Tone: <mark>简短、俏皮、观察细致、从不打扰</mark>
+Language: <mark>zh-CN</mark>
+You are accompanying <mark>你</mark> (<mark>屏幕前的用户</mark>).
+React to the current screen with brief, specific, non-intrusive danmaku comments.
+Return exactly <mark>3</mark> comments unless the model is unable to parse the request.
+Return only JSON in this shape: <span class="tok">{{jsonShape}}</span></pre>
+                <a class="btn btn-ghost btn-sm" href="#prompt" style="justify-self:start">编辑模板<svg class="i i-sm"><use href="#i-arrow-right"/></svg></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- PROMPT ---------- -->
+    <section class="page" id="p-prompt" aria-labelledby="h-prompt">
+      <header class="page-head">
+        <div class="ttl"><h1 id="h-prompt">提示词模板</h1><p>发送前会把 {{占位符}} 替换为当前设置</p></div>
+        <span class="save-state dirty-only">有未保存的修改</span>
+        <button class="btn btn-primary save-btn dirty-only" type="button"><svg class="i"><use href="#i-save"/></svg>保存<kbd>Ctrl S</kbd></button>
+        <button class="btn save-btn saved clean-only" type="button" disabled><svg class="i"><use href="#i-check"/></svg>已保存</button>
+      </header>
+      <div class="page-body">
+        <div class="split">
+          <div class="card">
+            <div class="tabs" role="tablist">
+              <button class="tab" role="tab" aria-selected="true">系统提示词</button>
+              <button class="tab" role="tab" aria-selected="false">用户提示词<span class="chip" style="height:20px; font-size:11px">空</span></button>
+              <button class="tab" role="tab" aria-selected="false">摘要提示词</button>
+            </div>
+            <div class="editor-wrap">
+              <label class="sr-only" for="pt">系统提示词</label>
+<textarea id="pt" class="editor" spellcheck="false">You are {{companion.name}}, a desktop danmaku companion.
+Persona: {{companion.persona}}
+Tone: {{companion.tone}}
+Language: {{companion.language}}
+You are accompanying {{user.name}} ({{user.role}}).
+React to the current screen with brief, specific, non-intrusive danmaku comments.
+Return exactly {{requestedCount}} comments unless the model is unable to parse the request.
+Do not mention private data, credentials, or exact personal identifiers.
+Each comment must be short enough to fit on screen.
+Return only JSON in this shape: {{jsonShape}}</textarea>
+            </div>
+            <div class="card-foot"><span class="help num">612 字符 · 10 行</span><span style="flex:1"></span><a class="btn btn-ghost btn-sm" href="#character">查看填充后的效果<svg class="i i-sm"><use href="#i-arrow-right"/></svg></a></div>
+          </div>
+          <div class="aside">
+            <div class="card">
+              <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-plus"/></svg></span><h2>插入占位符</h2><span class="sub">点击插入到光标处</span></div>
+              <div class="card-body" style="padding:6px 8px 10px; gap:0">
+                <div class="ph-list">
+                  <button class="ph" type="button"><code>{{companion.name}}</code><span>角色名 · <b>Mika</b></span><svg class="i i-sm ins"><use href="#i-plus"/></svg></button>
+                  <button class="ph" type="button"><code>{{companion.persona}}</code><span>人设</span><svg class="i i-sm ins"><use href="#i-plus"/></svg></button>
+                  <button class="ph" type="button"><code>{{companion.tone}}</code><span>语气</span><svg class="i i-sm ins"><use href="#i-plus"/></svg></button>
+                  <button class="ph" type="button"><code>{{companion.language}}</code><span>语言 · <b>zh-CN</b></span><svg class="i i-sm ins"><use href="#i-plus"/></svg></button>
+                  <button class="ph" type="button"><code>{{user.name}}</code><span>用户称呼 · <b>你</b></span><svg class="i i-sm ins"><use href="#i-plus"/></svg></button>
+                  <button class="ph" type="button"><code>{{user.role}}</code><span>用户身份 · <b>屏幕前的用户</b></span><svg class="i i-sm ins"><use href="#i-plus"/></svg></button>
+                  <button class="ph" type="button"><code>{{requestedCount}}</code><span>每轮弹幕 · <b>3</b></span><svg class="i i-sm ins"><use href="#i-plus"/></svg></button>
+                  <button class="ph" type="button"><code>{{jsonShape}}</code><span>要求返回的 JSON 结构</span><svg class="i i-sm ins"><use href="#i-plus"/></svg></button>
+                  <button class="ph todo-ph" type="button" title="尚未实现：目前总是填入 unknown"><code>{{activeApp}}</code><span><span class="todo">未实现</span> 目前总是 unknown</span><svg class="i i-sm ins"><use href="#i-plus"/></svg></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- RHYTHM ---------- -->
+    <section class="page" id="p-rhythm" aria-labelledby="h-rhythm">
+      <header class="page-head">
+        <div class="ttl"><h1 id="h-rhythm">运行节奏</h1><p>多久截一次图、每轮几条、弹幕怎样错开出现</p></div>
+        <span class="save-state dirty-only">有未保存的修改</span>
+        <button class="btn btn-primary save-btn dirty-only" type="button"><svg class="i"><use href="#i-save"/></svg>保存<kbd>Ctrl S</kbd></button>
+        <button class="btn save-btn saved clean-only" type="button" disabled><svg class="i"><use href="#i-check"/></svg>已保存</button>
+      </header>
+      <div class="page-body">
+        <div class="card">
+          <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-activity"/></svg></span><h2>一轮是怎样进行的</h2><span class="sub">按当前设置绘制</span></div>
+          <div class="tl" role="img" aria-label="启动后等待 5 秒截图，生成约 2.4 秒，3 条弹幕在 6 到 10 秒内飘出，同时等待 14 到 28 秒后进入下一轮">
+            <div class="tl-row" style="margin-top:58px">
+              <span class="node cyan"><svg class="i"><use href="#i-play"/></svg></span>
+              <span class="seg-bar delay"></span>
+              <span class="node pink"><svg class="i"><use href="#i-camera"/></svg></span>
+              <span class="seg-bar gen"></span>
+              <span class="node"><svg class="i"><use href="#i-sparkles"/></svg></span>
+              <span class="seg-bar wait">
+                <span class="release"><span class="band"></span>
+                  <span class="p" style="left:0; top:0; color:var(--ok)">这关的 BGM…</span>
+                  <span class="p" style="left:30%; top:24px; color:var(--warn)">宝箱还没开？</span>
+                  <span class="p" style="left:76%; top:0; color:var(--accent-text)">冲！</span>
+                </span>
+              </span>
+              <span class="node pink"><svg class="i"><use href="#i-camera"/></svg></span>
+            </div>
+            <div class="tl-labels">
+              <div class="edge">启动</div>
+              <div><b>启动延迟 5 秒</b>避开本窗口</div>
+              <div class="edge">截图</div>
+              <div><b>生成</b>约 2.4 秒</div>
+              <div class="edge">返回</div>
+              <div><b>等待 14–28 秒</b>其中前 6–10 秒陆续飘出 3 条弹幕</div>
+              <div class="edge">下一轮</div>
+            </div>
+          </div>
+          <div style="height:12px"></div>
+        </div>
+
+        <div class="row2" style="margin-top:16px; gap:16px">
+          <div class="card" style="margin:0">
+            <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-timer"/></svg></span><h2>截图间隔</h2></div>
+            <div class="card-body" style="gap:10px">
+              <div class="pair"><div class="affix"><label class="sr-only" for="r-min">最短间隔</label><input id="r-min" class="input num" value="14"><span class="unit">秒</span></div><span class="dash">–</span><div class="affix"><label class="sr-only" for="r-max">最长间隔</label><input id="r-max" class="input num" value="28"><span class="unit">秒</span></div></div>
+              <p class="help">每轮结束后，在这个范围里随机等待再截下一张。5 – 1800 秒。</p>
+            </div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="card-head"><span class="tile-ico cyan"><svg class="i"><use href="#i-play"/></svg></span><h2>启动延迟</h2></div>
+            <div class="card-body" style="gap:10px">
+              <div class="affix" style="max-width:160px"><label class="sr-only" for="r-delay">启动延迟</label><input id="r-delay" class="input num" value="5"><span class="unit">秒</span></div>
+              <p class="help">点击启动后先等一会儿再首次截图，免得截到这个设置窗口。0 – 60 秒。</p>
+            </div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-messages-square"/></svg></span><h2>每轮弹幕</h2></div>
+            <div class="card-body" style="gap:10px">
+              <div class="stepper"><button type="button" aria-label="减少"><svg class="i i-sm"><use href="#i-minus"/></svg></button><input class="num" value="3" aria-label="每轮弹幕条数"><button type="button" aria-label="增加"><svg class="i i-sm"><use href="#i-plus"/></svg></button></div>
+              <p class="help">每次请求让模型返回的条数。1 – 12 条。</p>
+            </div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-sliders-horizontal"/></svg></span><h2>投放窗口</h2></div>
+            <div class="card-body" style="gap:10px">
+              <div class="pair"><div class="affix"><label class="sr-only" for="w-min">投放窗口最短</label><input id="w-min" class="input num" value="6"><span class="unit">秒</span></div><span class="dash">–</span><div class="affix"><label class="sr-only" for="w-max">投放窗口最长</label><input id="w-max" class="input num" value="10"><span class="unit">秒</span></div></div>
+              <p class="help">同一轮的弹幕在这段时间里随机错开出现，不会一次全部涌出。0 – 60 秒。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- CAPTURE ---------- -->
+    <section class="page" id="p-capture" aria-labelledby="h-capture">
+      <header class="page-head">
+        <div class="ttl"><h1 id="h-capture">截图与历史</h1><p>截图大小、历史上下文、提示缓存与请求体上限</p></div>
+        <span class="save-state dirty-only">有未保存的修改</span>
+        <button class="btn btn-primary save-btn dirty-only" type="button"><svg class="i"><use href="#i-save"/></svg>保存<kbd>Ctrl S</kbd></button>
+        <button class="btn save-btn saved clean-only" type="button" disabled><svg class="i"><use href="#i-check"/></svg>已保存</button>
+      </header>
+      <div class="page-body">
+        <div class="split">
+          <div>
+            <div class="card">
+              <div class="card-head"><span class="tile-ico"><svg class="i"><use href="#i-camera"/></svg></span><h2>截图</h2></div>
+              <div class="card-body">
+                <div class="row2">
+                  <div class="field"><div class="lbl"><label for="s-edge">截图最长边</label><span class="hint">480 – 2160</span></div><div class="affix"><input id="s-edge" class="input num" value="960"><span class="unit">px</span></div></div>
+                  <div class="field"><span class="lbl" id="fmt-l">格式</span>
+                    <div class="seg full" role="radiogroup" aria-labelledby="fmt-l"><label><input type="radio" name="fmt" value="jpeg" checked>JPEG</label><label><input type="radio" name="fmt" value="png">PNG</label></div>
+                  </div>
+                </div>
+                <div class="field" id="jpegq">
+                  <div class="lbl"><label for="s-q">JPEG 质量</label><span class="hint">0.5 – 0.95</span></div>
+                  <div class="slide"><input type="range" min="0.5" max="0.95" step="0.01" value="0.82" style="--p:71%" aria-label="JPEG 质量"><div class="affix"><input id="s-q" class="input num" value="0.82"></div></div>
+                </div>
+                <div class="callout warn" id="pngwarn" style="display:none"><svg class="i"><use href="#i-triangle-alert"/></svg><div><p><b>保留历史截图时建议改用 JPEG。</b>PNG 截图通常是 JPEG 的 10 倍以上大小，而模型看到的 token 数相同；每一轮都要上传完整请求。</p></div></div>
+                <div class="switch-row" style="align-items:center; cursor:default">
+                  <span class="txt"><b>录屏权限 <span class="mac">仅 macOS</span></b><span>macOS 需要在系统设置里允许本应用录制屏幕</span></span>
+                  <button class="btn btn-sm" type="button"><svg class="i i-sm"><use href="#i-shield"/></svg>打开系统设置</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="tile-ico violet"><svg class="i"><use href="#i-history"/></svg></span><h2>历史与缓存</h2></div>
+              <div class="card-body">
+                <div class="field" style="grid-template-columns: minmax(0,1fr) 140px; align-items:center">
+                  <div><label class="lbl" for="h-rounds">历史轮数</label><p class="help">每次请求带上最近几轮对话，0 为不带。</p></div>
+                  <div class="affix"><input id="h-rounds" class="input num" value="4"><span class="unit">轮</span></div>
+                </div>
+                <div class="field">
+                  <span class="lbl" id="mode-l">历史模式<span class="hint">历史满了以后怎么办</span></span>
+                  <div class="modes" role="radiogroup" aria-labelledby="mode-l">
+                    <label class="mode"><input type="radio" name="hm"><span class="radio"></span>
+                      <span class="mt">满额重置</span>
+                      <span class="md">写满后清空重来，之后的轮次重新命中缓存。</span>
+                      <span class="blocks" aria-hidden="true"><i></i><i></i><i></i><i></i><span class="arrow">→</span><i class="new"></i></span>
+                    </label>
+                    <label class="mode"><input type="radio" name="hm" checked><span class="radio"></span>
+                      <span class="mt">分批滑动 <span class="chip ok" style="height:20px">缓存友好</span></span>
+                      <span class="md">一次丢弃最早的一半，保留上下文，每半个窗口才失去一次缓存。</span>
+                      <span class="blocks" aria-hidden="true"><i class="drop"></i><i class="drop"></i><i></i><i></i><span class="arrow">→</span><i class="new"></i></span>
+                    </label>
+                    <label class="mode"><input type="radio" name="hm"><span class="radio"></span>
+                      <span class="mt">逐轮滑动 <span class="chip warn" style="height:20px">每轮失去缓存</span></span>
+                      <span class="md">每轮丢弃最早一轮，请求开头每次都变；保留历史截图时不建议。</span>
+                      <span class="blocks" aria-hidden="true"><i class="drop"></i><i></i><i></i><i></i><span class="arrow">→</span><i class="new"></i></span>
+                    </label>
+                  </div>
+                </div>
+
+                <label class="switch-row"><input class="switch" type="checkbox" checked><span class="txt"><b>保留历史截图</b><span>历史里的截图每轮都会重新上传，模型能对比之前的画面</span></span></label>
+                <div class="sub-block">
+                  <div class="row2">
+                    <div class="field"><div class="lbl"><label for="h-img">历史截图上限</label><span class="hint">0 – 50</span></div><div class="affix"><input id="h-img" class="input num" value="24"><span class="unit">张</span></div></div>
+                    <div class="field"><div class="lbl"><label for="h-body">请求体上限</label><span class="hint">1 – 512</span></div><div class="affix"><input id="h-body" class="input num" value="48"><span class="unit">MB</span></div></div>
+                  </div>
+                  <div class="callout cyan"><svg class="i"><use href="#i-info"/></svg><div>
+                    <p>两个上限都没超时什么都不变。超出任意一个，就一次丢弃最早的截图直到两者都回到一半（文字保留），<b>只有这一轮需要重新预填充</b>，之后继续命中缓存。</p>
+                    <p>服务器返回 413 时，会按它报告的上限压缩并重试一次。上限越大，每轮上传越多。</p>
+                  </div></div>
+                </div>
+
+                <label class="switch-row"><input class="switch" type="checkbox" checked><span class="txt"><b>上下文摘要</b><span>重置或减半历史前，先在后台总结之前的内容，并放进系统提示词</span></span></label>
+                <div class="field" style="grid-template-columns: minmax(0,1fr) 140px; align-items:center">
+                  <div><label class="lbl" for="h-sum">摘要上限</label><p class="help">摘要请求的模板在“提示词模板 › 摘要提示词”。</p></div>
+                  <div class="affix"><input id="h-sum" class="input num" value="400"><span class="unit">字</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="tile-ico ok"><svg class="i"><use href="#i-shield"/></svg></span><h2>隐私与存储</h2></div>
+              <div class="card-body">
+                <div class="field">
+                  <div class="lbl"><label for="pv-bl">隐私黑名单</label><span class="todo" title="尚未实现：截图前不会检查前台应用，名单里的应用照样会被截图并发送">未实现</span></div>
+                  <input id="pv-bl" class="input" disabled placeholder="例如 1Password, 微信（逗号分隔）">
+                  <p class="help">尚未实现：截图前不会检查前台应用，名单里的应用照样会被截图并发送。</p>
+                </div>
+                <label class="switch-row disabled" title="尚未实现：截图从不写入磁盘"><input class="switch" type="checkbox" disabled><span class="txt"><b>保存截图到磁盘 <span class="todo">未实现</span></b><span>目前截图从不写入磁盘</span></span></label>
+                <div class="field" style="grid-template-columns: minmax(0,1fr) 140px; align-items:center">
+                  <div><label class="lbl" for="pv-log">日志保留</label><p class="help">超过后删除最早的生成日志。10 – 2000 条。</p></div>
+                  <div class="affix"><input id="pv-log" class="input num" value="200"><span class="unit">条</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="aside">
+            <div class="card">
+              <div class="card-head"><span class="tile-ico ok"><svg class="i"><use href="#i-activity"/></svg></span><h2>实时用量</h2><div class="tail"><span class="chip pink"><span style="width:6px;height:6px;border-radius:50%;background:var(--pink)"></span>第 37 轮</span></div></div>
+              <div class="card-body usage">
+                <div>
+                  <div class="u-k">请求体<b class="num">3.12 <em>/ 48 MB</em></b></div>
+                  <div class="meter"><i style="width:6.5%; min-width:6px"></i><span class="mark" style="left:50%"></span></div>
+                  <div class="u-n"><span>有效上限 48 MB</span><span>超限后压到 24 MB</span></div>
+                </div>
+                <div>
+                  <div class="u-k">历史截图<b class="num">6 <em>/ 24 张</em></b></div>
+                  <div class="meter"><i style="width:25%; background:var(--violet)"></i><span class="mark" style="left:50%"></span></div>
+                  <div class="u-n"><span>本轮发送 6 张</span><span>超限后保留 12 张</span></div>
+                </div>
+                <div>
+                  <div class="u-k">缓存命中<b class="num">82%</b></div>
+                  <div class="meter ok"><i style="width:82%"></i></div>
+                  <div class="u-n num"><span>5,612 / 6,840 tokens</span></div>
+                </div>
+                <div class="divider"></div>
+                <div style="display:flex; gap:10px; font-size:12.5px; color:var(--text-2)">
+                  <svg class="i i-sm" style="color:var(--cyan-text); margin-top:2px"><use href="#i-shrink"/></svg>
+                  <div><b style="color:var(--text)">最近一次压缩</b><br><span class="num">14:30:02</span> · 超出张数，丢弃 12 张</div>
+                </div>
+                <a class="btn btn-ghost btn-sm" href="#logs" style="justify-self:start; margin:-6px 0 -4px -8px">在生成日志中查看<svg class="i i-sm"><use href="#i-arrow-right"/></svg></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ======================= DOCK ======================= -->
+  <footer class="dock" aria-label="运行控制">
+    <button class="play" id="playBtn" type="button" aria-label="暂停" title="暂停"><svg class="i"><use href="#i-pause"/></svg></button>
+    <div class="dock-state">
+      <div class="st" id="dockState"><span class="dot"></span>运行中</div>
+      <div class="sub num" id="dockSub">第 37 轮</div>
+    </div>
+    <div class="dock-track">
+      <div class="row"><b id="trackLbl">下次截图</b><span id="trackSub" class="num">上次生成 14:32:08 · 3 条</span><span class="cd num" id="trackCd">12<small>秒</small></span></div>
+      <div class="track" id="track" role="progressbar" aria-label="距下次截图" aria-valuemin="0" aria-valuemax="21" aria-valuenow="9"><i style="width:43%"></i></div>
+    </div>
+    <div class="dock-stats">
+      <div class="s"><small>耗时</small><b class="num">2.41 s</b></div>
+      <div class="s"><small>缓存命中</small><b class="num">82%</b></div>
+      <div class="s opt"><small>请求体</small><b class="num">3.1 <em>/ 48 MB</em></b></div>
+    </div>
+    <div class="dock-sep"></div>
+    <div class="dock-actions">
+      <button class="dbtn" type="button"><svg class="i i-sm"><use href="#i-sparkles"/></svg>生成一次</button>
+      <button class="dan" type="button" aria-pressed="true" aria-label="弹幕层显示中，点击隐藏" title="隐藏弹幕层"><span class="glyph" aria-hidden="true">弹</span></button>
+      <button class="dbtn icon" type="button" aria-label="清空屏幕上的弹幕" title="清屏"><svg class="i i-sm"><use href="#i-eraser"/></svg></button>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var pages = ["overview", "logs", "model", "danmaku", "character", "prompt", "rhythm", "capture"];
+  var q = new URLSearchParams(location.search);
+  function show() {
+    var h = location.hash.slice(1);
+    var p = pages.indexOf(h) >= 0 ? h : "overview";
+    document.body.dataset.page = p;
+    document.querySelectorAll(".page").forEach(function (s) { s.classList.toggle("on", s.id === "p-" + p); });
+    document.querySelectorAll(".nav a").forEach(function (a) {
+      if (a.dataset.p === p) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    document.body.dataset.dirty = (p === "danmaku" || q.get("dirty") === "1") && q.get("dirty") !== "0" ? "1" : "0";
+  }
+  window.addEventListener("hashchange", show);
+  show();
+
+  var pop = document.getElementById("profilePop"), pb = document.getElementById("profileBtn");
+  function setPop(open) { pop.classList.toggle("open", open); pb.setAttribute("aria-expanded", String(open)); }
+  pb.addEventListener("click", function () { setPop(!pop.classList.contains("open")); });
+  if (q.get("menu") === "profiles") setPop(true);
+
+  document.querySelectorAll('input[name="pbg"]').forEach(function (r) {
+    r.addEventListener("change", function () { document.getElementById("pv").dataset.bg = r.value; });
+  });
+  if (q.get("bg") === "light") { document.getElementById("pv").dataset.bg = "light"; document.querySelector('input[name="pbg"][value="light"]').checked = true; }
+
+  if (q.get("png") === "1") {
+    document.querySelector('input[name="fmt"][value="png"]').checked = true;
+    document.getElementById("pngwarn").style.display = "";
+    document.querySelectorAll("#jpegq input").forEach(function (i) { i.disabled = true; });
+  }
+
+  var state = q.get("state");
+  var st = document.getElementById("dockState"), sub = document.getElementById("dockSub"),
+      lbl = document.getElementById("trackLbl"), tsub = document.getElementById("trackSub"),
+      cd = document.getElementById("trackCd"), track = document.getElementById("track"),
+      play = document.getElementById("playBtn");
+  function playIcon(name, label) { play.innerHTML = '<svg class="i"><use href="#i-' + name + '"/></svg>'; play.setAttribute("aria-label", label); play.title = label; }
+  if (q.get("full") === "1") document.documentElement.classList.add("full");
+  if (q.get("open")) {
+    var logs = document.querySelectorAll(".logs > details.log");
+    logs.forEach(function (d, i) { d.open = String(i + 1) === q.get("open"); });
+  }
+  if (state === "delay") {
+    sub.textContent = "第 0 轮";
+    document.getElementById("heroPill").innerHTML = '<span class="dot"></span>运行中 · 即将首次截图';
+    document.getElementById("heroTitle").innerHTML = "<em>Mika</em> 准备好了";
+    document.getElementById("heroSub").textContent = "启动延迟 5 秒：先切换到你想让 Mika 看的画面，首次截图不会拍到这个窗口。";
+    lbl.textContent = "首次截图"; tsub.textContent = "启动延迟，先切换到要看的画面";
+    cd.innerHTML = "3<small>秒</small>"; track.className = "track delay"; track.firstElementChild.style.width = "40%";
+    document.getElementById("ringNum").innerHTML = "3<small>s</small>"; document.getElementById("ringLbl").textContent = "首次截图";
+    document.getElementById("ringArc").setAttribute("stroke", "var(--cyan)"); document.getElementById("ringArc").setAttribute("stroke-dasharray", "173 289");
+  }
+  if (state === "paused" || state === "idle" || state === "error") {
+    playIcon("play", "启动");
+    var dot = '<span class="dot" style="animation:none;background:' + (state === "error" ? "#ff7b7b" : state === "paused" ? "#f5b54a" : "#8a90a0") + '"></span>';
+    st.innerHTML = dot + (state === "error" ? "错误" : state === "paused" ? "已暂停" : "空闲");
+    lbl.textContent = state === "idle" ? "未启动" : "下次截图";
+    tsub.textContent = state === "idle" ? "启动后 5 秒首次截图" : "上次生成 14:32:08 · 3 条";
+    cd.innerHTML = "—"; track.classList.add("empty");
+    document.getElementById("heroPill").innerHTML = st.innerHTML;
+    document.getElementById("heroPill").style.cssText = state === "error" ? "background:var(--bad-soft);color:var(--bad)" : "background:var(--surface-3);color:var(--text-2)";
+    document.getElementById("heroTitle").innerHTML = state === "error" ? "<em>Mika</em> 遇到了问题" : "<em>Mika</em> 在休息";
+    document.getElementById("ringNum").innerHTML = "—"; document.getElementById("ringLbl").textContent = state === "idle" ? "未启动" : state === "error" ? "未在运行" : "已暂停";
+    document.getElementById("ringArc").style.display = "none";
+  }
+  if (state === "error") {
+    document.querySelectorAll(".page-body").forEach(function (b) {
+      var d = document.createElement("div");
+      d.className = "banner bad"; d.setAttribute("role", "alert");
+      d.innerHTML = '<svg class="i"><use href="#i-circle-alert"/></svg><div class="grow"><b>上一轮失败：</b>HTTP 413 Payload Too Large（exceeds max_body of 67108864）。已按服务器上限压缩历史，下一轮会自动重试。</div><a class="link" href="#logs">查看日志</a>';
+      b.insertBefore(d, b.firstChild);
+    });
+  }
+})();
+</script>
+</body>
+</html>
