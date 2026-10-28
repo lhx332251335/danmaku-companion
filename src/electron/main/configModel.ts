@@ -78,7 +78,7 @@ const NUMBER_RULES: Readonly<Partial<Record<SectionPath<number>, NumberRule>>> =
   "runtime.releaseWindowMinSeconds": { range: LIMITS.releaseWindowSeconds },
   "runtime.releaseWindowMaxSeconds": { range: LIMITS.releaseWindowSeconds },
   "runtime.releaseWindowSeconds": { range: LIMITS.releaseWindowSeconds },
-  "runtime.captureMaxEdgePixels": { range: LIMITS.captureMaxEdgePixels, integer: true },
+  "runtime.captureShortEdgePixels": { range: LIMITS.captureShortEdgePixels, integer: true },
   "runtime.captureJpegQuality": { range: LIMITS.captureJpegQuality },
   "runtime.historyRounds": { range: LIMITS.historyRounds, integer: true },
   "runtime.historyMaxImages": { range: LIMITS.historyMaxImages, integer: true },
@@ -203,8 +203,22 @@ export function parseJson(raw: string): unknown {
   return JSON.parse(raw.replace(/^\uFEFF/, ""));
 }
 
+/** Up to 0.3.0 the screenshot size capped the long edge; read on a 16:9 screen as its short edge. */
+const LEGACY_LONG_TO_SHORT_EDGE = 9 / 16;
+
 export function migrateParsedConfig(config: DeepPartial<AppConfig>): DeepPartial<AppConfig> {
   const runtime = config.runtime;
+  const legacyMaxEdge = isRecord(runtime)
+    ? (runtime as Record<string, unknown>).captureMaxEdgePixels
+    : undefined;
+  if (
+    runtime &&
+    runtime.captureShortEdgePixels === undefined &&
+    typeof legacyMaxEdge === "number" &&
+    Number.isFinite(legacyMaxEdge)
+  ) {
+    runtime.captureShortEdgePixels = Math.round(legacyMaxEdge * LEGACY_LONG_TO_SHORT_EDGE);
+  }
   if (
     runtime &&
     runtime.releaseWindowSeconds !== undefined &&

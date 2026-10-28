@@ -72,7 +72,8 @@ export interface RuntimeSettings {
   releaseWindowMinSeconds: number;
   releaseWindowMaxSeconds: number;
   releaseWindowSeconds: number;
-  captureMaxEdgePixels: number;
+  /** Screenshots are scaled down (never up) until their short edge fits, like 1080p. */
+  captureShortEdgePixels: number;
   captureImageFormat: ScreenImageFormat;
   captureJpegQuality: number;
   historyRounds: number;

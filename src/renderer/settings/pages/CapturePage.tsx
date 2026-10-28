@@ -94,17 +94,17 @@ export function CapturePage({ controller, navigate }: PageProps) {
         <Card title="截图" icon={<Camera />}>
           <div className="row2">
             <Field
-              label="截图最长边"
-              hint={rangeHint(LIMITS.captureMaxEdgePixels, "px")}
-              help="长边缩到这个尺寸再发送，越大越清晰也越慢。"
+              label="截图分辨率"
+              hint={rangeHint(LIMITS.captureShortEdgePixels, "p")}
+              help="短边缩到这个尺寸再发送（不会放大），越大越清晰也越慢。常用 720p / 900p / 1080p；4K 屏要看清标签栏这类小字用 1080p。"
             >
               <NumberField
-                value={runtime.captureMaxEdgePixels}
-                range={LIMITS.captureMaxEdgePixels}
-                step={10}
+                value={runtime.captureShortEdgePixels}
+                range={LIMITS.captureShortEdgePixels}
+                step={90}
                 integer
-                unit="px"
-                onCommit={(captureMaxEdgePixels) => edit("runtime", { captureMaxEdgePixels })}
+                unit="p"
+                onCommit={(captureShortEdgePixels) => edit("runtime", { captureShortEdgePixels })}
               />
             </Field>
             <Field label="格式" group help="JPEG 体积小；PNG 无损但大很多。">

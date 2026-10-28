@@ -10,9 +10,9 @@ import type {
   ScreenSnapshot,
 } from "../../../shared/types";
 import { LIMITS, clampOr } from "../../../shared/limits";
-import { desktopThumbnailSize, fitWithinMaxEdge } from "./captureSize";
+import { desktopThumbnailSize, fitWithinShortEdge } from "./captureSize";
 
-const DEFAULT_CAPTURE_MAX_EDGE_PIXELS = 960;
+const DEFAULT_CAPTURE_SHORT_EDGE_PIXELS = 900;
 const DEFAULT_CAPTURE_IMAGE_FORMAT: ScreenImageFormat = "jpeg";
 const DEFAULT_CAPTURE_JPEG_QUALITY = 0.82;
 const execFileAsync = promisify(execFile);
@@ -71,7 +71,7 @@ function encodeImage(
 }
 
 async function captureWithMacScreencapture(
-  maxEdgePixels: number,
+  shortEdgePixels: number,
   options: CaptureEncodingOptions,
 ): Promise<ScreenSnapshot> {
   const filePath = path.join(
@@ -92,7 +92,7 @@ async function captureWithMacScreencapture(
     }
 
     const imageSize = image.getSize();
-    const thumbnailSize = fitWithinMaxEdge(imageSize, maxEdgePixels);
+    const thumbnailSize = fitWithinShortEdge(imageSize, shortEdgePixels);
     const thumbnail =
       thumbnailSize.width === imageSize.width && thumbnailSize.height === imageSize.height
         ? image
@@ -115,13 +115,13 @@ async function captureWithMacScreencapture(
 }
 
 async function captureWithDesktopCapturer(
-  maxEdgePixels: number,
+  shortEdgePixels: number,
   options: CaptureEncodingOptions,
 ): Promise<ScreenSnapshot> {
   const primary = screen.getPrimaryDisplay();
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
-    thumbnailSize: desktopThumbnailSize(primary.size, primary.scaleFactor, maxEdgePixels),
+    thumbnailSize: desktopThumbnailSize(primary.size, primary.scaleFactor, shortEdgePixels),
   });
 
   const primarySource = sources.find((item) => item.display_id === String(primary.id));
@@ -207,13 +207,13 @@ export async function probeScreenCapturePermission(): Promise<ScreenCaptureProbe
 }
 
 export async function capturePrimaryScreen(
-  maxEdgePixels = DEFAULT_CAPTURE_MAX_EDGE_PIXELS,
+  shortEdgePixels = DEFAULT_CAPTURE_SHORT_EDGE_PIXELS,
   options: CaptureEncodingOptions = {},
 ): Promise<ScreenSnapshot> {
   let macScreencaptureError: unknown;
   if (process.platform === "darwin") {
     try {
-      return await captureWithMacScreencapture(maxEdgePixels, options);
+      return await captureWithMacScreencapture(shortEdgePixels, options);
     } catch (error) {
       macScreencaptureError = error;
       console.warn("macOS screencapture failed; trying desktopCapturer.", error);
@@ -221,7 +221,7 @@ export async function capturePrimaryScreen(
   }
 
   try {
-    return await captureWithDesktopCapturer(maxEdgePixels, options);
+    return await captureWithDesktopCapturer(shortEdgePixels, options);
   } catch (error) {
     if (macScreencaptureError) {
       throw new Error(

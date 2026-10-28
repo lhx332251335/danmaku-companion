@@ -8,7 +8,7 @@ export interface NormalizedRuntimeSettings {
   itemsPerCycle: number;
   releaseWindowMinSeconds: number;
   releaseWindowMaxSeconds: number;
-  captureMaxEdgePixels: number;
+  captureShortEdgePixels: number;
   captureImageFormat: ScreenImageFormat;
   captureJpegQuality: number;
   historyRounds: number;
@@ -67,8 +67,8 @@ export function normalizeRuntimeSettings(config: AppConfig): NormalizedRuntimeSe
     itemsPerCycle: Math.round(clampToRange(rawItemsPerCycle, LIMITS.itemsPerCycle)),
     releaseWindowMinSeconds,
     releaseWindowMaxSeconds,
-    captureMaxEdgePixels: Math.round(
-      clampToRange(runtime.captureMaxEdgePixels, LIMITS.captureMaxEdgePixels),
+    captureShortEdgePixels: Math.round(
+      clampToRange(runtime.captureShortEdgePixels, LIMITS.captureShortEdgePixels),
     ),
     captureImageFormat: runtime.captureImageFormat === "png" ? "png" : "jpeg",
     captureJpegQuality: clampToRange(runtime.captureJpegQuality, LIMITS.captureJpegQuality),

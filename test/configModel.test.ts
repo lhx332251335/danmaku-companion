@@ -37,6 +37,22 @@ describe("config normalization", () => {
     expect(config.runtime.releaseWindowMaxSeconds).toBe(4);
   });
 
+  it("migrates the old long-edge screenshot size to a short edge", () => {
+    expect(normalizeProfileConfig({ runtime: { captureMaxEdgePixels: 960 } }).runtime.captureShortEdgePixels).toBe(540);
+    expect(normalizeProfileConfig({ runtime: { captureMaxEdgePixels: 2160 } }).runtime.captureShortEdgePixels).toBe(1215);
+    // Below the new floor it clamps instead of dropping back to the default.
+    expect(normalizeProfileConfig({ runtime: { captureMaxEdgePixels: 480 } }).runtime.captureShortEdgePixels).toBe(360);
+    expect(normalizeProfileConfig({ runtime: {} }).runtime.captureShortEdgePixels).toBe(900);
+  });
+
+  it("keeps a short edge already set over a stale long edge", () => {
+    const runtime = normalizeProfileConfig({
+      runtime: { captureShortEdgePixels: 1080, captureMaxEdgePixels: 960 },
+    }).runtime;
+    expect(runtime.captureShortEdgePixels).toBe(1080);
+    expect("captureMaxEdgePixels" in runtime).toBe(false);
+  });
+
   it("moves old default user-template lines into the system template", () => {
     const config = makeConfig({
       prompt: {

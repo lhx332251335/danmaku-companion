@@ -3,10 +3,10 @@ export interface PixelSize {
   height: number;
 }
 
-/** Scale a size down (never up) so its longest edge is at most maxEdgePixels. */
-export function fitWithinMaxEdge(size: PixelSize, maxEdgePixels: number): PixelSize {
-  const longestEdge = Math.max(size.width, size.height);
-  const scale = Math.min(1, maxEdgePixels / longestEdge);
+/** Scale a size down (never up) so its short edge is at most shortEdgePixels, like 1080p. */
+export function fitWithinShortEdge(size: PixelSize, shortEdgePixels: number): PixelSize {
+  const shortEdge = Math.min(size.width, size.height);
+  const scale = Math.min(1, shortEdgePixels / shortEdge);
 
   return {
     width: Math.max(1, Math.round(size.width * scale)),
@@ -26,11 +26,11 @@ export function physicalDisplaySize(dipSize: PixelSize, scaleFactor: number): Pi
   };
 }
 
-/** Thumbnail size to request from desktopCapturer so the capture honours maxEdgePixels. */
+/** Thumbnail size to request from desktopCapturer so the capture honours shortEdgePixels. */
 export function desktopThumbnailSize(
   dipSize: PixelSize,
   scaleFactor: number,
-  maxEdgePixels: number,
+  shortEdgePixels: number,
 ): PixelSize {
-  return fitWithinMaxEdge(physicalDisplaySize(dipSize, scaleFactor), maxEdgePixels);
+  return fitWithinShortEdge(physicalDisplaySize(dipSize, scaleFactor), shortEdgePixels);
 }
