@@ -268,6 +268,9 @@ export class WindowManager {
       minWidth: 940,
       minHeight: 660,
       title: APP_NAME,
+      // The default File/Edit/View bar does not belong to this app; Alt still shows it, and the
+      // Edit menu keeps the clipboard shortcuts on macOS.
+      autoHideMenuBar: true,
       backgroundColor: settingsBackground(),
       webPreferences: secureWebPreferences(),
     });
