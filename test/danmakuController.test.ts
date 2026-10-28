@@ -321,12 +321,16 @@ describe("DanmakuController", () => {
     expect(mocks.capture).not.toHaveBeenCalled();
     const due = Date.parse(h.controller.getStatus().nextCycleAt ?? "");
     expect(due - Date.now()).toBe(5000);
-    expect(h.statuses.at(-1)?.nextCycleAt).toBeDefined();
+    expect(h.statuses.at(-1)).toMatchObject({ nextCycleIsFirst: true });
+    expect(due - Date.parse(h.statuses.at(-1)?.nextCycleArmedAt ?? "")).toBe(5000);
 
     await vi.advanceTimersByTimeAsync(4999);
     expect(mocks.generate).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(mocks.generate).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(h.controller.getStatus().nextCycleAt).toBeDefined());
+    // The regular interval after the first cycle is not the start delay.
+    expect(h.controller.getStatus().nextCycleIsFirst).toBeUndefined();
   });
 
   it("stop() during the start delay cancels the first capture", async () => {

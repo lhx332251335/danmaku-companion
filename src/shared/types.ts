@@ -135,6 +135,10 @@ export interface RuntimeStatus {
   historyImages?: number;
   /** When the next timed generation is due (ISO time), while one is scheduled. */
   nextCycleAt?: string;
+  /** When that wait started, so a countdown can show its progress. */
+  nextCycleArmedAt?: string;
+  /** The wait is the start delay before the first capture after Start. */
+  nextCycleIsFirst?: boolean;
   /** Summary of earlier rounds currently carried in the system prompt. */
   contextSummary?: string;
   contextSummaryAt?: string;

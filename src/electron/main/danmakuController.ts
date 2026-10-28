@@ -75,6 +75,12 @@ function screenLogInfo(
   };
 }
 
+const noCycleScheduled = {
+  nextCycleAt: undefined,
+  nextCycleArmedAt: undefined,
+  nextCycleIsFirst: undefined,
+} satisfies Partial<RuntimeStatus>;
+
 export class DanmakuController {
   private cycleTimer:
     | { handle: NodeJS.Timeout; armed: ArmedCycle; firstAfterStart: boolean }
@@ -582,7 +588,7 @@ export class DanmakuController {
 
     const handle = setTimeout(() => {
       this.cycleTimer = undefined;
-      this.status = { ...this.status, nextCycleAt: undefined };
+      this.status = { ...this.status, ...noCycleScheduled };
       void this.generateOnce("timer");
     }, delayMs);
     const dueAt = Date.now() + delayMs;
@@ -595,7 +601,12 @@ export class DanmakuController {
       },
       firstAfterStart,
     };
-    this.status = { ...this.status, nextCycleAt: new Date(dueAt).toISOString() };
+    this.status = {
+      ...this.status,
+      nextCycleAt: new Date(dueAt).toISOString(),
+      nextCycleArmedAt: new Date(dueAt - delayMs).toISOString(),
+      nextCycleIsFirst: firstAfterStart || undefined,
+    };
   }
 
   private clearCycleTimer(): void {
@@ -603,7 +614,7 @@ export class DanmakuController {
       clearTimeout(this.cycleTimer.handle);
       this.cycleTimer = undefined;
     }
-    this.status = { ...this.status, nextCycleAt: undefined };
+    this.status = { ...this.status, ...noCycleScheduled };
   }
 
   private scheduleItems(items: DanmakuItem[], releaseWindowSeconds: number): void {
